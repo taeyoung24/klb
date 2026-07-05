@@ -1,0 +1,136 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+  max-width: 500px;
+  margin: 0 auto;
+  font-family: var(--sans);
+}
+
+.stageTitle {
+  font-size: 14px;
+  font-weight: 600;
+  color: #4A4A4A;
+  text-align: center;
+}
+
+.teamsContainer {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  gap: 10px;
+}
+
+.teamBox {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  border-radius: 29px;
+  background: var(--social-bg);
+  color: var(--text-h);
+  box-shadow: 0px 4px 8.6px rgba(95, 95, 95, 0.25);
+  gap: 24px;
+  /* 팀 정보와 점수 사이의 최소 간격 확보 */
+}
+
+.defaultTeam {
+  background: linear-gradient(90deg, #848484 0%, #484848 100%);
+  color: #fff;
+}
+
+.teamInfoWrapper {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+}
+
+.logoWrapper {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.teamLogo {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  border-radius: 50%;
+}
+
+.logoPlaceholder {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.teamText {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  line-height: 1.2;
+  gap: 6px;
+}
+
+.seedTitle {
+  font-size: 8px;
+  font-weight: 600;
+  opacity: 0.8;
+  text-transform: uppercase;
+}
+
+.teamName {
+  font-size: 14px;
+  font-weight: 700;
+  text-transform: uppercase;
+  line-height: 1;
+  /* 아래로 치우치는 현상 방지를 위해 1로 설정 */
+}
+
+.scoresWrapper {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.scoreItem {
+  width: 33px;
+  height: 33px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 600;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.scoreEmpty {
+  opacity: 0.5;
+  font-weight: 400;
+}
+
+.scoreLoser {
+  opacity: 0.3; /* 패배 측 점수는 더 투명하게 처리 */
+}
+
+/* 시리즈가 종료되었을 때 하이라이트/딤 처리 로직 */
+.winner {
+  background: linear-gradient(90deg, #738FFF 0%, #7141E0 100%); /* 승리 시 그라데이션 적용 */
+  opacity: 1;
+}
+
+.loser {
+  /* 패자는 투명도를 낮추거나 흑백 처리하여 승자를 돋보이게 합니다 */
+  opacity: 0.4;
+  filter: grayscale(100%);
+  transition: opacity 0.3s ease, filter 0.3s ease;
+}
