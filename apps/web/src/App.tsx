@@ -1,122 +1,63 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
 import './App.css'
 
 function App() {
-  const [count, setCount] = useState(0)
-
   return (
     <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
+      <header className="header">
+        <div className="header__logo">KROWN LEAGUE</div>
+        <nav className="header__nav">
+          <ul className="header__nav-list">
+            <li className="header__nav-item">
+              <a className="header__nav-link" href="#home">Home</a>
+            </li>
+            <li className="header__nav-item">
+              <a className="header__nav-link" href="#schedule">Schedule</a>
+            </li>
+            <li className="header__nav-item">
+              <a className="header__nav-link" href="#teams">Teams</a>
+            </li>
+            <li className="header__nav-item">
+              <a className="header__nav-link" href="#stats">Stats</a>
+            </li>
+            <li className="header__nav-item">
+              <a className="header__nav-link" href="#news">News</a>
+            </li>
+          </ul>
+        </nav>
+      </header>
+
+      <section className="hero-banner">
+        <div className="hero-banner__content">
+          <h1 className="hero-banner__title">Krown League Baseball</h1>
         </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.tsx</code> and save to test <code>HMR</code>
+      </section>
+
+      <section className="section section--light">
+        <div className="section__container">
+          <h2 className="section__title">Krown League Overview</h2>
+          <p className="section__paragraph">
+            Welcome to the official home of Krown League Baseball. We are committed to
+            delivering the most competitive and exciting baseball experience in the region.
+            With historic rivalries and outstanding sportsmanship, the Krown League continues
+            to push the boundaries of modern sports entertainment.
           </p>
         </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
       </section>
 
-      <div className="ticks"></div>
-
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
+      <section className="section section--dark">
+        <div className="section__container">
+          <h2 className="section__title">Upcoming Seasons & Events</h2>
+          <p className="section__paragraph">
+            The new season of Krown League Baseball is just around the corner. Get ready
+            to support your favorite teams, track player achievements, and secure your tickets
+            early. Detailed schedules and roster updates will be posted soon on our dedicated
+            pages. Keep an eye out for official press releases.
+          </p>
         </div>
       </section>
-
-      <div className="ticks"></div>
-      <section id="spacer"></section>
     </>
   )
 }
 
 export default App
+
