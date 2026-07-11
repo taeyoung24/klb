@@ -1,0 +1,18 @@
+# klb/docker-compose.yml
+version: '3.8'
+
+services:
+  klb-db:
+    image: postgres:16-alpine
+    container_name: klb_postgres_container
+    environment:
+      POSTGRES_USER: klb_admin
+      POSTGRES_PASSWORD: klb_password
+      POSTGRES_DB: klb_dev
+    ports:
+      - "5433:5432"
+    volumes:
+      - klb_postgres_data:/var/lib/postgresql/data
+
+volumes:
+  klb_postgres_data:

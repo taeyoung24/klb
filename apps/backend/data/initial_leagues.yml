@@ -1,0 +1,387 @@
+- name: Azalea League
+  name_ko: 아젤리아 리그
+  mascot_ko: 진달래
+  team_code: AL
+  lore: 
+  clubs:
+
+  - name: Comets
+    name_ko: 코메츠
+    hometown: Dormir
+    hometown_ko: 도르미르
+    team_code: COM
+    abbr_name: D. Comets
+    stadium_name: Dormir Stadium
+    stadium_name_ko: 도르미르 스타디움
+
+  - name: Enders
+    name_ko: 엔더스
+    hometown: Paustalo
+    hometown_ko: 퍼스톨로
+    team_code: END
+    abbr_name: P. Enders
+    stadium_name: Paustalo Stadium
+    stadium_name_ko: 퍼스톨로 스타디움
+
+  - name: Phantoms
+    name_ko: 팬텀즈
+    hometown: Wheelo Street
+    hometown_ko: 휠로 스트리트
+    team_code: PHN
+    abbr_name: W. Phantoms
+    stadium_name: Wheelo Central Ballpark
+    stadium_name_ko: 휠로 센트럴볼파크
+
+  - name: Pumpkins
+    name_ko: 펌킨스
+    hometown: Phord
+    hometown_ko: 포드
+    team_code: PUM
+    abbr_name: P. Pumpkins
+    stadium_name: Pumpkinland
+    stadium_name_ko: 펌킨랜드
+
+  - name: Guardians
+    name_ko: 가디언즈
+    hometown: Rotreeban
+    hometown_ko: 로트리반
+    team_code: GUA
+    abbr_name: R. Guardians
+    stadium_name: Rotreeban Stadium
+    stadium_name_ko: 로트리반 스타디움
+
+  - name: Saturns
+    name_ko: 새턴즈
+    hometown: Duntle
+    hometown_ko: 던틀
+    team_code: SAT
+    abbr_name: D. Saturns
+    stadium_name: Duntle Park
+    stadium_name_ko: 던틀 파크
+
+  - name: Sentinels
+    name_ko: 센티넬즈
+    hometown: Haltous
+    hometown_ko: 할토스
+    team_code: SEN
+    abbr_name: H. Sentinels
+    stadium_name: Haltous Park
+    stadium_name_ko: 할토스 파크
+    
+  - name: Valiants
+    name_ko: 밸리언츠
+    hometown: Karsnil
+    hometown_ko: 카즈닐
+    team_code: VAL
+    abbr_name: K. Valiants
+    stadium_name: Karsnil Dome
+    stadium_name_ko: 카즈닐 돔
+    
+  - name: Whales
+    name_ko: 웨일스
+    hometown: Yoshido
+    hometown_ko: 요시도
+    team_code: WHL
+    abbr_name: Y. Whales
+    stadium_name: Yoshido Field
+    stadium_name_ko: 요시도 필드
+    
+  - name: Zeniths
+    name_ko: 제니스
+    hometown: Barsnhel
+    hometown_ko: 바즈넬
+    team_code: ZEN
+    abbr_name: B. Zeniths
+    stadium_name: Barsnhels Field
+    stadium_name_ko: 바즈넬스 필드
+
+- name: Camellia League
+  name_ko: 카멜리아 리그
+  mascot_ko: 동백
+  team_code: CL
+  lore: 
+  clubs:
+    
+  - name: Archers
+    name_ko: 아쳐스
+    hometown: Rotlen
+    hometown_ko: 라틀렌
+    team_code: ARC
+    abbr_name: R. Archers
+    stadium_name: Rotlen Field
+    stadium_name_ko: 라틀렌 필드
+    
+  - name: Black Cats
+    name_ko: 블랙캣츠
+    hometown: Ensai
+    hometown_ko: 엔사이
+    team_code: CAT
+    abbr_name: E. Black Cats
+    stadium_name: Ensai Cats Field
+    stadium_name_ko: 엔사이 캣츠 필드
+    
+  - name: Dinos
+    name_ko: 다이노스
+    hometown: Julton
+    hometown_ko: 쥴톤
+    team_code: DIN
+    abbr_name: J. Dinos
+    stadium_name: Jultonpark
+    stadium_name_ko: 쥴톤파크
+    
+  - name: Flames
+    name_ko: 플레임즈
+    hometown: Ellifril
+    hometown_ko: 엘리프릴
+    team_code: EFL
+    abbr_name: E. Flames
+    stadium_name: Ellipril Park
+    stadium_name_ko: 엘리프릴 파크
+    
+  - name: Firsters
+    name_ko: 퍼스터즈
+    hometown: Liphinel
+    hometown_ko: 리피넬
+    team_code: FST
+    abbr_name: L. Firsters
+    stadium_name: Firsters Ballpark
+    stadium_name_ko: 퍼스터즈 볼파크
+    
+  - name: Heros
+    name_ko: 히어로즈
+    hometown: Ureme
+    hometown_ko: 유림
+    team_code: HRO
+    abbr_name: U. Heros
+    stadium_name: Ureme Heros Field
+    stadium_name_ko: 유림 히어로즈 필드
+    
+  - name: Red Hunters
+    name_ko: 레드헌터즈
+    hometown: Hellenvit
+    hometown_ko: 헬렌빗
+    team_code: RED
+    abbr_name: H. Red Hunters
+    stadium_name: Hellenvits Field
+    stadium_name_ko: 헬렌빗스 필드
+    
+  - name: Solarians
+    name_ko: 솔라리안즈
+    hometown: Costria
+    hometown_ko: 코스트리아
+    team_code: SOL
+    abbr_name: C. Solarians
+    stadium_name: Costria Park
+    stadium_name_ko: 코스트리아 파크
+    
+  - name: Tales
+    name_ko: 태일즈
+    hometown: Medihals
+    hometown_ko: 메디할스
+    team_code: TAL
+    abbr_name: M. Tales
+    stadium_name: Tale Stadium
+    stadium_name_ko: 태일 스타디움
+    
+  - name: Treasures
+    name_ko: 트레져스
+    hometown: Undger
+    hometown_ko: 언져
+    team_code: UND
+    abbr_name: U. Treasures
+    stadium_name: Undger Stadium
+    stadium_name_ko: 언져 스타디움
+
+- name: Gentiana League
+  name_ko: 젠티아나 리그
+  mascot_ko: 용담
+  team_code: GL
+  lore: 
+  clubs:
+
+  - name: Crystals
+    name_ko: 크리스탈즈
+    hometown: Widgery
+    hometown_ko: 위져리
+    team_code: WIS
+    abbr_name: W. Crystals
+    stadium_name: Widgery Ballpark
+    stadium_name_ko: 위져리 볼파크
+    
+  - name: Falcons
+    name_ko: 팔콘스
+    hometown: Ovestaln
+    hometown_ko: 오베스톤
+    team_code: FAL
+    abbr_name: O. Falcons
+    stadium_name: Ovestaln Ballpark
+    stadium_name_ko: 오베스톤 볼파크
+
+  - name: Freezers
+    name_ko: 프리져스
+    hometown: Nuax
+    hometown_ko: 뉴악스
+    team_code: NUF
+    abbr_name: N. Freezers
+    stadium_name: Freezers Field
+    stadium_name_ko: 프리져스 필드
+
+  - name: Glitters
+    name_ko: 글리터즈
+    hometown: Rocy
+    hometown_ko: 로시
+    team_code: GLI
+    abbr_name: R. Glitters
+    stadium_name: Glitterland
+    stadium_name_ko: 글리터랜드
+    
+  - name: Knights
+    name_ko: 나이츠
+    hometown: Talus
+    hometown_ko: 탈루스
+    team_code: TKN
+    abbr_name: T. Knights
+    stadium_name: Talus Ballpark
+    stadium_name_ko: 탈루스 볼파크
+    
+  - name: Pegasus
+    name_ko: 페가수스
+    hometown: Voky
+    hometown_ko: 보키
+    team_code: VPE
+    abbr_name: V. Pegasus
+    stadium_name: Voky Dome
+    stadium_name_ko: 보키 돔
+
+  - name: Swans
+    name_ko: 스완스
+    hometown: Gersway
+    hometown_ko: 져스웨이
+    team_code: GSW
+    abbr_name: G. Swans
+    stadium_name: Gersway Lake Field
+    stadium_name_ko: 져스웨이 래이크필드
+    
+  - name: Voyagers
+    name_ko: 보이져스
+    hometown: Istaa
+    hometown_ko: 이스타
+    team_code: IVO
+    abbr_name: I. Voyagers
+    stadium_name: Istaa Dome
+    stadium_name_ko: 이스타 돔
+
+  - name: Wyverns
+    name_ko: 와이번스
+    hometown: Thorl
+    hometown_ko: 솔
+    team_code: WYV
+    abbr_name: T. Wyverns
+    stadium_name: Thorl Stadium
+    stadium_name_ko: 솔 스타디움
+    
+  - name: Bears
+    name_ko: 베어스
+    hometown: Holia
+    hometown_ko: 할리아
+    team_code: HOB
+    abbr_name: H. Bears
+    stadium_name: Holia Dome
+    stadium_name_ko: 할리아 돔
+
+- name: Magnolia League
+  name_ko: 매그놀리아 리그
+  mascot_ko: 목련
+  team_code: ML
+  lore: 
+  clubs:
+
+  - name: Blue Birds
+    name_ko: 블루버즈
+    hometown: Halosy Hill
+    hometown_ko: 할로지힐
+    team_code: BLU
+    abbr_name: H. Blue Birds
+    stadium_name: Halosy Field
+    stadium_name_ko: 할로지 필드
+    
+  - name: Dragons
+    name_ko: 드래곤즈
+    hometown: Pedelo
+    hometown_ko: 페델로
+    team_code: DRG
+    abbr_name: P. Dragons
+    stadium_name: Pedelo Dome
+    stadium_name_ko: 
+    
+  - name: Eagles
+    name_ko: 이글스
+    hometown: Calupia
+    hometown_ko: 칼루피아
+    team_code: EAG
+    abbr_name: C. Eagles
+    stadium_name: Calupia Stadium
+    stadium_name_ko: 칼루피아 스타디움
+    
+  - name: Eternals
+    name_ko: 이터널스
+    hometown: Genpill
+    hometown_ko: 젠필
+    team_code: ETR
+    abbr_name: G. Eternals
+    stadium_name: Genpill Dome
+    stadium_name_ko: 젠필 돔
+    
+  - name: Giants
+    name_ko: 자이언츠
+    hometown: Fiamor
+    hometown_ko: 피아모어
+    team_code: GIA
+    abbr_name: F. Giants
+    stadium_name: Fiamor Dome
+    stadium_name_ko: 피아모어 돔
+    
+  - name: Lunarians
+    name_ko: 루나리안즈
+    hometown: Aione
+    hometown_ko: 아이원
+    team_code: LUN
+    abbr_name: A. Lunarians
+    stadium_name: Aione Lunarfield
+    stadium_name_ko: 아이원 루나필드
+    
+  - name: Stellars
+    name_ko: 스텔라즈
+    hometown: Popplehill
+    hometown_ko: 파플힐
+    team_code: PST
+    abbr_name: P. Stellars
+    stadium_name: Popplehill Ballpark
+    stadium_name_ko: 파플힐 볼파크
+    
+  - name: Panthers
+    name_ko: 팬서스
+    hometown: Raswell
+    hometown_ko: 라즈웰
+    team_code: RPN
+    abbr_name: R. Panthers
+    stadium_name: Raswell Dome
+    stadium_name_ko: 라즈웰 돔
+    
+  - name: Unicorns
+    name_ko: 유니콘즈
+    hometown: Nuarque
+    hometown_ko: 뉴아크
+    team_code: UNI
+    abbr_name: N. Unicorns
+    stadium_name: N-World Park
+    stadium_name_ko: 엔월드파크
+    
+  - name: Black Crowns
+    name_ko: 블랙크라운즈
+    hometown: Vastown
+    hometown_ko: 바스타운
+    team_code: VBC
+    abbr_name: V. Black Crowns
+    stadium_name: Vastown Stadium
+    stadium_name_ko: 바스타운 스타디움
