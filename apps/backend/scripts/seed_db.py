@@ -19,13 +19,29 @@ def main():
 
     with Session(engine) as session:
         for league_rawdata in initial_leagues_rawdata:
-            league = League(name=league_rawdata["name"])
+            league = League(
+                name=league_rawdata["name"],
+                name_ko=league_rawdata["name_ko"],
+                mascot_ko=league_rawdata["mascot_ko"],
+                league_code=league_rawdata["league_code"],
+                lore=league_rawdata["lore"]
+            )
             session.add(league)
             session.commit()
             session.refresh(league)
 
             for club_rawdata in league_rawdata["clubs"]:
-                club = Club(name=club_rawdata["name"], league_id=league.id)
+                club = Club(
+                    name=club_rawdata["name"], 
+                    name_ko=club_rawdata["name_ko"],
+                    hometown=club_rawdata["hometown"],
+                    hometown_ko=club_rawdata["hometown_ko"],
+                    team_code=club_rawdata["team_code"],
+                    abbr_name=club_rawdata["abbr_name"],
+                    stadium_name=club_rawdata["stadium_name"],
+                    stadium_name_ko=club_rawdata["stadium_name_ko"],
+                    league_id=league.id
+                )
                 session.add(club)
 
             session.commit()
