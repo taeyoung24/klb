@@ -17,6 +17,9 @@ export default defineConfig({
       'src': fileURLToPath(new URL('./src', import.meta.url))
     }
   },
+  preview: {
+    allowedHosts: true
+  },
   test: {
     projects: [{
       extends: true,
