@@ -1,0 +1,124 @@
+.intro {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.intro-hero {
+  background-color: #0b0c10;
+  color: #ffffff;
+  padding: 120px 24px 80px;
+  text-align: center;
+  border-bottom: 1px solid #1a1a1a;
+}
+
+.intro-hero__container {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.intro-hero__tag {
+  font-family: var(--sans);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-bold);
+  color: var(--accent);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  display: inline-block;
+  margin-bottom: 16px;
+}
+
+.intro-hero__title {
+  font-family: var(--heading);
+  font-size: var(--fs-5xl);
+  font-weight: var(--fw-black);
+  margin: 0 0 24px;
+  line-height: 1.2;
+}
+
+.intro-hero__desc {
+  font-family: var(--sans);
+  font-size: var(--fs-base);
+  font-weight: var(--fw-regular);
+  color: rgba(255, 255, 255, 0.7);
+  line-height: 1.7;
+  margin: 0;
+}
+
+.intro-section {
+  width: 100%;
+  padding: 80px 24px;
+  box-sizing: border-box;
+}
+
+.intro-section--light {
+  background-color: var(--bg);
+}
+
+.intro-section__container {
+  max-width: 1126px;
+  margin: 0 auto;
+}
+
+.intro-section__grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 48px;
+}
+
+@media (max-width: 768px) {
+  .intro-section__grid {
+    grid-template-columns: 1fr;
+    gap: 32px;
+  }
+}
+
+.intro-section__content {
+  text-align: left;
+}
+
+.intro-section__title {
+  font-family: var(--heading);
+  font-size: var(--fs-2xl);
+  font-weight: var(--fw-bold);
+  color: var(--text-h);
+  margin: 0 0 20px;
+  position: relative;
+  padding-bottom: 12px;
+}
+
+.intro-section__title::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 32px;
+  height: 2px;
+  background-color: var(--accent);
+}
+
+.intro-section__paragraph {
+  font-family: var(--sans);
+  font-size: var(--fs-base);
+  line-height: 1.8;
+  color: var(--text);
+  margin: 0;
+}
+
+.intro-section__values {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.intro-section__value-item {
+  font-family: var(--sans);
+  font-size: var(--fs-base);
+  line-height: 1.8;
+  color: var(--text);
+  margin-bottom: 16px;
+}
+
+.intro-section__value-item strong {
+  color: var(--text-h);
+  font-weight: var(--fw-bold);
+}
