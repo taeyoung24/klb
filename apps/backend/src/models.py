@@ -81,3 +81,22 @@ class Match(SQLModel, table=True):
     
     # 끝난 매치에 대한 raw 레벨 가공 JSON 인스트럭션 로그 (Data-Driven Playback)
     match_log_json: Optional[dict[str, Any]] = Field(default=None, sa_type=JSON)
+
+class MatchPlaceholder(SQLModel, table=True):
+    """
+    토너먼트(녹아웃) 대진 스키마를 표현하는 플레이스홀더 테이블.
+    """
+    id: Optional[int] = Field(default=None, primary_key=True)
+    round: str  # "ROUND_OF_8", "SEMI_FINAL", "FINAL"
+    sim_day: int  # 경기가 치러질 예정 시뮬레이션 일자
+    
+    # 8강처럼 최초 구단이 고정된 경우에만 값을 가짐
+    home_club_id: Optional[int] = Field(default=None, foreign_key="club.id")
+    away_club_id: Optional[int] = Field(default=None, foreign_key="club.id")
+    
+    # 대진 트리 상에서 이 노드의 홈/어웨이 팀의 승자가 결정될 이전 플레이스홀더 매치
+    home_parent_id: Optional[int] = Field(default=None, foreign_key="matchplaceholder.id")
+    away_parent_id: Optional[int] = Field(default=None, foreign_key="matchplaceholder.id")
+
+    # 이 플레이스홀더를 통해 실제로 생성된 경기 ID (추적 용도)
+    actual_match_id: Optional[int] = Field(default=None, foreign_key="match.id")

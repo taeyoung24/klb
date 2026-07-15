@@ -1,3 +1,4 @@
+# uv run -m scripts.seed_db
 from sqlmodel import Session, SQLModel, create_engine
 import yaml
 
