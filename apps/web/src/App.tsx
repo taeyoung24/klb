@@ -29,10 +29,10 @@ function App() {
               <a className={`header__nav-link ${currentHash === '#intro' ? 'header__nav-link--active' : ''}`} href="#intro">소개</a>
             </li>
             <li className="header__nav-item">
-              <a className={`header__nav-link ${currentHash === '#schedule' ? 'header__nav-link--active' : ''}`} href="#schedule">일정 진행</a>
+              <a className={`header__nav-link ${currentHash === '#schedule' ? 'header__nav-link--active' : ''}`} href="#schedule">통합 일정</a>
             </li>
             <li className="header__nav-item">
-              <a className={`header__nav-link ${currentHash === '#teams' ? 'header__nav-link--active' : ''}`} href="#teams">리그 및 구단</a>
+              <a className={`header__nav-link ${currentHash === '#teams' ? 'header__nav-link--active' : ''}`} href="#teams">리그 구성</a>
             </li>
             <li className="header__nav-item">
               <a className={`header__nav-link ${currentHash === '#live' ? 'header__nav-link--active' : ''}`} href="#live">LIVE</a>
@@ -84,6 +84,39 @@ function App() {
           </section>
         </>
       )}
+
+      <footer className="footer">
+        <div className="footer__container">
+          <div className="footer__info">
+            <div className="footer__logo">
+              <img className="footer__logo-img" src="/klb-logo-256.svg" alt="KLB Logo" />
+              <span className="footer__logo-text">KLB</span>
+            </div>
+            <p className="footer__desc">
+              Krown League Baseball은 대한민국 야구의 새로운 역사와 혁신을 만들어갑니다.
+            </p>
+          </div>
+          <div className="footer__links-section">
+            <div className="footer__link-group">
+              <h4 className="footer__link-title">League</h4>
+              <a href="#intro" className="footer__link">소개</a>
+              <a href="#schedule" className="footer__link">일정 진행</a>
+              <a href="#teams" className="footer__link">리그 및 구단</a>
+            </div>
+            <div className="footer__link-group">
+              <h4 className="footer__link-title">Support</h4>
+              <a href="#live" className="footer__link">LIVE</a>
+              <a href="#community" className="footer__link">커뮤니티</a>
+              <a href="#terms" className="footer__link">이용약관</a>
+            </div>
+          </div>
+        </div>
+        <div className="footer__bottom">
+          <p className="footer__copyright">
+            © 2026 Krown League Baseball. All rights reserved.
+          </p>
+        </div>
+      </footer>
     </>
   )
 }

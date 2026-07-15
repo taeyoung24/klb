@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Any, Optional
 from sqlmodel import SQLModel, Field, JSON
 
-from .enums import MatchStatus, RosterStatus 
+from .enums import MatchStatus, IngameRole, RosterStatus
 
 class League(SQLModel, table=True):
     id: int = Field(default=None, primary_key=True)
@@ -36,7 +36,8 @@ class Player(SQLModel, table=True):
     flexibility: int  = Field(ge=1, le=1000)
     focus: int        = Field(ge=1, le=1000)
 
-    roster_status: RosterStatus = Field(default=RosterStatus.ACTIVE)
+    roster_status: RosterStatus
+    position: IngameRole
 
     personality: list[int] = Field(sa_type=JSON)
     birthday: datetime
