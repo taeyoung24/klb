@@ -58,6 +58,7 @@ version = "0.1.0"
 source = { virtual = "apps/backend" }
 dependencies = [
     { name = "apscheduler" },
+    { name = "colorama" },
     { name = "fastapi" },
     { name = "httpx" },
     { name = "psycopg", extra = ["binary"] },
@@ -70,6 +71,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "apscheduler", specifier = ">=3.11.3" },
+    { name = "colorama", specifier = ">=0.4.6" },
     { name = "fastapi", specifier = ">=0.139.0" },
     { name = "httpx", specifier = ">=0.28.1" },
     { name = "psycopg", extras = ["binary"], specifier = ">=3.3.4" },
