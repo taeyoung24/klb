@@ -45,20 +45,24 @@ class TestScheduleUtils(unittest.TestCase):
     def test_generate_regular_schedule(self):
         # 10개 구단을 추려내기
         clubs_10 = self.clubs[:10]
-        matches = generate_regular_schedule(clubs_10)
+        
+        # 시나리오 A: 2024년(윤년), base_sim_day = 1
+        # 2024년 1월 1일(월) 대비 3월 첫 화요일은 3월 5일(+64일) -> 글로벌 sim_day = 65
+        matches = generate_regular_schedule(clubs_10, 2024, 1)
         
         # 전체 경기 수 = 10 * 144 / 2 = 720 경기여야 함.
         self.assertEqual(len(matches), 720)
         
         # sim_day 목록 추출 및 검증
         sim_days = {m.sim_day for m in matches}
-        self.assertEqual(min(sim_days), 1)
-        # 24주차 스케줄의 마지막 경기는 167일차(일요일)여야 함 (168일은 월요일 휴식)
-        self.assertEqual(max(sim_days), 167)
+        start_sim_day = 64
+        self.assertEqual(min(sim_days), start_sim_day)
+        # 24주차 스케줄의 마지막 경기는 230일차(일요일)여야 함 (231일은 월요일 휴식)
+        self.assertEqual(max(sim_days), start_sim_day + 166)
         
-        # 월요일(7의 배수) 경기가 없어야 함
+        # 월요일 경기가 없어야 함 (시작일 64 = 화요일이므로, (day - 64) % 7 == 6 인 날이 월요일)
         for day in sim_days:
-            self.assertNotEqual(day % 7, 0, f"Monday (sim_day {day}) should not have matches.")
+            self.assertNotEqual((day - start_sim_day) % 7, 6, f"Monday (sim_day {day}) should not have matches.")
             
         # 3연전 연속성 검증
         # 경기들을 날짜와 홈팀별로 정렬/그루핑하여 3일 연속 동일 대진인지 확인
@@ -66,12 +70,12 @@ class TestScheduleUtils(unittest.TestCase):
         for m in matches:
             matches_by_day_and_home[(m.sim_day, m.home_club_id)] = m.away_club_id
             
-        # 모든 주차(0~23)의 주중(화수목: 1,2,3), 주말(금토일: 4,5,6)에 대해 대진 고정 여부 확인
+        # 모든 주차(0~23)의 주중(화수목), 주말(금토일)에 대해 대진 고정 여부 확인
         for week in range(24):
-            # 주중 3연전 검증
-            midweek_start = week * 7 + 1
-            # 주말 3연전 검증
-            weekend_start = week * 7 + 4
+            # 주중 3연전 검증 (화요일 시작)
+            midweek_start = start_sim_day + week * 7
+            # 주말 3연전 검증 (금요일 시작)
+            weekend_start = start_sim_day + week * 7 + 3
             
             for start_day in (midweek_start, weekend_start):
                 # 첫날 대진 추출
@@ -108,6 +112,17 @@ class TestScheduleUtils(unittest.TestCase):
             # 홈 72회, 원정 72회 검증
             self.assertEqual(team_home_counts[club.id], 72)
             self.assertEqual(team_away_counts[club.id], 72)
+
+    def test_generate_regular_schedule_scenario_b(self):
+        # 시나리오 B: 2025년(평년), base_sim_day = 100
+        # 2025년 3월 첫 화요일인 3월 4일은 1월 1일 대비 +62일 경과
+        # 따라서 시작 글로벌 sim_day = 100 + 62 = 162
+        clubs_10 = self.clubs[:10]
+        matches = generate_regular_schedule(clubs_10, 2025, 100)
+        
+        sim_days = {m.sim_day for m in matches}
+        self.assertEqual(min(sim_days), 162)
+        self.assertEqual(max(sim_days), 162 + 166)
 
     def test_generate_krown_elite_schedule(self):
         matches = generate_krown_elite_schedule(self.clubs)

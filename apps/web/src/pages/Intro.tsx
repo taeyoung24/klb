@@ -3,6 +3,15 @@ import './Intro.css';
 export default function Intro() {
   return (
     <div className="intro">
+      <section className="hero-banner">
+        <div className="hero-banner__content">
+          <div className="hero-banner__quote">
+            <h1 className="hero-banner__slogan">Dream Yours</h1>
+            <p className="hero-banner__subtext">당신의 꿈으로 우리의 역사가 탄생합니다.</p>
+          </div>
+        </div>
+      </section>
+
       <section className="intro-hero">
         <div className="intro-hero__container">
           <span className="intro-hero__tag">ABOUT KROWN LEAGUE</span>

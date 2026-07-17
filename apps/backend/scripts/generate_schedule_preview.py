@@ -83,7 +83,7 @@ def main():
         # 시드 배정 순서만 달라지고, 3연전 및 홈/원정 72경기 규칙(알고리즘)은 엄격하게 유지됩니다.
         random.shuffle(clubs)
         
-        matches = generate_regular_schedule(clubs)
+        matches = generate_regular_schedule(clubs, 2024, 1)
         for match in matches:
             session.add(match)
         session.commit()

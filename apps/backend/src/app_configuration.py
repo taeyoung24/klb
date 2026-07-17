@@ -3,7 +3,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
 from fastapi.responses import JSONResponse
 
-from settings import API_KEY
 from src.api import router
 from src.utils.logger import logger
 
@@ -26,30 +25,30 @@ def setup(app: FastAPI):
         if "components" not in openapi_schema:
             openapi_schema["components"] = {}
             
-        openapi_schema["components"]["securitySchemes"] = {
-            "ApiKeyAuth": {
-                "type": "apiKey",
-                "in": "header",
-                "name": "X-API-Key"
-            }
-        }
+        # openapi_schema["components"]["securitySchemes"] = {
+        #     "ApiKeyAuth": {
+        #         "type": "apiKey",
+        #         "in": "header",
+        #         "name": "X-API-Key"
+        #     }
+        # }
         
-        openapi_schema["security"] = [{"ApiKeyAuth": []}]
+        # openapi_schema["security"] = [{"ApiKeyAuth": []}]
         
         app.openapi_schema = openapi_schema
         return app.openapi_schema
 
     app.openapi = custom_openapi
 
-    # API 키 검증 미들웨어
+    # API 키 검증 미들웨어 (지금은 사용하지 않음)
     async def verify_api_key(request: Request, call_next):
-        if request.url.path.startswith("/api"):
-            api_key = request.headers.get("X-API-Key")
-            if not api_key or api_key != API_KEY:
-                return JSONResponse(
-                    status_code=403,
-                    content={"detail": "Invalid API key"}
-                )
+        # if request.url.path.startswith("/api"):
+        #     api_key = request.headers.get("X-API-Key")
+        #     if not api_key or api_key != API_KEY:
+        #         return JSONResponse(
+        #             status_code=403,
+        #             content={"detail": "Invalid API key"}
+        #         )
         response = await call_next(request)
         return response
     

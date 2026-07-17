@@ -8,7 +8,8 @@ from src.lifespan_definition import lifespan
 klb_backend = FastAPI(
     title="KLB Backend API Documentation",
     lifespan=lifespan,
-    swagger_ui_parameters={"persistAuthorization": True}
+    docs_url="/docs",
+    # swagger_ui_parameters={"persistAuthorization": True}
 )
 
 setup(klb_backend)

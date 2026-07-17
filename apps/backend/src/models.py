@@ -4,6 +4,15 @@ from sqlmodel import SQLModel, Field, JSON
 
 from .enums import MatchStatus, IngameRole, RosterStatus
 
+class WorldState(SQLModel, table=True):
+    """
+    KLB 유니버스의 현재 가상 시계를 저장하는 전역 메타데이터 장부.
+    데이터베이스 전체에 단 '1개의 행(id=1)'만 존재하며, 매일 이 행을 업데이트함.
+    """
+    id: int = Field(default=1, primary_key=True)
+    
+    current_sim_day: int = Field(default=1)
+
 class League(SQLModel, table=True):
     id: int = Field(default=None, primary_key=True)
     name: str

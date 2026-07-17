@@ -1,8 +1,10 @@
+import datetime
 from typing import Optional
 from src.enums import MatchStatus
 from src.models import Match, Club, MatchPlaceholder
 
-def generate_regular_schedule(clubs: list[Club]) -> list[Match]:
+
+def generate_regular_schedule(clubs: list[Club], year: int, base_sim_day: int) -> list[Match]:
     """
     정규시즌 경기 일정 생성하는 함수. 참가 구단인 clubs를 입력받아(10개 구단 기준) Match list를 반환한다.
     매주 7일 주기 중 화~목(주중 3연전), 금~일(주말 3연전) 경기를 편성하고 월요일은 휴식일로 비워둔다.
@@ -11,6 +13,21 @@ def generate_regular_schedule(clubs: list[Club]) -> list[Match]:
     n = len(clubs)
     if n != 10:
         raise ValueError("정규시즌 일정 생성에는 정확히 10개의 구단이 필요합니다.")
+
+    # 3월 첫 번째 화요일의 글로벌 sim_day 계산
+    jan_first = datetime.date(year, 1, 1)
+    march_first = datetime.date(year, 3, 1)
+    # 화요일 = 1 (월=0, 화=1, 수=2...)
+    days_to_tuesday = (1 - march_first.weekday() + 7) % 7
+    first_tuesday = march_first + datetime.timedelta(days=days_to_tuesday)
+
+    # 1월 1일 대비 첫 화요일까지 경과된 날짜
+    days_elapsed = (first_tuesday - jan_first).days
+    temp_start_sim_day = base_sim_day + days_elapsed
+
+    # 시스템 요일 상 화요일(sim_day % 7 == 1)이 되도록 역방향 보정
+    system_weekday_offset = (temp_start_sim_day % 7 - 1 + 7) % 7
+    start_sim_day = temp_start_sim_day - system_weekday_offset
         
     # 1. 48개 시리즈 대진 매칭 조합 생성
     def get_round_robin_matchings():
@@ -52,11 +69,11 @@ def generate_regular_schedule(clubs: list[Club]) -> list[Match]:
         is_weekend = series_idx % 2
         
         if is_weekend == 0:
-            # 주중 3연전 (화, 수, 목): 7일 주기 중 1, 2, 3일차
-            sim_day_start = week * 7 + 1
+            # 주중 3연전 (화, 수, 목): 화요일부터 시작
+            sim_day_start = start_sim_day + week * 7
         else:
-            # 주말 3연전 (금, 토, 일): 7일 주기 중 4, 5, 6일차
-            sim_day_start = week * 7 + 4
+            # 주말 3연전 (금, 토, 일): 금요일부터 시작 (화요일로부터 3일 뒤)
+            sim_day_start = start_sim_day + week * 7 + 3
             
         for home_idx, away_idx in matchings:
             if not flip:
