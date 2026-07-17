@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-API_URL                = os.getenv('API_URL', 'http://localhost:8080')
+API_URL                = os.getenv('API_URL', 'http://localhost:3000')
 DATABASE_URL           = os.environ['DATABASE_URL']
 
 DISCORD_LOG_WH_URL     = os.environ['DISCORD_LOG_WH_URL']

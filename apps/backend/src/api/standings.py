@@ -27,6 +27,13 @@ def get_standings(
     
     target_day = session.exec(recent_day_query).first()
     if target_day is None:
+        first_day_query = select(DailyClubStanding.sim_day)\
+            .where(DailyClubStanding.league_id == league_id)\
+            .order_by(asc(DailyClubStanding.sim_day))\
+            .limit(1)
+        target_day = session.exec(first_day_query).first()
+
+    if target_day is None:
         return []
 
     query = select(DailyClubStanding)\

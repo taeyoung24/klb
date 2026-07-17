@@ -1,0 +1,398 @@
+/* Match Schedule Layout Styles (Light Theme) */
+.match-schedule {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.match-schedule__date-controller {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+  padding: 16px 0;
+  border-bottom: 1px solid #eaeaea;
+  box-sizing: border-box;
+}
+
+.match-schedule__date-btn {
+  background: none;
+  border: 1px solid #e5e5e5;
+  border-radius: 4px;
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #000000;
+  transition: all 0.2s ease;
+  box-sizing: border-box;
+}
+
+.match-schedule__date-btn:hover {
+  border-color: #000000;
+  background-color: #fafafa;
+}
+
+.match-schedule__date-text {
+  font-family: var(--heading);
+  font-size: var(--fs-lg);
+  font-weight: var(--fw-bold);
+  color: #000000;
+  letter-spacing: 0.5px;
+  min-width: 180px;
+  text-align: center;
+}
+
+/* Tier and League Filters */
+.match-schedule__tier-tabs {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  margin-top: 4px;
+  padding-bottom: 4px;
+  flex-wrap: wrap;
+}
+
+.match-schedule__tier-tab {
+  background: none;
+  border: 1px solid #e5e5e5;
+  border-radius: 20px;
+  padding: 6px 18px;
+  font-family: var(--sans);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-bold);
+  color: #555555;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.match-schedule__tier-tab:hover {
+  color: #000000;
+  border-color: #999999;
+}
+
+.match-schedule__tier-tab--active {
+  background-color: #000000;
+  color: #ffffff !important;
+  border-color: #000000;
+}
+
+.match-schedule__league-chips {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-top: 4px;
+  margin-bottom: 8px;
+}
+
+.match-schedule__league-chip {
+  background-color: #f5f5f7;
+  border: none;
+  border-radius: 14px;
+  padding: 6px 12px;
+  font-family: var(--sans);
+  font-size: var(--fs-xs);
+  color: #666666;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.match-schedule__league-chip:hover {
+  background-color: #eaeaea;
+  color: #000000;
+}
+
+.match-schedule__league-chip--active {
+  background-color: #e2e2e8;
+  color: #000000;
+  font-weight: var(--fw-bold);
+}
+
+/* Grouping and Grid Layout */
+.match-schedule__content-area {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  margin-top: 16px;
+}
+
+.match-schedule__league-group {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.match-schedule__group-title {
+  font-family: var(--heading);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-bold);
+  color: #000000;
+  margin: 0;
+  padding-left: 8px;
+  border-left: 3px solid #000000;
+  height: 14px;
+  line-height: 14px;
+}
+
+.match-schedule__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 440px), 1fr));
+  gap: 10px;
+}
+
+.match-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background-color: #ffffff;
+  border: 1px solid #eaeaea;
+  border-radius: 4px;
+  padding: 12px 16px;
+  height: 64px;
+  box-sizing: border-box;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.match-card:hover {
+  border-color: #bbbbbb;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+}
+
+.match-card__status-col {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 110px;
+}
+
+.match-card__status-badge {
+  font-family: var(--sans);
+  font-size: 10px;
+  font-weight: var(--fw-bold);
+  padding: 2px 6px;
+  border-radius: 2px;
+  text-transform: uppercase;
+}
+
+.match-card__status-badge--ended {
+  background-color: #f5f5f5;
+  color: #777777;
+}
+
+.match-card__status-badge--live {
+  background-color: #e01e3c;
+  color: #ffffff;
+  animation: pulse-live 1.8s infinite ease-in-out;
+}
+
+.match-card__status-badge--upcoming {
+  background-color: #f0f0f5;
+  color: #5555aa;
+}
+
+.match-card__time {
+  font-family: var(--heading);
+  font-size: var(--fs-sm);
+  color: #333333;
+  font-weight: var(--fw-bold);
+}
+
+.match-card__versus-col {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex-grow: 1;
+  min-width: 0;
+}
+
+.match-card__team {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+}
+
+.match-card__team--away {
+  justify-content: flex-end;
+}
+
+.match-card__team--home {
+  justify-content: flex-start;
+}
+
+.match-card__team-name {
+  font-family: var(--sans);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-bold);
+  color: #000000;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.match-card__logo-placeholder {
+  width: 24px;
+  height: 24px;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  background-color: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--heading);
+  font-size: 13px;
+  font-weight: var(--fw-black);
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+
+.match-card__score-board {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  width: 50px;
+  flex-shrink: 0;
+}
+
+.match-card__score {
+  font-family: var(--heading);
+  font-size: var(--fs-md);
+  font-weight: var(--fw-bold);
+  color: #000000;
+  width: 20px;
+  text-align: center;
+}
+
+.match-card__score-divider {
+  font-family: var(--heading);
+  font-size: var(--fs-sm);
+  color: #888888;
+}
+
+.match-card__vs-label {
+  font-family: var(--heading);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-bold);
+  color: #888888;
+}
+
+.match-card__venue-col {
+  flex: 0 0 100px;
+  text-align: right;
+  min-width: 0;
+}
+
+.match-card__venue {
+  font-family: var(--sans);
+  font-size: var(--fs-xs);
+  color: #666666;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.match-schedule__empty {
+  padding: 48px 0;
+  text-align: center;
+  font-family: var(--sans);
+  font-size: var(--fs-sm);
+  color: #888888;
+  border-bottom: 1px dashed #eaeaea;
+}
+
+@keyframes pulse-live {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.65;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+@media (max-width: 768px) {
+  .match-card {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-areas: 
+      "status venue"
+      "versus versus";
+    height: auto;
+    gap: 10px;
+    padding: 12px 14px;
+    align-items: center;
+  }
+  
+  .match-card__status-col {
+    grid-area: status;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: auto;
+    flex: none;
+  }
+  
+  .match-card__venue-col {
+    grid-area: venue;
+    text-align: right;
+    width: auto;
+    flex: none;
+  }
+  
+  .match-card__versus-col {
+    grid-area: versus;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    margin-top: 4px;
+    border-top: 1px dashed #eaeaea;
+    padding-top: 10px;
+  }
+  
+  .match-card__team {
+    flex: 1;
+    min-width: 0;
+  }
+  
+  .match-card__team--away {
+    justify-content: flex-end;
+  }
+  
+  .match-card__team--home {
+    justify-content: flex-start;
+  }
+  
+  .match-card__team-name {
+    font-size: var(--fs-xs);
+  }
+}
+
+@media (max-width: 480px) {
+  .match-schedule__date-controller {
+    gap: 12px;
+    padding: 12px 0;
+  }
+  
+  .match-schedule__date-text {
+    font-size: var(--fs-md);
+    min-width: 140px;
+  }
+
+  .match-schedule__tier-tab {
+    padding: 6px 12px;
+    font-size: 11px;
+  }
+  
+  .match-schedule__league-chip {
+    padding: 4px 10px;
+    font-size: 11px;
+  }
+}
