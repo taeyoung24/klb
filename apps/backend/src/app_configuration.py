@@ -53,9 +53,15 @@ def setup(app: FastAPI):
         return response
     
     # CORS 설정
+    origins = [
+        "http://localhost:5500",
+        "http://krownbaseball.kro.kr",
+        "https://krownbaseball.kro.kr",
+        "http://www.krownbaseball.kro.kr",
+    ]
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"],
+        allow_origins=origins,
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
