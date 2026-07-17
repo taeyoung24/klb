@@ -49,3 +49,6 @@ storybook-static
 
 # Environment variables
 .env
+.env.production
+.env.development
+
