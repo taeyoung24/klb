@@ -6,7 +6,8 @@
 .intro-hero {
   background-color: #0b0c10;
   color: #ffffff;
-  padding: 120px 24px 80px;
+  height: 250vh; /* 스크롤 고정 공간 확보를 위해 높이를 길게 설정 */
+  position: relative;
   text-align: center;
   border-bottom: 1px solid #1a1a1a;
 }
@@ -14,13 +15,20 @@
 .intro-hero__container {
   max-width: 800px;
   margin: 0 auto;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  box-sizing: border-box;
 }
 
 .intro-hero__tag {
   font-family: var(--sans);
   font-size: var(--fs-sm);
   font-weight: var(--fw-bold);
-  color: var(--accent);
   letter-spacing: 2px;
   text-transform: uppercase;
   display: inline-block;
@@ -30,8 +38,9 @@
 .intro-hero__title {
   font-family: var(--heading);
   font-size: var(--fs-5xl);
-  font-weight: var(--fw-black);
+  font-weight: var(--fw-bold);
   margin: 0 0 24px;
+  color: #ffffff;
   line-height: 1.2;
 }
 
@@ -121,4 +130,261 @@
 .intro-section__value-item strong {
   color: var(--text-h);
   font-weight: var(--fw-bold);
+}
+
+/* ==========================================================================
+   Hero Banner
+   ========================================================================== */
+.hero-banner {
+  position: relative;
+  width: 100%;
+  height: 60vh;
+  min-height: 400px;
+  margin-top: 69px;
+  /* header height buffer: padding(32) + logo(36) + border(1) */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  overflow: hidden;
+  background-color: #000000;
+  /* 비디오 투명화 시 보여질 완벽한 블랙 백그라운드 */
+  /* CSS 레벨 배경 폴백 */
+  background-image: linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.4)),
+    url('../assets/main_banner.jpeg');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+.hero-banner__video {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: 1;
+  transition: opacity 0.25s linear;
+  /* React State 업데이트 사이의 미세한 끊김 보정 */
+}
+
+.hero-banner__fallback-img {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: 1;
+}
+
+.hero-banner__overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.4);
+  z-index: 2;
+}
+
+.hero-banner__content {
+  position: relative;
+  z-index: 3;
+}
+
+.hero-banner__quote {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  padding: 24px 0;
+}
+
+.hero-banner__slogan {
+  font-family: var(--heading);
+  font-size: var(--fs-7xl);
+  font-weight: var(--fw-black);
+  color: #ffffff;
+  text-transform: uppercase;
+  letter-spacing: 3px;
+  line-height: 1.1;
+  margin: 0;
+  text-shadow: 0 4px 15px rgba(0, 0, 0, 0.6);
+}
+
+.hero-banner__subtext {
+  font-family: var(--sans);
+  font-size: var(--fs-xl);
+  font-weight: var(--fw-light);
+  color: rgba(255, 255, 255, 0.9);
+  margin: 0;
+  line-height: 1.6;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
+}
+
+@media (max-width: 1024px) {
+  .hero-banner {
+    margin-top: 53px;
+    /* header height buffer: padding(24) + logo(28) + border(1) */
+    height: 50vh;
+  }
+
+  .hero-banner__quote {
+    padding: 16px 0;
+    gap: 16px;
+  }
+
+  .hero-banner__quote::before,
+  .hero-banner__quote::after {
+    width: 32px;
+  }
+
+  .hero-banner__slogan {
+    font-size: var(--fs-5xl);
+    letter-spacing: 1px;
+  }
+
+  .hero-banner__subtext {
+    font-size: var(--fs-base);
+  }
+}
+
+@media (max-width: 768px) {
+  .hero-banner {
+    margin-top: 86px;
+  }
+}
+
+/* ==========================================================================
+   ABS Strike Zone
+   ========================================================================== */
+.strike-zone {
+  margin-top: 48px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-family: var(--sans);
+}
+
+.strike-zone__connector {
+  width: 1px;
+  height: 340px;
+  /* 길게 이어진 세로 이음선 */
+  background: linear-gradient(to bottom,
+      rgba(255, 255, 255, 0.4) 0%,
+      rgba(255, 255, 255, 0.1) 80%,
+      rgba(255, 255, 255, 0) 100%);
+  margin: 16px auto 32px;
+}
+
+.strike-zone__display {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.strike-zone__board {
+  position: relative;
+  width: 320px;
+  height: 380px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  overflow: visible; /* 야구공이 팽창하여 돌파할 때 잘림 방지 */
+  box-shadow: inset 0 0 30px rgba(0, 0, 0, 0.8), 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+
+.strike-zone__grid {
+  position: absolute;
+  top: 15%;
+  left: 15%;
+  width: 70%;
+  height: 65%;
+  border: 2px solid rgba(255, 255, 255, 0.4);
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(3, 1fr);
+  background: rgba(255, 255, 255, 0.03);
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+  z-index: 2; /* 야구공(z-index: 1)보다 위에 위치하여 뒤에서 날아오는 공간감 연출 */
+}
+
+.strike-zone__cell {
+  border: 1px dashed rgba(255, 255, 255, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--fs-xs);
+  color: rgba(255, 255, 255, 0.2);
+  font-weight: var(--fw-bold);
+  transition: all 0.2s ease;
+}
+
+.strike-zone__cell:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.strike-zone__plate {
+  position: absolute;
+  bottom: 4%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 220px;
+  height: 35px;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  clip-path: polygon(50% 100%, 90% 40%, 90% 0, 10% 0, 10% 40%);
+  opacity: 0.8;
+  pointer-events: none;
+}
+
+/* 스크롤 연동 야구공 */
+.strike-zone__ball-scroll {
+  position: absolute;
+  width: 48px; /* 기본 크기 설정 */
+  height: 48px;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  z-index: 3; /* 격자(z-index: 2)의 앞쪽 레이어로 변경하여 화면을 뚫고 튀어나오는 공간감 연출 */
+  transition: transform 0.05s linear; /* 프레임 갱신 보정 */
+}
+
+.strike-zone__ball-scroll-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+/* 100마일 스트라이크 판정 표시 마커 */
+.strike-zone__marker {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  z-index: 4; /* 공(z-index: 3) 위에 노출 */
+  pointer-events: none;
+  transition: transform 0.05s linear; /* 프레임 갱신 보정 */
+}
+
+.strike-zone__marker-circle {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: #ff3e3e; /* ABS 판정용 네온 레드 */
+  border: 2px solid #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 16px rgba(255, 62, 62, 0.8), 0 0 4px rgba(255, 255, 255, 0.6);
+}
+
+.strike-zone__marker-text {
+  font-size: 11px;
+  font-weight: var(--fw-bold);
+  color: #ffffff;
+  font-family: var(--heading);
+  letter-spacing: -0.5px;
+  line-height: 1;
 }

@@ -66,61 +66,6 @@
   color: #ffffff;
 }
 
-.hero-banner {
-  width: 100%;
-  height: 60vh;
-  min-height: 400px;
-  margin-top: 69px; /* header height buffer: padding(32) + logo(36) + border(1) */
-  background-image: linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.4)),
-    url('./assets/main_banner.jpeg');
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-}
-
-.hero-banner__quote {
-  display: inline-flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 20px;
-  padding: 24px 0;
-}
-
-.hero-banner__quote::before,
-.hero-banner__quote::after {
-  content: '';
-  display: block;
-  width: 48px;
-  height: 1px;
-  background-color: rgba(255, 255, 255, 0.35);
-}
-
-.hero-banner__slogan {
-  font-family: var(--heading);
-  font-size: var(--fs-7xl);
-  font-weight: var(--fw-black);
-  color: #ffffff;
-  text-transform: uppercase;
-  letter-spacing: 3px;
-  line-height: 1.1;
-  margin: 0;
-  text-shadow: 0 4px 15px rgba(0, 0, 0, 0.6);
-}
-
-.hero-banner__subtext {
-  font-family: var(--sans);
-  font-size: var(--fs-xl);
-  font-weight: var(--fw-light);
-  color: rgba(255, 255, 255, 0.9);
-  margin: 0;
-  line-height: 1.6;
-  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
-}
-
 .section {
   width: 100%;
   padding: 80px 0;
@@ -203,30 +148,6 @@
     font-size: var(--fs-sm);
   }
 
-  .hero-banner {
-    margin-top: 53px; /* header height buffer: padding(24) + logo(28) + border(1) */
-    height: 50vh;
-  }
-
-  .hero-banner__quote {
-    padding: 16px 0;
-    gap: 16px;
-  }
-
-  .hero-banner__quote::before,
-  .hero-banner__quote::after {
-    width: 32px;
-  }
-
-  .hero-banner__slogan {
-    font-size: var(--fs-5xl);
-    letter-spacing: 1px;
-  }
-
-  .hero-banner__subtext {
-    font-size: var(--fs-base);
-  }
-
   .section {
     padding: 60px 0;
   }
@@ -259,9 +180,6 @@
     flex-wrap: wrap;
   }
 
-  .hero-banner {
-    margin-top: 86px;
-  }
 }
 
 .header__nav-link--active {
