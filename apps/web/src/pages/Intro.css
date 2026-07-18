@@ -6,7 +6,8 @@
 .intro-hero {
   background-color: #0b0c10;
   color: #ffffff;
-  height: 250vh; /* 스크롤 고정 공간 확보를 위해 높이를 길게 설정 */
+  height: 250vh;
+  /* 스크롤 고정 공간 확보를 위해 높이를 길게 설정 */
   position: relative;
   text-align: center;
   border-bottom: 1px solid #1a1a1a;
@@ -33,6 +34,16 @@
   text-transform: uppercase;
   display: inline-block;
   margin-bottom: 16px;
+  /* 페이드인 진입 연출 기본값 */
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.intro-hero__tag--visible {
+  opacity: 1;
+  transform: translateY(0);
 }
 
 .intro-hero__title {
@@ -42,6 +53,17 @@
   margin: 0 0 24px;
   color: #ffffff;
   line-height: 1.2;
+  /* 페이드인 진입 연출 기본값 및 Staggered delay (0.15초) */
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+  transition-delay: 0.15s;
+}
+
+.intro-hero__title--visible {
+  opacity: 1;
+  transform: translateY(0);
 }
 
 .intro-hero__desc {
@@ -51,85 +73,95 @@
   color: rgba(255, 255, 255, 0.7);
   line-height: 1.7;
   margin: 0;
+  /* 페이드인 진입 연출 기본값 및 Staggered delay (0.3초) */
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+  transition-delay: 0.3s;
 }
 
-.intro-section {
+.intro-hero__desc--visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.intro-legacy {
   width: 100%;
-  padding: 80px 24px;
+  padding: 100px 24px;
   box-sizing: border-box;
+  background-color: #0b0c10;
+  /* 블랙 테마 */
+  color: #ffffff;
+  text-align: center;
+  border-bottom: 1px solid #1a1a1a;
 }
 
-.intro-section--light {
-  background-color: var(--bg);
-}
-
-.intro-section__container {
-  max-width: 1126px;
+.intro-legacy__container {
+  max-width: 1000px;
   margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
-.intro-section__grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 48px;
-}
-
-@media (max-width: 768px) {
-  .intro-section__grid {
-    grid-template-columns: 1fr;
-    gap: 32px;
-  }
-}
-
-.intro-section__content {
-  text-align: left;
-}
-
-.intro-section__title {
-  font-family: var(--heading);
-  font-size: var(--fs-2xl);
+.intro-legacy__tag {
+  font-family: var(--sans);
+  font-size: var(--fs-sm);
   font-weight: var(--fw-bold);
-  color: var(--text-h);
-  margin: 0 0 20px;
-  position: relative;
-  padding-bottom: 12px;
-}
-
-.intro-section__title::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  width: 32px;
-  height: 2px;
-  background-color: var(--accent);
-}
-
-.intro-section__paragraph {
-  font-family: var(--sans);
-  font-size: var(--fs-base);
-  line-height: 1.8;
-  color: var(--text);
-  margin: 0;
-}
-
-.intro-section__values {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-}
-
-.intro-section__value-item {
-  font-family: var(--sans);
-  font-size: var(--fs-base);
-  line-height: 1.8;
-  color: var(--text);
+  color: var(--accent);
+  letter-spacing: 2px;
+  color: #ffffff;
+  text-transform: uppercase;
+  display: inline-block;
   margin-bottom: 16px;
 }
 
-.intro-section__value-item strong {
-  color: var(--text-h);
+.intro-legacy__title {
+  font-family: var(--heading);
+  font-size: var(--fs-5xl);
   font-weight: var(--fw-bold);
+  margin: 0 0 24px;
+  color: #ffffff;
+  line-height: 1.2;
+}
+
+.intro-legacy__desc {
+  font-family: var(--sans);
+  font-size: var(--fs-base);
+  font-weight: var(--fw-regular);
+  color: rgba(255, 255, 255, 0.7);
+  line-height: 1.7;
+  margin: 0;
+  max-width: 600px;
+}
+
+.intro-legacy__map-placeholder {
+  width: 100%;
+  max-width: 800px;
+  height: 450px;
+  margin-top: 48px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px dashed rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: inset 0 0 30px rgba(0, 0, 0, 0.5);
+  transition: all 0.3s ease;
+}
+
+.intro-legacy__map-placeholder:hover {
+  background: rgba(255, 255, 255, 0.03);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.intro-legacy__map-placeholder-text {
+  font-family: var(--sans);
+  color: rgba(255, 255, 255, 0.3);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-bold);
+  letter-spacing: 1px;
 }
 
 /* ==========================================================================
@@ -293,7 +325,8 @@
   background: rgba(255, 255, 255, 0.02);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 8px;
-  overflow: visible; /* 야구공이 팽창하여 돌파할 때 잘림 방지 */
+  overflow: visible;
+  /* 야구공이 팽창하여 돌파할 때 잘림 방지 */
   box-shadow: inset 0 0 30px rgba(0, 0, 0, 0.8), 0 10px 30px rgba(0, 0, 0, 0.5);
 }
 
@@ -309,7 +342,8 @@
   grid-template-rows: repeat(3, 1fr);
   background: rgba(255, 255, 255, 0.03);
   box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
-  z-index: 2; /* 야구공(z-index: 1)보다 위에 위치하여 뒤에서 날아오는 공간감 연출 */
+  z-index: 2;
+  /* 야구공(z-index: 1)보다 위에 위치하여 뒤에서 날아오는 공간감 연출 */
 }
 
 .strike-zone__cell {
@@ -345,12 +379,15 @@
 /* 스크롤 연동 야구공 */
 .strike-zone__ball-scroll {
   position: absolute;
-  width: 48px; /* 기본 크기 설정 */
+  width: 48px;
+  /* 기본 크기 설정 */
   height: 48px;
   transform: translate(-50%, -50%);
   pointer-events: none;
-  z-index: 3; /* 격자(z-index: 2)의 앞쪽 레이어로 변경하여 화면을 뚫고 튀어나오는 공간감 연출 */
-  transition: transform 0.05s linear; /* 프레임 갱신 보정 */
+  z-index: 3;
+  /* 격자(z-index: 2)의 앞쪽 레이어로 변경하여 화면을 뚫고 튀어나오는 공간감 연출 */
+  transition: transform 0.05s linear;
+  /* 프레임 갱신 보정 */
 }
 
 .strike-zone__ball-scroll-img {
@@ -363,16 +400,19 @@
 .strike-zone__marker {
   position: absolute;
   transform: translate(-50%, -50%);
-  z-index: 4; /* 공(z-index: 3) 위에 노출 */
+  z-index: 4;
+  /* 공(z-index: 3) 위에 노출 */
   pointer-events: none;
-  transition: transform 0.05s linear; /* 프레임 갱신 보정 */
+  transition: transform 0.05s linear;
+  /* 프레임 갱신 보정 */
 }
 
 .strike-zone__marker-circle {
   width: 38px;
   height: 38px;
   border-radius: 50%;
-  background: #ff3e3e; /* ABS 판정용 네온 레드 */
+  background: #ff3e3e;
+  /* ABS 판정용 네온 레드 */
   border: 2px solid #ffffff;
   display: flex;
   align-items: center;
@@ -387,4 +427,586 @@
   font-family: var(--heading);
   letter-spacing: -0.5px;
   line-height: 1;
+}
+
+/* ==========================================================================
+   Intro Journey (B/W Infographic)
+   ========================================================================== */
+.intro-journey {
+  width: 100%;
+  padding: 100px 24px;
+  box-sizing: border-box;
+  background-color: #000000; /* 블랙 테마 극대화 */
+  color: #ffffff;
+  text-align: center;
+  border-bottom: 1px solid #1a1a1a;
+  overflow-x: hidden;
+}
+
+.intro-journey__container {
+  max-width: 1000px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.intro-journey__tag {
+  font-family: var(--sans);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-bold);
+  color: #ffffff; /* b/w 컨셉에 맞춤 */
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  display: inline-block;
+  margin-bottom: 16px;
+  opacity: 0.6;
+}
+
+.intro-journey__title {
+  font-family: var(--heading);
+  font-size: var(--fs-5xl);
+  font-weight: var(--fw-bold);
+  margin: 0 0 24px;
+  color: #ffffff;
+  line-height: 1.2;
+}
+
+.intro-journey__desc {
+  font-family: var(--sans);
+  font-size: var(--fs-base);
+  font-weight: var(--fw-regular);
+  color: rgba(255, 255, 255, 0.7);
+  line-height: 1.7;
+  margin: 0 0 64px;
+  max-width: 600px;
+}
+
+/* 타임라인 플로우 */
+.journey-flow {
+  position: relative;
+  width: 100%;
+  max-width: 800px;
+  display: flex;
+  flex-direction: column;
+  gap: 48px;
+}
+
+.journey-flow__line {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 24px; /* 모바일 대응 및 좌측 정렬 고정 */
+  width: 1px;
+  background: linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0.2) 0%,
+    rgba(255, 255, 255, 0.05) 100%
+  );
+}
+
+.journey-step {
+  position: relative;
+  display: flex;
+  gap: 32px;
+  text-align: left;
+  padding-left: 12px;
+}
+
+.journey-step__badge {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #ffffff;
+  color: #000000;
+  font-family: var(--heading);
+  font-size: 10px;
+  font-weight: var(--fw-bold);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+  box-shadow: 0 0 0 6px #000000; /* 뒤의 라인을 가리는 마스킹 */
+  margin-top: 4px;
+}
+
+.journey-step__badge--final {
+  background: #ffffff;
+  color: #000000;
+  border: 1px solid #ffffff;
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.4), 0 0 0 6px #000000;
+}
+
+.journey-step__content {
+  flex-grow: 1;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 8px;
+  padding: 24px;
+  transition: all 0.3s ease;
+}
+
+.journey-step__content:hover {
+  background: rgba(255, 255, 255, 0.03);
+  border-color: rgba(255, 255, 255, 0.12);
+  transform: translateX(4px);
+}
+
+.journey-step__title {
+  font-family: var(--heading);
+  font-size: var(--fs-lg);
+  font-weight: var(--fw-bold);
+  color: #ffffff;
+  margin: 0 0 12px;
+}
+
+.journey-step__description {
+  font-family: var(--sans);
+  font-size: var(--fs-sm);
+  line-height: 1.6;
+  color: rgba(255, 255, 255, 0.6);
+  margin: 0 0 20px;
+}
+
+/* 비주얼 그래픽 레이아웃 */
+.journey-step__visual {
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  border-radius: 6px;
+  padding: 16px;
+}
+
+/* Step 1: 팀 풀 */
+.journey-step__team-pool {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.journey-step__league-tag {
+  font-family: var(--heading);
+  font-size: 11px;
+  font-weight: var(--fw-bold);
+  padding: 4px 8px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.journey-step__total-badge {
+  font-family: var(--sans);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-bold);
+  color: #ffffff;
+  opacity: 0.8;
+  display: inline-block;
+  border-left: 2px solid #ffffff;
+  padding-left: 8px;
+}
+
+/* Step 2: 정예 리그 */
+.journey-step__rule-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 12px;
+}
+
+.journey-step__rule-info span {
+  font-family: var(--sans);
+  font-size: var(--fs-xs);
+  color: rgba(255, 255, 255, 0.7);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.journey-step__rule-info span::before {
+  content: '•';
+  color: #ffffff;
+}
+
+.journey-step__survival-box {
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  padding-top: 12px;
+}
+
+.journey-step__survival-indicator {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.journey-step__survival-teams {
+  font-family: var(--heading);
+  font-size: 11px;
+  font-weight: var(--fw-black);
+  letter-spacing: 1px;
+  color: #ffffff;
+}
+
+.journey-step__survival-rate {
+  font-family: var(--sans);
+  font-size: var(--fs-xs);
+  color: rgba(255, 255, 255, 0.4);
+}
+
+/* Step 3: 토너먼트 */
+.journey-step__tournament-flow {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.journey-step__round {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.journey-step__round-name {
+  font-family: var(--heading);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-bold);
+  color: #ffffff;
+}
+
+.journey-step__round-detail {
+  font-family: var(--sans);
+  font-size: var(--fs-xs);
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.journey-step__arrow {
+  font-size: var(--fs-xs);
+  color: rgba(255, 255, 255, 0.3);
+  margin-left: 8px;
+}
+
+/* Step 4: 파이널 */
+.journey-step__final-box {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.journey-step__final-format {
+  font-family: var(--heading);
+  font-size: var(--fs-md);
+  font-weight: var(--fw-bold);
+  color: #ffffff;
+}
+
+.journey-step__final-detail {
+  font-family: var(--sans);
+  font-size: var(--fs-xs);
+  color: rgba(255, 255, 255, 0.5);
+  margin-bottom: 12px;
+}
+
+.journey-step__crown-graphic {
+  font-family: var(--heading);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-black);
+  color: #000000;
+  background: #ffffff;
+  padding: 8px 16px;
+  border-radius: 4px;
+  display: inline-block;
+  align-self: flex-start;
+  letter-spacing: 1px;
+  box-shadow: 0 0 15px rgba(255, 255, 255, 0.15);
+}
+
+@media (max-width: 768px) {
+  .journey-step {
+    gap: 16px;
+  }
+}
+
+/* ==========================================================================
+   Intro Journey Infographic Additions
+   ========================================================================== */
+/* Step 1 리그 그리드 */
+.journey-step__league-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+}
+
+.journey-step__league-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.journey-step__league-label {
+  width: 120px;
+  font-family: var(--heading);
+  font-size: 11px;
+  font-weight: var(--fw-black);
+  letter-spacing: 0.5px;
+  color: rgba(255, 255, 255, 0.4);
+  text-align: left;
+}
+
+.journey-step__team-blocks {
+  display: flex;
+  gap: 6px;
+}
+
+.journey-step__team-block {
+  width: 32px;
+  height: 24px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+  font-family: var(--sans);
+  font-size: 9px;
+  font-weight: var(--fw-bold);
+  color: rgba(255, 255, 255, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Step 2 생존율 */
+.journey-step__survival-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+}
+
+.journey-step__survival-row {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.journey-step__survival-status {
+  font-family: var(--heading);
+  font-size: 10px;
+  font-weight: var(--fw-bold);
+  letter-spacing: 0.5px;
+  text-align: left;
+}
+
+.journey-step__survival-row--survived .journey-step__survival-status {
+  color: #ffffff;
+}
+
+.journey-step__survival-row--eliminated .journey-step__survival-status {
+  color: rgba(255, 255, 255, 0.2);
+}
+
+.journey-step__survival-blocks {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.journey-step__survival-block {
+  width: 36px;
+  height: 28px;
+  border-radius: 4px;
+  font-family: var(--sans);
+  font-size: 10px;
+  font-weight: var(--fw-bold);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.journey-step__survival-row--survived .journey-step__survival-block {
+  background: #ffffff;
+  color: #000000;
+  border: 1px solid #ffffff;
+  box-shadow: 0 0 8px rgba(255, 255, 255, 0.1);
+}
+
+.journey-step__survival-row--eliminated .journey-step__survival-block {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px dashed rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.2);
+  text-decoration: line-through;
+}
+
+/* Step 3 브래킷 */
+.journey-step__bracket {
+  display: flex;
+  align-items: flex-start;
+  gap: 36px; /* 컬럼 간 ㄷ자 연결선이 차지할 여백 공간 */
+  width: 100%;
+  overflow-x: auto;
+  padding: 16px 0;
+}
+
+.journey-step__bracket-column {
+  display: flex;
+  flex-direction: column;
+  gap: 16px; /* 그룹 사이의 Y축 마진 */
+  flex-shrink: 0;
+  width: 130px;
+  justify-content: flex-start;
+}
+
+.journey-step__bracket-title {
+  font-family: var(--heading);
+  font-size: 10px;
+  font-weight: var(--fw-bold);
+  color: rgba(255, 255, 255, 0.4);
+  text-transform: uppercase;
+  margin-bottom: 8px;
+  text-align: left;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding-bottom: 4px;
+}
+
+/* 매치업 그룹 공통 규격 (높이를 64px로 통일하여 완벽한 Y축 싱크 구현) */
+.journey-step__bracket-group {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  height: 64px;
+  justify-content: center; /* 단일 카드가 들어올 때도 수직 중앙 정렬 보장 */
+}
+
+/* 8강 매치 두 개를 우측 4강 하나로 수렴시키는 ㄷ자 라인 */
+.journey-step__bracket-group::after {
+  content: '';
+  position: absolute;
+  right: -18px;
+  top: 25%;
+  bottom: 25%;
+  width: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-left: none;
+  pointer-events: none;
+}
+
+/* 합류점 중앙(50%)에서 우측 진출 블록 입구까지 가로로 도킹되는 선 */
+.journey-step__bracket-group::before {
+  content: '';
+  position: absolute;
+  right: -36px;
+  top: 50%;
+  width: 18px;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.15);
+  pointer-events: none;
+}
+
+/* 4강 컬럼 전용 컨테이너 (8강 전체 높이인 144px 동기화 및 SF1/SF2의 정밀한 Y축 분배) */
+.journey-step__bracket-semi-group {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: 144px; /* 64px * 2 + 16px (gap) = 144px */
+  box-sizing: border-box;
+  padding: 8px 0; /* SF 1 카드와 SF 2 카드의 정중앙을 각각 Y: 32px 및 Y: 112px 지점에 칼정렬하기 위함 */
+}
+
+/* 4강 2개 매치(SF1, SF2)를 우측 결승 하나로 수렴시키는 큰 ㄷ자 라인 */
+.journey-step__bracket-semi-group::after {
+  content: '';
+  position: absolute;
+  right: -18px;
+  top: 22.2%; /* SF 1 카드 중앙 (32px / 144px) */
+  bottom: 22.2%; /* SF 2 카드 중앙 (112px / 144px) */
+  width: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-left: none;
+  pointer-events: none;
+}
+
+/* 4강 합류점 중앙에서 결승 블록 입구까지 도킹되는 선 */
+.journey-step__bracket-semi-group::before {
+  content: '';
+  position: absolute;
+  right: -36px;
+  top: 50%;
+  width: 18px;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.15);
+  pointer-events: none;
+}
+
+/* 결승 컬럼 전용 컨테이너 (8강/4강의 Y축 전체 높이인 144px 동기화 및 꼬리 라인 없음) */
+.journey-step__bracket-final-group {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 144px; /* 64px * 2 + 16px (gap) = 144px */
+  justify-content: center;
+}
+
+.journey-step__bracket-match {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 4px;
+  padding: 8px 10px;
+  font-family: var(--sans);
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.8);
+  text-align: center;
+  height: 28px;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.journey-step__bracket-match--semi {
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  font-weight: var(--fw-bold);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+/* 개최지 지역 선정 규정 스타일 */
+.journey-step__venue-info {
+  margin: 16px 0 24px;
+  padding: 16px 20px;
+  background: rgba(255, 255, 255, 0.01);
+  border-left: 2px solid rgba(255, 255, 255, 0.15);
+  border-radius: 0 6px 6px 0;
+  text-align: left;
+}
+
+.journey-step__venue-title {
+  display: block;
+  font-family: var(--heading);
+  font-size: 12px;
+  font-weight: var(--fw-bold);
+  color: rgba(255, 255, 255, 0.85);
+  margin-bottom: 10px;
+  letter-spacing: 0.5px;
+}
+
+.journey-step__venue-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.journey-step__venue-list li {
+  font-family: var(--sans);
+  font-size: 11px;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.5);
 }
