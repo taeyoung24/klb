@@ -11,8 +11,13 @@ function App() {
   const [currentHash, setCurrentHash] = useState(window.location.hash || '#home')
   const [matchDate, setMatchDate] = useState<Date>(new Date("2026-07-17"))
 
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [seasonYear, setSeasonYear] = useState<number | null>(null)
   const [isSeasonYearLoaded, setIsSeasonYearLoaded] = useState(false)
+
+  useEffect(() => {
+    setIsMobileMenuOpen(false)
+  }, [currentHash])
 
   useEffect(() => {
     getSystemInfo()
@@ -53,7 +58,16 @@ function App() {
           <img className="header__logo-img" src="/klb-logo-256.svg" alt="KLB Logo" />
           <span className="header__logo-text">KLB</span>
         </a>
-        <nav className="header__nav">
+        {/* 모바일 메뉴바 버튼 */}
+        <button 
+          className={`header__menu-btn ${isMobileMenuOpen ? 'header__menu-btn--open' : ''}`}
+          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          aria-label="Toggle menu"
+        >
+          <span className="header__menu-icon"></span>
+        </button>
+
+        <nav className={`header__nav ${isMobileMenuOpen ? 'header__nav--open' : ''}`}>
           <ul className="header__nav-list">
             <li className="header__nav-item">
               <a className={`header__nav-link ${currentHash === '#intro' ? 'header__nav-link--active' : ''}`} href="#intro">소개</a>

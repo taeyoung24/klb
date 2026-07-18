@@ -283,12 +283,6 @@
   }
 }
 
-@media (max-width: 768px) {
-  .hero-banner {
-    margin-top: 86px;
-  }
-}
-
 /* ==========================================================================
    ABS Strike Zone
    ========================================================================== */
@@ -436,7 +430,8 @@
   width: 100%;
   padding: 100px 24px;
   box-sizing: border-box;
-  background-color: #000000; /* 블랙 테마 극대화 */
+  background-color: #000000;
+  /* 블랙 테마 극대화 */
   color: #ffffff;
   text-align: center;
   border-bottom: 1px solid #1a1a1a;
@@ -455,7 +450,8 @@
   font-family: var(--sans);
   font-size: var(--fs-sm);
   font-weight: var(--fw-bold);
-  color: #ffffff; /* b/w 컨셉에 맞춤 */
+  color: #ffffff;
+  /* b/w 컨셉에 맞춤 */
   letter-spacing: 2px;
   text-transform: uppercase;
   display: inline-block;
@@ -496,13 +492,12 @@
   position: absolute;
   top: 0;
   bottom: 0;
-  left: 24px; /* 모바일 대응 및 좌측 정렬 고정 */
+  left: 24px;
+  /* 모바일 대응 및 좌측 정렬 고정 */
   width: 1px;
-  background: linear-gradient(
-    to bottom,
-    rgba(255, 255, 255, 0.2) 0%,
-    rgba(255, 255, 255, 0.05) 100%
-  );
+  background: linear-gradient(to bottom,
+      rgba(255, 255, 255, 0.2) 0%,
+      rgba(255, 255, 255, 0.05) 100%);
 }
 
 .journey-step {
@@ -527,7 +522,8 @@
   align-items: center;
   justify-content: center;
   z-index: 2;
-  box-shadow: 0 0 0 6px #000000; /* 뒤의 라인을 가리는 마스킹 */
+  box-shadow: 0 0 0 6px #000000;
+  /* 뒤의 라인을 가리는 마스킹 */
   margin-top: 4px;
 }
 
@@ -842,7 +838,8 @@
 .journey-step__bracket {
   display: flex;
   align-items: flex-start;
-  gap: 36px; /* 컬럼 간 ㄷ자 연결선이 차지할 여백 공간 */
+  gap: 36px;
+  /* 컬럼 간 ㄷ자 연결선이 차지할 여백 공간 */
   width: 100%;
   overflow-x: auto;
   padding: 16px 0;
@@ -851,7 +848,8 @@
 .journey-step__bracket-column {
   display: flex;
   flex-direction: column;
-  gap: 16px; /* 그룹 사이의 Y축 마진 */
+  gap: 16px;
+  /* 그룹 사이의 Y축 마진 */
   flex-shrink: 0;
   width: 130px;
   justify-content: flex-start;
@@ -876,7 +874,8 @@
   flex-direction: column;
   gap: 8px;
   height: 64px;
-  justify-content: center; /* 단일 카드가 들어올 때도 수직 중앙 정렬 보장 */
+  justify-content: center;
+  /* 단일 카드가 들어올 때도 수직 중앙 정렬 보장 */
 }
 
 /* 8강 매치 두 개를 우측 4강 하나로 수렴시키는 ㄷ자 라인 */
@@ -910,9 +909,11 @@
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  height: 144px; /* 64px * 2 + 16px (gap) = 144px */
+  height: 144px;
+  /* 64px * 2 + 16px (gap) = 144px */
   box-sizing: border-box;
-  padding: 8px 0; /* SF 1 카드와 SF 2 카드의 정중앙을 각각 Y: 32px 및 Y: 112px 지점에 칼정렬하기 위함 */
+  padding: 8px 0;
+  /* SF 1 카드와 SF 2 카드의 정중앙을 각각 Y: 32px 및 Y: 112px 지점에 칼정렬하기 위함 */
 }
 
 /* 4강 2개 매치(SF1, SF2)를 우측 결승 하나로 수렴시키는 큰 ㄷ자 라인 */
@@ -920,8 +921,10 @@
   content: '';
   position: absolute;
   right: -18px;
-  top: 22.2%; /* SF 1 카드 중앙 (32px / 144px) */
-  bottom: 22.2%; /* SF 2 카드 중앙 (112px / 144px) */
+  top: 22.2%;
+  /* SF 1 카드 중앙 (32px / 144px) */
+  bottom: 22.2%;
+  /* SF 2 카드 중앙 (112px / 144px) */
   width: 18px;
   border: 1px solid rgba(255, 255, 255, 0.15);
   border-left: none;
@@ -945,7 +948,8 @@
   position: relative;
   display: flex;
   flex-direction: column;
-  height: 144px; /* 64px * 2 + 16px (gap) = 144px */
+  height: 144px;
+  /* 64px * 2 + 16px (gap) = 144px */
   justify-content: center;
 }
 
