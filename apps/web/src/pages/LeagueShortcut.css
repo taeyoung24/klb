@@ -1,0 +1,156 @@
+/* ==========================================================================
+   League Shortcut Style (Full Viewport Video Slider)
+   ========================================================================== */
+.league-shortcut {
+  width: 100%;
+  height: 100vh;
+  background-color: #000000;
+  overflow: hidden;
+  overflow-x: hidden; /* 가로 스크롤 원천 차단 */
+  box-sizing: border-box;
+}
+
+.league-shortcut__container {
+  display: flex;
+  width: 100%;
+  height: 100%;
+}
+
+/* League Card (4열 수직 슬라이드 형태) */
+.league-card {
+  flex: 1;
+  position: relative;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 60px 40px;
+  box-sizing: border-box;
+  overflow: hidden;
+  border-right: 1px solid rgba(255, 255, 255, 0.05);
+  transition: all 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+  cursor: pointer; /* 영역 전체를 클릭할 수 있게 포인터형 커서 적용 */
+}
+
+.league-card:last-child {
+  border-right: none;
+}
+
+/* 마우스 호버 시 가로 팽창 효과 */
+.league-card:hover {
+  flex: 1.6;
+  box-shadow: inset 0 0 100px rgba(0, 0, 0, 0.8), 0 0 40px rgba(var(--glow-rgb), 0.2);
+}
+
+/* 각 리그 색상 변수 */
+.league-card--pink { --glow-rgb: 255, 107, 139; }
+.league-card--red { --glow-rgb: 255, 71, 87; }
+.league-card--blue { --glow-rgb: 30, 144, 255; }
+.league-card--white { --glow-rgb: 255, 255, 255; }
+
+/* 배경 깃발 비디오 루프 */
+.league-card__video {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: 1;
+  opacity: 0.25; /* 평상시 어둡게 */
+  transition: opacity 0.7s ease, transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+  pointer-events: none;
+}
+
+/* 마우스 호버 시 비디오 줌인 및 밝아짐 */
+.league-card:hover .league-card__video {
+  opacity: 0.65;
+  transform: scale(1.05);
+}
+
+/* 비디오 가독성 향상 오버레이 */
+.league-card__overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0.2) 0%,
+    rgba(0, 0, 0, 0.85) 100%
+  );
+  z-index: 2;
+  pointer-events: none;
+}
+
+/* 콘텐츠 배치 */
+.league-card__content {
+  position: relative;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  transition: transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.league-card:hover .league-card__content {
+  transform: translateY(-10px);
+}
+
+.league-card__title {
+  font-family: var(--heading);
+  font-size: var(--fs-4xl);
+  font-weight: var(--fw-bold);
+  color: #ffffff;
+  margin: 0 0 4px 0; /* 하단 한글명과의 마진 확보 */
+  letter-spacing: -0.5px;
+  text-shadow: 0 4px 10px rgba(0, 0, 0, 0.6);
+}
+
+.league-card__subtitle {
+  font-family: var(--sans);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-bold);
+  color: rgba(255, 255, 255, 0.45); /* 평상시 차분한 반투명 그레이 */
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.8);
+  transition: all 0.4s ease;
+  display: inline-block;
+}
+
+.league-card:hover .league-card__subtitle {
+  color: var(--glow-color); /* 호버 시 각 리그 고유 네온 컬러로 발색 */
+  transform: translateX(2px); /* 부드럽게 오른쪽으로 슬라이드 */
+}
+
+/* 모바일/태블릿 반응형 대응 */
+@media (max-width: 768px) {
+  .league-shortcut__container {
+    flex-direction: column;
+  }
+
+  .league-card {
+    width: 100%;
+    height: 25%;
+    flex: 1;
+    border-right: none;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    padding: 30px 24px;
+  }
+
+  .league-card:last-child {
+    border-bottom: none;
+  }
+
+  .league-card:hover {
+    flex: 1.3;
+  }
+
+  .league-card__title {
+    font-size: var(--fs-2xl);
+  }
+
+  .league-card__subtitle {
+    font-size: var(--fs-xs);
+  }
+}

@@ -43,6 +43,7 @@
 .header__nav-list {
   display: flex;
   justify-content: flex-end;
+  align-items: center; /* 메뉴 항목과 LIVE 뱃지의 완벽한 수직 중앙 정렬 보장 */
   gap: 32px;
   list-style: none;
   margin: 0;
@@ -50,16 +51,20 @@
 }
 
 .header__nav-item {
-  display: inline-block;
+  display: flex;
+  align-items: center;
 }
 
 .header__nav-link {
+  display: inline-flex;
+  align-items: center;
   color: rgba(255, 255, 255, 0.7);
   text-decoration: none;
   font-size: var(--fs-md);
   font-weight: var(--fw-medium);
   font-family: var(--sans);
   transition: color 0.2s ease;
+  height: 32px; /* 수직 정렬 밸런싱을 위한 높이 확보 */
 }
 
 .header__nav-link:hover {
@@ -184,6 +189,41 @@
 
 .header__nav-link--active {
   color: #ffffff !important;
+}
+
+.header__nav-link--live {
+  display: inline-flex;
+  align-items: center;
+  color: #000000 !important;
+  background: linear-gradient(135deg, #ffffff 0%, #e2e4e9 100%);
+  padding: 7px 14px; /* 높이(height)감을 키우기 위해 상하 패딩을 도톰하게 확장 */
+  border-radius: 4px;
+  font-weight: var(--fw-bold) !important;
+  font-size: var(--fs-xs) !important; /* 콤팩트한 뱃지 스케일 */
+  line-height: 1 !important;
+  letter-spacing: 0.5px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+  transition: none !important; /* 호버 시 애니메이션 효과 배제 */
+  height: auto !important; /* 상위 링크의 height 강제 상속 해제 */
+}
+
+/* 호버 시 스타일 고정 (강조용으로 호버 반응 제거) */
+.header__nav-link--live:hover {
+  color: #000000 !important;
+  background: linear-gradient(135deg, #ffffff 0%, #e2e4e9 100%) !important;
+  opacity: 1 !important;
+}
+
+/* 고정형 빨간색 녹화용 동그라미 아이콘 */
+.header__nav-link--live::before {
+  content: '';
+  display: inline-block;
+  width: 6px; /* 서체 크기에 맞게 6px로 축소 */
+  height: 6px;
+  border-radius: 50%;
+  background-color: #ff4757; /* 빨간색 녹화 닷 */
+  margin-right: 6px;
+  flex-shrink: 0;
 }
 
 .empty-page {

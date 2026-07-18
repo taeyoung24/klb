@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import './App.css'
 import Intro from './pages/Intro'
+import LeagueShortcut from './pages/LeagueShortcut'
 import AppSeasonStandingSection from './pages/AppSeasonStandingSection'
 import AppNewsSection from './pages/AppNewsSection'
 import AppScheduleSection from './pages/AppScheduleSection'
@@ -61,13 +62,16 @@ function App() {
               <a className={`header__nav-link ${currentHash === '#schedule' ? 'header__nav-link--active' : ''}`} href="#schedule">통합 일정</a>
             </li>
             <li className="header__nav-item">
-              <a className={`header__nav-link ${currentHash === '#teams' ? 'header__nav-link--active' : ''}`} href="#teams">리그 구성</a>
+              <a className={`header__nav-link ${currentHash === '#league-shortcut' ? 'header__nav-link--active' : ''}`} href="#league-shortcut">리그 바로가기</a>
             </li>
             <li className="header__nav-item">
-              <a className={`header__nav-link ${currentHash === '#live' ? 'header__nav-link--active' : ''}`} href="#live">LIVE</a>
+              <a className={`header__nav-link header__nav-link--live ${currentHash === '#live' ? 'header__nav-link--active' : ''}`} href="#live">LIVE</a>
             </li>
             <li className="header__nav-item">
               <a className={`header__nav-link ${currentHash === '#community' ? 'header__nav-link--active' : ''}`} href="#community">커뮤니티</a>
+            </li>
+            <li className="header__nav-item">
+              <a className={`header__nav-link ${currentHash === '#archive' ? 'header__nav-link--active' : ''}`} href="#archive">자료실</a>
             </li>
           </ul>
         </nav>
@@ -75,7 +79,9 @@ function App() {
 
       {currentHash === '#intro' ? (
         <Intro />
-      ) : ['#schedule', '#teams', '#live', '#community'].includes(currentHash) ? (
+      ) : currentHash === '#league-shortcut' ? (
+        <LeagueShortcut />
+      ) : ['#schedule', '#live', '#community', '#archive'].includes(currentHash) ? (
         <div className="empty-page" />
       ) : (
         <>
@@ -108,12 +114,13 @@ function App() {
               <h4 className="footer__link-title">League</h4>
               <a href="#intro" className="footer__link">소개</a>
               <a href="#schedule" className="footer__link">일정 진행</a>
-              <a href="#teams" className="footer__link">리그 및 구단</a>
+              <a href="#league-shortcut" className="footer__link">리그 및 구단</a>
             </div>
             <div className="footer__link-group">
               <h4 className="footer__link-title">Support</h4>
               <a href="#live" className="footer__link">LIVE</a>
               <a href="#community" className="footer__link">커뮤니티</a>
+              <a href="#archive" className="footer__link">자료실</a>
               <a href="#terms" className="footer__link">이용약관</a>
             </div>
           </div>
