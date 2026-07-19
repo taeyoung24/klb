@@ -239,7 +239,7 @@ export default function AppSeasonStandingSection({
   const getEliteStandings = (): EliteStandingRow[] => {
     const clubIds = Object.keys(seedMap).map(Number);
     if (clubIds.length === 0) return [];
-    
+
     const stats: Record<number, Omit<EliteStandingRow, 'rank' | 'games_back'>> = {};
     clubIds.forEach(cid => {
       stats[cid] = {
@@ -286,17 +286,17 @@ export default function AppSeasonStandingSection({
       const clubMatches = eliteMatches
         .filter(m => m.status === 'COMPLETED' && (m.home_club_id === cid || m.away_club_id === cid))
         .sort((a, b) => b.sim_day - a.sim_day);
-      
+
       let streak = 0;
       if (clubMatches.length > 0) {
         const firstMatch = clubMatches[0];
         const f_h = firstMatch.home_club_id;
         const f_h_score = firstMatch.home_score ?? 0;
         const f_a_score = firstMatch.away_score ?? 0;
-        
+
         let isFirstWin = false;
         let isFirstLoss = false;
-        
+
         if (f_h_score > f_a_score) {
           if (f_h === cid) isFirstWin = true;
           else isFirstLoss = true;
@@ -304,7 +304,7 @@ export default function AppSeasonStandingSection({
           if (f_h !== cid) isFirstWin = true;
           else isFirstLoss = true;
         }
-        
+
         if (isFirstWin) {
           streak = 1;
           for (let k = 1; k < clubMatches.length; k++) {
@@ -340,8 +340,8 @@ export default function AppSeasonStandingSection({
 
     if (list.length === 0) return [];
     const leader = list[0];
-    
-    return list.map((item, idx) => {
+
+    return list.map((item) => {
       const rank = list.findIndex(x => x.win_rate === item.win_rate && x.wins === item.wins) + 1;
       const games_back = (((leader.wins - item.wins) + (item.losses - leader.losses)) / 2) * 10;
       return { ...item, rank, games_back };
@@ -458,7 +458,7 @@ export default function AppSeasonStandingSection({
       if (!c1 || !c2) return { upperScores: [], lowerScores: [] };
       const upperScores: number[] = [];
       const lowerScores: number[] = [];
-      
+
       if (isBo3Advantage) {
         upperScores.push(1);
         lowerScores.push(0);
