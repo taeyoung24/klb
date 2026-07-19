@@ -1,4 +1,5 @@
-from sqlmodel import Session, select
+from sqlmodel import Session, select, asc
+from typing import Optional
 from src.models import League, Club, Match, DailyClubStanding
 from src.enums import MatchStatus
 
@@ -30,6 +31,9 @@ def update_daily_standings(session: Session, sim_day: int):
         for match in matches:
             # 홈/어웨이 중 해당 리그 소속 팀이 있는 경우 결과 처리
             if match.home_club_id in match_results:
+                if match.home_score is None or match.away_score is None:
+                    raise ValueError(f"Completed match {match.id} has missing scores (None).")
+
                 if match.home_score > match.away_score:
                     match_results[match.home_club_id] = "W"
                     match_results[match.away_club_id] = "L"
@@ -139,3 +143,43 @@ def update_daily_standings(session: Session, sim_day: int):
                 era=0.0
             )
             session.add(standing_record)
+
+def get_playoff_host_league(session: Session, max_regular_day: int = 168) -> Optional[League]:
+    """
+    정규시즌 최종 순위를 토대로 각 리그의 1~4위 진출팀의 승률 합산을 비교하여
+    크라운 정예리그의 집중 개최 리그(Host Region)를 동적으로 선정해 반환합니다.
+    """
+    from typing import Optional
+    
+    # max_regular_day 에 해당하는 standings 데이터가 존재하는지 확인 (정규시즌 종료 여부)
+    any_standing = session.exec(
+        select(DailyClubStanding)
+        .where(DailyClubStanding.sim_day == max_regular_day)
+    ).first()
+    
+    if not any_standing:
+        return None
+        
+    leagues = session.exec(select(League)).all()
+    league_win_sums = {}
+    
+    for league in leagues:
+        # 정규리그 최종 순위 기준 1~4위 구단 조회
+        standings = session.exec(
+            select(DailyClubStanding)
+            .where(DailyClubStanding.league_id == league.id)
+            .where(DailyClubStanding.sim_day == max_regular_day)
+            .order_by(asc(DailyClubStanding.rank))
+        ).all()
+        
+        top_4_standings = standings[:4]
+        if len(top_4_standings) < 4:
+            continue
+        win_sum = sum(std.win_rate for std in top_4_standings)
+        league_win_sums[league.id] = win_sum
+        
+    if not league_win_sums:
+        return None
+        
+    host_league_id = max(league_win_sums, key=lambda k: league_win_sums[k])
+    return session.get(League, host_league_id)

@@ -4,6 +4,9 @@ export interface SystemInfo {
   season_year: number;
   current_sim_day: number;
   current_date: string;
+  host_league_id?: number | null;
+  host_league_name?: string | null;
+  host_league_name_ko?: string | null;
 }
 
 export const getSeasonYear = async (): Promise<number> => {
