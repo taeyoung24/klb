@@ -92,54 +92,89 @@ def generate_regular_schedule(clubs: list[Club], year: int, base_sim_day: int) -
                 
     return matches
 
-def generate_krown_elite_schedule(clubs: list[Club]) -> list[Match]:
+def generate_krown_elite_schedule(clubs: list[Club], base_sim_day: int) -> list[Match]:
     """
-    크라운 엘리트 경기 일정 생성하는 함수. 참가 구단인 clubs를 입력받아(16개 구단 기준) Match list를 반환한다.
-    모든 팀이 서로 상대 팀과 홈 1경기, 원정 1경기를 완벽히 배분하여 더블 라운드 로빈으로 총 30라운드(30 sim_day) 일정을 빌드한다.
+    크라운 정예리그 경기 일정 생성하는 함수. 참가 구단인 clubs를 입력받아(16개 구단 기준) Match list를 반환한다.
+    모든 팀이 서로 상대 팀과 홈 1경기, 원정 1경기를 배분하여 더블 라운드 로빈으로 총 15개 2연전 시리즈(총 30경기일) 일정을 빌드한다.
+    경기 일정은 수/목, 토/일 요일에만 매핑되도록 생성한다.
     """
     n = len(clubs)
-    if n % 2 != 0:
-        raise ValueError("크라운 엘리트 경기 일정 생성에는 짝수 개의 구단이 필요합니다.")
-        
-    matches = []
-    sim_day = 1
-    
-    # 더블 라운드 로빈이므로 2번 반복
-    for iteration in range(2):
-        for round_num in range(n - 1):
-            for i in range(n // 2):
+    if n != 16:
+        raise ValueError("크라운 정예리그 일정 생성에는 정확히 16개의 구단이 필요합니다.")
+
+    # 1. 15개 라운드의 싱글 라운드 로빈 대진 매칭 생성
+    def get_round_robin_matchings():
+        round_matchings = []
+        for round_num in range(n - 1): # 15라운드
+            round_matches = []
+            for i in range(n // 2): # 8경기
                 home_idx = (round_num + i) % (n - 1)
                 away_idx = (round_num + n - 1 - i) % (n - 1)
                 if i == 0:
                     away_idx = n - 1
-                
-                # 첫 번째 세트와 두 번째 세트의 홈/원정을 반대로 배정
-                if iteration == 0:
-                    if round_num % 2 == 0:
-                        home = clubs[home_idx]
-                        away = clubs[away_idx]
-                    else:
-                        home = clubs[away_idx]
-                        away = clubs[home_idx]
-                else:
-                    if round_num % 2 == 0:
-                        home = clubs[away_idx]
-                        away = clubs[home_idx]
-                    else:
-                        home = clubs[home_idx]
-                        away = clubs[away_idx]
-                        
-                matches.append(Match(
-                    home_club_id=home.id,
-                    away_club_id=away.id,
-                    sim_day=sim_day,
-                    status=MatchStatus.SCHEDULED
-                ))
-            sim_day += 1
+                round_matches.append((home_idx, away_idx))
+            round_matchings.append(round_matches)
+        return round_matchings
+
+    base_round_robin = get_round_robin_matchings()
+    
+    # 2. 날짜 탐색 헬퍼 함수 정의
+    def is_valid_day(day: int) -> bool:
+        # 2026-01-01 (sim_day=1)은 목요일(3)이므로
+        # weekday: 0=월, 1=화, 2=수, 3=목, 4=금, 5=토, 6=일
+        weekday = (3 + (day - 1)) % 7
+        return weekday in [2, 3, 5, 6]
+
+    def get_next_valid_day(current_day: int) -> int:
+        day = current_day + 1
+        while not is_valid_day(day):
+            day += 1
+        return day
+
+    # 시작일 보정 (base_sim_day가 수/목/토/일이 아니면 가장 가까운 경기일로 밀어줌)
+    start_day = base_sim_day
+    while not is_valid_day(start_day):
+        start_day += 1
+
+    matches = []
+    current_game_day = start_day
+
+    # 3. 15개 라운드 매칭에 대해 2연전 시리즈 매칭 진행
+    for series_idx, matchings in enumerate(base_round_robin):
+        if series_idx > 0:
+            # 다음 시리즈 시작일 (수요일 또는 토요일) 찾기
+            current_game_day = get_next_valid_day(current_game_day)
             
+        day1 = current_game_day
+        day2 = get_next_valid_day(day1)
+        
+        # 다음 루프를 위해 현재 경기일을 day2로 업데이트
+        current_game_day = day2
+
+        for home_idx, away_idx in matchings:
+            club_a = clubs[home_idx]
+            club_b = clubs[away_idx]
+            
+            # 1차전: club_a 홈 (경기일: day1)
+            matches.append(Match(
+                home_club_id=club_a.id,
+                away_club_id=club_b.id,
+                sim_day=day1,
+                status=MatchStatus.SCHEDULED
+            ))
+            # 2차전: club_b 홈 (경기일: day2)
+            matches.append(Match(
+                home_club_id=club_b.id,
+                away_club_id=club_a.id,
+                sim_day=day2,
+                status=MatchStatus.SCHEDULED
+            ))
+
+    # 매치들을 sim_day 순서대로 정렬하여 반환
+    matches.sort(key=lambda x: x.sim_day)
     return matches
 
-def generate_knockout_schedule(clubs: list[Club]) -> list[MatchPlaceholder]:
+def generate_knockout_schedule(clubs: list[Club], base_sim_day: int) -> list[MatchPlaceholder]:
     """
     토너먼트 경기 일정 대진 스케줄러(8개 구단 기준).
     정예리그 최종 순위(#1 ~ #8) 대로 구단들이 전달된다고 가정합니다.
@@ -152,20 +187,20 @@ def generate_knockout_schedule(clubs: list[Club]) -> list[MatchPlaceholder]:
     
     # 1. 8강전 플레이스홀더 (4개)
     # 대진 매칭: #1 vs #8 (q1), #4 vs #5 (q2), #2 vs #7 (q3), #3 vs #6 (q4)
-    # Bo3이므로 8강전의 시뮬레이션 일자는 1~2일차 예정
-    q1 = MatchPlaceholder(round="ROUND_OF_8", sim_day=1, home_club_id=clubs[0].id, away_club_id=clubs[7].id)
-    q2 = MatchPlaceholder(round="ROUND_OF_8", sim_day=1, home_club_id=clubs[3].id, away_club_id=clubs[4].id)
-    q3 = MatchPlaceholder(round="ROUND_OF_8", sim_day=1, home_club_id=clubs[1].id, away_club_id=clubs[6].id)
-    q4 = MatchPlaceholder(round="ROUND_OF_8", sim_day=1, home_club_id=clubs[2].id, away_club_id=clubs[5].id)
+    # Bo3이므로 8강전의 시뮬레이션 일자는 base_sim_day ~ base_sim_day + 1일차 예정
+    q1 = MatchPlaceholder(round="ROUND_OF_8", sim_day=base_sim_day, home_club_id=clubs[0].id, away_club_id=clubs[7].id)
+    q2 = MatchPlaceholder(round="ROUND_OF_8", sim_day=base_sim_day, home_club_id=clubs[3].id, away_club_id=clubs[4].id)
+    q3 = MatchPlaceholder(round="ROUND_OF_8", sim_day=base_sim_day, home_club_id=clubs[1].id, away_club_id=clubs[6].id)
+    q4 = MatchPlaceholder(round="ROUND_OF_8", sim_day=base_sim_day, home_club_id=clubs[2].id, away_club_id=clubs[5].id)
     
     placeholders.extend([q1, q2, q3, q4])
     
     # 2. 4강전 플레이스홀더 (2개)
     # 4강 1경기: 8강 1경기(q1) 승자 vs 8강 2경기(q2) 승자
     # 4강 2경기: 8강 3경기(q3) 승자 vs 8강 4경기(q4) 승자
-    # Bo5이므로 4강전의 sim_day는 3일차~7일차 예정
-    s1 = MatchPlaceholder(round="SEMI_FINAL", sim_day=3)
-    s2 = MatchPlaceholder(round="SEMI_FINAL", sim_day=3)
+    # Bo5이므로 4강전의 sim_day는 base_sim_day + 3 ~ base_sim_day + 9일차 예정 (중간 휴식일 포함)
+    s1 = MatchPlaceholder(round="SEMI_FINAL", sim_day=base_sim_day + 3)
+    s2 = MatchPlaceholder(round="SEMI_FINAL", sim_day=base_sim_day + 3)
     
     # DB 저장 전 ID 매핑 헬퍼를 위해 임시 인메모리 속성 연결
     setattr(s1, "_home_parent", q1)
@@ -177,8 +212,8 @@ def generate_knockout_schedule(clubs: list[Club]) -> list[MatchPlaceholder]:
     
     # 3. 결승전 플레이스홀더 (1개)
     # 4강 1경기(s1) 승자 vs 4강 2경기(s2) 승자
-    # Bo7이므로 결승전의 sim_day는 8일차~14일차 예정
-    f = MatchPlaceholder(round="FINAL", sim_day=8)
+    # Bo7이므로 결승전의 sim_day는 base_sim_day + 11 ~ base_sim_day + 19일차 예정 (3일 경기 후 1일 휴식 패턴)
+    f = MatchPlaceholder(round="FINAL", sim_day=base_sim_day + 11)
     
     setattr(f, "_home_parent", s1)
     setattr(f, "_away_parent", s2)

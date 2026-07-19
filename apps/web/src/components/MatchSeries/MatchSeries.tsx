@@ -3,32 +3,40 @@ import styles from './MatchSeries.module.css';
 
 interface MatchSeriesProps {
   stageTitle: string;
+  seriesLimit?: number;
   upperSeedTitle?: string;
   upperTeamName?: string;
   upperTeamImage?: string;
+  upperTeamSymbol?: string;
+  upperTeamColor?: string;
   upperScoreSeries?: number[];
   lowerSeedTitle?: string;
   lowerTeamName?: string;
   lowerTeamImage?: string;
+  lowerTeamSymbol?: string;
+  lowerTeamColor?: string;
   lowerScoreSeries?: number[];
 }
 
 const MatchSeries: React.FC<MatchSeriesProps> = ({
   stageTitle,
+  seriesLimit,
   upperSeedTitle,
   upperTeamName = 'TBD',
   upperTeamImage,
+  upperTeamSymbol,
+  upperTeamColor,
   upperScoreSeries = [],
   lowerSeedTitle,
   lowerTeamName = 'TBD',
   lowerTeamImage,
+  lowerTeamSymbol,
+  lowerTeamColor,
   lowerScoreSeries = [],
 }) => {
-  // Determine the number of score columns (next odd number, default 3 if empty)
+  // Determine the number of score columns
   const maxLen = Math.max(upperScoreSeries.length, lowerScoreSeries.length);
-  let seriesCount = maxLen;
-  if (seriesCount === 0) seriesCount = 3;
-  else if (seriesCount % 2 === 0) seriesCount += 1;
+  const seriesCount = seriesLimit || (maxLen === 0 ? 3 : (maxLen % 2 === 0 ? maxLen + 1 : maxLen));
 
   // Calculate wins
   let upperWins = 0;
@@ -78,6 +86,33 @@ const MatchSeries: React.FC<MatchSeriesProps> = ({
     return `${styles.teamBox} ${styles.defaultTeam} ${isWinner ? styles.winner : styles.loser}`;
   };
 
+  const renderLogo = (imgSrc?: string, symbol?: string, color?: string) => {
+    if (imgSrc) {
+      return <img src={imgSrc} alt="" className={styles.teamLogo} />;
+    }
+    if (symbol) {
+      return (
+        <div 
+          className={styles.logoPlaceholder} 
+          style={{ 
+            color: color || '#ffffff', 
+            border: `1px solid ${color || 'rgba(255,255,255,0.2)'}`,
+            background: 'rgba(0,0,0,0.3)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontFamily: 'var(--sans)',
+            fontSize: '10px',
+            fontWeight: 'bold',
+          }}
+        >
+          {symbol}
+        </div>
+      );
+    }
+    return <div className={styles.logoPlaceholder} />;
+  };
+
   return (
     <div className={styles.container}>
       <div className={styles.stageTitle}>{stageTitle}</div>
@@ -86,11 +121,7 @@ const MatchSeries: React.FC<MatchSeriesProps> = ({
         <div className={getTeamClasses(true)}>
           <div className={styles.teamInfoWrapper}>
             <div className={styles.logoWrapper}>
-              {upperTeamImage ? (
-                <img src={upperTeamImage} alt="" className={styles.teamLogo} />
-              ) : (
-                <div className={styles.logoPlaceholder} />
-              )}
+              {renderLogo(upperTeamImage, upperTeamSymbol, upperTeamColor)}
             </div>
             <div className={styles.teamText}>
               {upperSeedTitle && <div className={styles.seedTitle}>{upperSeedTitle}</div>}
@@ -106,11 +137,7 @@ const MatchSeries: React.FC<MatchSeriesProps> = ({
         <div className={getTeamClasses(false)}>
           <div className={styles.teamInfoWrapper}>
             <div className={styles.logoWrapper}>
-              {lowerTeamImage ? (
-                <img src={lowerTeamImage} alt="" className={styles.teamLogo} />
-              ) : (
-                <div className={styles.logoPlaceholder} />
-              )}
+              {renderLogo(lowerTeamImage, lowerTeamSymbol, lowerTeamColor)}
             </div>
             <div className={styles.teamText}>
               {lowerSeedTitle && <div className={styles.seedTitle}>{lowerSeedTitle}</div>}

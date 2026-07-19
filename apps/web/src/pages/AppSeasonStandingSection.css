@@ -1,11 +1,12 @@
 section.section--first {
   margin-top: 69px;
-  height: 880px;
-  padding: 0 !important;
+  min-height: 880px;
+  padding: 64px 0 !important;
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  justify-content: flex-start;
   box-sizing: border-box;
+  scrollbar-gutter: stable;
 
   /* 중압감 넘치는 프리미엄 어두운 파도/깃발 펄럭임 그라데이션 */
   background:
@@ -16,6 +17,10 @@ section.section--first {
   animation: waveGradient 12s ease-in-out infinite;
 
   border-bottom: 1px solid #14161e;
+}
+
+.section--first .section__container {
+  overflow: visible !important;
 }
 
 @keyframes waveGradient {
@@ -93,6 +98,14 @@ section.section--first {
   font-family: var(--sans);
   font-size: var(--fs-xs);
   white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  transition: opacity 0.2s ease;
+}
+
+.progress-status__step:hover {
+  opacity: 0.8;
 }
 
 .progress-status__step-num {
@@ -101,6 +114,7 @@ section.section--first {
   font-weight: var(--fw-bold);
   padding: 0px 6px;
   border-radius: 2px;
+  box-sizing: border-box;
 }
 
 .progress-status__step--active .progress-status__step-num {
@@ -121,6 +135,18 @@ section.section--first {
 
 .progress-status__step--inactive .progress-status__step-text {
   color: #555555;
+}
+
+/* 현재 진행 단계 표시를 위한 하이라이트 */
+.progress-status__step--current .progress-status__step-num {
+  border: 1px solid rgba(255, 255, 255, 0.6) !important;
+}
+
+.progress-status__current-dot {
+  color: #ffcc00;
+  font-size: 6px;
+  margin-left: 6px;
+  vertical-align: middle;
 }
 
 .progress-status__connector {
@@ -365,4 +391,50 @@ section.section--first {
   .standings__table td {
     padding: 10px 10px;
   }
+}
+
+/* Tournament Bracket Styles */
+.bracket-view {
+  display: flex;
+  flex-direction: row;
+  gap: 16px;
+  width: 100%;
+  margin-top: 16px;
+  box-sizing: border-box;
+  align-items: stretch;
+}
+
+.bracket-col {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  background-color: rgba(15, 17, 24, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 6px;
+  padding: 16px;
+  box-sizing: border-box;
+}
+
+.bracket-col__header {
+  font-family: var(--sans);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-bold);
+  color: rgba(255, 255, 255, 0.65);
+  text-align: center;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding-bottom: 12px;
+  margin-bottom: 20px;
+  text-transform: uppercase;
+}
+
+.bracket-col__nodes {
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+  justify-content: space-around;
+  gap: 16px;
+}
+
+.bracket-col__nodes--center {
+  justify-content: center;
 }

@@ -1,6 +1,9 @@
 import { useState, useEffect } from 'react'
 import { getClubs, type Club } from '../api/clubs'
 import { getStandings, type DailyClubStanding } from '../api/standings'
+import { getMatches, type Match } from '../api/matches'
+import { FaCircle } from 'react-icons/fa'
+import MatchSeries from '../components/MatchSeries/MatchSeries'
 import './AppSeasonStandingSection.css'
 
 const LEAGUES = [
@@ -108,6 +111,11 @@ export default function AppSeasonStandingSection({
   });
   const [isStandingsLoaded, setIsStandingsLoaded] = useState(false);
 
+  const [selectedStep, setSelectedStep] = useState<number>(1);
+  const [seedMap, setSeedMap] = useState<Record<number, string>>({});
+  const [eliteMatches, setEliteMatches] = useState<Match[]>([]);
+  const [knockoutMatches, setKnockoutMatches] = useState<Match[]>([]);
+
   useEffect(() => {
     getClubs()
       .then(list => {
@@ -150,7 +158,375 @@ export default function AppSeasonStandingSection({
       });
   }, [matchDate, seasonYear]);
 
+  useEffect(() => {
+    const finalSimDay = 228;
+    Promise.all(
+      LEAGUES.map(league => getStandings(league.id, finalSimDay))
+    )
+      .then(results => {
+        const map: Record<number, string> = {};
+        const leagueCodes = ['AL', 'CL', 'GL', 'ML'];
+        results.forEach((standings, idx) => {
+          const code = leagueCodes[idx];
+          standings.forEach(row => {
+            if (row.rank <= 4) {
+              map[row.club_id] = `${code}#${row.rank}`;
+            }
+          });
+        });
+        setSeedMap(map);
+      })
+      .catch(e => console.error("Failed to load final standings for seeds", e));
+
+    getMatches({ status: 'COMPLETED' })
+      .then(matches => {
+        // 정예리그는 금요일 개막 보정에 따라 최대 284일차에 끝나므로, 285일을 확실한 안전 경계선으로 나눕니다.
+        const elite = matches.filter(m => m.sim_day >= 233 && m.sim_day <= 285);
+        const ko = matches.filter(m => m.sim_day >= 286);
+
+        setEliteMatches(elite);
+        setKnockoutMatches(ko);
+      })
+      .catch(e => console.error("Failed to load completed post-season matches", e));
+  }, [seasonYear, matchDate]);
+
   const isSectionLoaded = isSeasonYearLoaded && isStandingsLoaded && Object.keys(clubsMap).length > 0;
+
+  const simDay = getSimDayFromDate(matchDate, seasonYear || 2026);
+  let currentStep = 1;
+  if (simDay < 146) {
+    currentStep = 1;
+  } else if (simDay >= 146 && simDay <= 228) {
+    currentStep = 3;
+  } else if (simDay >= 229 && simDay <= 283) {
+    currentStep = 4;
+  } else {
+    currentStep = 5;
+  }
+
+  // 현재 날짜 단계가 바뀌면 자동으로 선택된 단계를 활성화
+  useEffect(() => {
+    setSelectedStep(currentStep);
+  }, [currentStep]);
+
+  interface EliteStandingRow {
+    club_id: number;
+    wins: number;
+    losses: number;
+    draws: number;
+    games_played: number;
+    win_rate: number;
+    games_back: number;
+    rank: number;
+    streak: number;
+  }
+
+  // 4단계 크라운 정예리그 순위표 동적 집계 로직
+  const getEliteStandings = (): EliteStandingRow[] => {
+    const clubIds = Object.keys(seedMap).map(Number);
+    if (clubIds.length === 0) return [];
+    
+    const stats: Record<number, Omit<EliteStandingRow, 'rank' | 'games_back'>> = {};
+    clubIds.forEach(cid => {
+      stats[cid] = {
+        club_id: cid,
+        wins: 0,
+        losses: 0,
+        draws: 0,
+        games_played: 0,
+        win_rate: 0,
+        streak: 0,
+      };
+    });
+
+    eliteMatches.forEach(m => {
+      const h = m.home_club_id;
+      const a = m.away_club_id;
+      if (stats[h] && stats[a] && m.status === 'COMPLETED') {
+        stats[h].games_played += 1;
+        stats[a].games_played += 1;
+        const h_score = m.home_score ?? 0;
+        const a_score = m.away_score ?? 0;
+
+        if (h_score > a_score) {
+          stats[h].wins += 1;
+          stats[a].losses += 1;
+        } else if (h_score < a_score) {
+          stats[a].wins += 1;
+          stats[h].losses += 1;
+        } else {
+          stats[h].draws += 1;
+          stats[a].draws += 1;
+        }
+      }
+    });
+
+    clubIds.forEach(cid => {
+      const row = stats[cid];
+      const win_loss = row.wins + row.losses;
+      row.win_rate = win_loss > 0 ? row.wins / win_loss : 0;
+    });
+
+    // 각 구단별 streak(연속 기록) 동적 계산
+    clubIds.forEach(cid => {
+      const clubMatches = eliteMatches
+        .filter(m => m.status === 'COMPLETED' && (m.home_club_id === cid || m.away_club_id === cid))
+        .sort((a, b) => b.sim_day - a.sim_day);
+      
+      let streak = 0;
+      if (clubMatches.length > 0) {
+        const firstMatch = clubMatches[0];
+        const f_h = firstMatch.home_club_id;
+        const f_h_score = firstMatch.home_score ?? 0;
+        const f_a_score = firstMatch.away_score ?? 0;
+        
+        let isFirstWin = false;
+        let isFirstLoss = false;
+        
+        if (f_h_score > f_a_score) {
+          if (f_h === cid) isFirstWin = true;
+          else isFirstLoss = true;
+        } else if (f_h_score < f_a_score) {
+          if (f_h !== cid) isFirstWin = true;
+          else isFirstLoss = true;
+        }
+        
+        if (isFirstWin) {
+          streak = 1;
+          for (let k = 1; k < clubMatches.length; k++) {
+            const m = clubMatches[k];
+            const h = m.home_club_id;
+            const h_s = m.home_score ?? 0;
+            const a_s = m.away_score ?? 0;
+            const isWin = (h_s > a_s && h === cid) || (h_s < a_s && h !== cid);
+            if (isWin) streak += 1;
+            else break;
+          }
+        } else if (isFirstLoss) {
+          streak = -1;
+          for (let k = 1; k < clubMatches.length; k++) {
+            const m = clubMatches[k];
+            const h = m.home_club_id;
+            const h_s = m.home_score ?? 0;
+            const a_s = m.away_score ?? 0;
+            const isLoss = (h_s < a_s && h === cid) || (h_s > a_s && h !== cid);
+            if (isLoss) streak -= 1;
+            else break;
+          }
+        }
+      }
+      stats[cid].streak = streak;
+    });
+
+    const list = Object.values(stats).sort((a, b) => {
+      if (b.win_rate !== a.win_rate) return b.win_rate - a.win_rate;
+      if (b.wins !== a.wins) return b.wins - a.wins;
+      return a.club_id - b.club_id;
+    });
+
+    if (list.length === 0) return [];
+    const leader = list[0];
+    
+    return list.map((item, idx) => {
+      const rank = list.findIndex(x => x.win_rate === item.win_rate && x.wins === item.wins) + 1;
+      const games_back = (((leader.wins - item.wins) + (item.losses - leader.losses)) / 2) * 10;
+      return { ...item, rank, games_back };
+    });
+  };
+
+  // 5단계 토너먼트 대진 결과 집계 로직
+  const getKnockoutResults = () => {
+    const eliteStandings = getEliteStandings();
+    const top8 = eliteStandings.slice(0, 8).map(r => r.club_id);
+    const clubsList = Object.keys(clubsMap).map(Number).slice(0, 8);
+    const t8 = top8.length === 8 ? top8 : clubsList;
+
+    const matchups = [
+      { round: 'ROUND_OF_8', id: 'q1', home: t8[0], away: t8[7] },
+      { round: 'ROUND_OF_8', id: 'q2', home: t8[3], away: t8[4] },
+      { round: 'ROUND_OF_8', id: 'q3', home: t8[1], away: t8[6] },
+      { round: 'ROUND_OF_8', id: 'q4', home: t8[2], away: t8[5] },
+    ];
+
+    const getWins = (c1: number, c2: number) => {
+      let c1_wins = 1; // 8강 상위시드 1승 선치
+      let c2_wins = 0;
+      knockoutMatches.forEach(m => {
+        const h = m.home_club_id;
+        const a = m.away_club_id;
+        if (m.status === 'COMPLETED' && ((h === c1 && a === c2) || (h === c2 && a === c1))) {
+          const winner = (m.home_score ?? 0) > (m.away_score ?? 0) ? h : a;
+          if (winner === c1) c1_wins += 1;
+          else c2_wins += 1;
+        }
+      });
+      return { c1_wins, c2_wins };
+    };
+
+    const q1_res = getWins(matchups[0].home, matchups[0].away);
+    const q1_winner = q1_res.c1_wins >= 2 ? matchups[0].home : (q1_res.c2_wins >= 2 ? matchups[0].away : null);
+
+    const q2_res = getWins(matchups[1].home, matchups[1].away);
+    const q2_winner = q2_res.c1_wins >= 2 ? matchups[1].home : (q2_res.c2_wins >= 2 ? matchups[1].away : null);
+
+    const q3_res = getWins(matchups[2].home, matchups[2].away);
+    const q3_winner = q3_res.c1_wins >= 2 ? matchups[2].home : (q3_res.c2_wins >= 2 ? matchups[2].away : null);
+
+    const q4_res = getWins(matchups[3].home, matchups[3].away);
+    const q4_winner = q4_res.c1_wins >= 2 ? matchups[3].home : (q4_res.c2_wins >= 2 ? matchups[3].away : null);
+
+    const getHigherSeed = (c1: number | null, c2: number | null) => {
+      if (!c1 || !c2) return { home: c1, away: c2 };
+      const idx1 = t8.indexOf(c1);
+      const idx2 = t8.indexOf(c2);
+      return idx1 < idx2 ? { home: c1, away: c2 } : { home: c2, away: c1 };
+    };
+
+    const s1_teams = getHigherSeed(q1_winner, q2_winner);
+    const s2_teams = getHigherSeed(q3_winner, q4_winner);
+
+    const getWinsBo5 = (c1: number | null, c2: number | null) => {
+      if (!c1 || !c2) return { c1_wins: 0, c2_wins: 0 };
+      let c1_wins = 0, c2_wins = 0;
+      knockoutMatches.forEach(m => {
+        const h = m.home_club_id;
+        const a = m.away_club_id;
+        if (m.status === 'COMPLETED' && ((h === c1 && a === c2) || (h === c2 && a === c1))) {
+          const winner = (m.home_score ?? 0) > (m.away_score ?? 0) ? h : a;
+          if (winner === c1) c1_wins += 1;
+          else c2_wins += 1;
+        }
+      });
+      return { c1_wins, c2_wins };
+    };
+
+    const s1_res = getWinsBo5(s1_teams.home, s1_teams.away);
+    const s1_winner = s1_res.c1_wins === 3 ? s1_teams.home : (s1_res.c2_wins === 3 ? s1_teams.away : null);
+
+    const s2_res = getWinsBo5(s2_teams.home, s2_teams.away);
+    const s2_winner = s2_res.c1_wins === 3 ? s2_teams.home : (s2_res.c2_wins === 3 ? s2_teams.away : null);
+
+    const f_teams = getHigherSeed(s1_winner, s2_winner);
+
+    const getWinsBo7 = (c1: number | null, c2: number | null) => {
+      if (!c1 || !c2) return { c1_wins: 0, c2_wins: 0 };
+      let c1_wins = 0, c2_wins = 0;
+      knockoutMatches.forEach(m => {
+        const h = m.home_club_id;
+        const a = m.away_club_id;
+        if (m.status === 'COMPLETED' && ((h === c1 && a === c2) || (h === c2 && a === c1))) {
+          const winner = (m.home_score ?? 0) > (m.away_score ?? 0) ? h : a;
+          if (winner === c1) c1_wins += 1;
+          else c2_wins += 1;
+        }
+      });
+      return { c1_wins, c2_wins };
+    };
+
+    const f_res = getWinsBo7(f_teams.home, f_teams.away);
+    const f_winner = f_res.c1_wins === 4 ? f_teams.home : (f_res.c2_wins === 4 ? f_teams.away : null);
+
+    return {
+      q1: { ...matchups[0], wins: q1_res, winner: q1_winner },
+      q2: { ...matchups[1], wins: q2_res, winner: q2_winner },
+      q3: { ...matchups[2], wins: q3_res, winner: q3_winner },
+      q4: { ...matchups[3], wins: q4_res, winner: q4_winner },
+      s1: { ...s1_teams, wins: s1_res, winner: s1_winner },
+      s2: { ...s2_teams, wins: s2_res, winner: s2_winner },
+      f: { ...f_teams, wins: f_res, winner: f_winner }
+    };
+  };
+
+  const renderBracket = () => {
+    const data = getKnockoutResults();
+
+    const getSeriesScores = (c1: number | null, c2: number | null, isBo3Advantage = false) => {
+      if (!c1 || !c2) return { upperScores: [], lowerScores: [] };
+      const upperScores: number[] = [];
+      const lowerScores: number[] = [];
+      
+      if (isBo3Advantage) {
+        upperScores.push(1);
+        lowerScores.push(0);
+      }
+
+      const matches = knockoutMatches
+        .filter(m => m.status === 'COMPLETED' && ((m.home_club_id === c1 && m.away_club_id === c2) || (m.home_club_id === c2 && m.away_club_id === c1)))
+        .sort((a, b) => a.sim_day - b.sim_day);
+
+      matches.forEach(m => {
+        const isC1Home = m.home_club_id === c1;
+        const c1Score = isC1Home ? (m.home_score ?? 0) : (m.away_score ?? 0);
+        const c2Score = isC1Home ? (m.away_score ?? 0) : (m.home_score ?? 0);
+        upperScores.push(c1Score);
+        lowerScores.push(c2Score);
+      });
+
+      return { upperScores, lowerScores };
+    };
+
+    const renderNode = (title: string, homeId: number | null, awayId: number | null, isBo3Advantage = false, seriesLimit?: number) => {
+      const homeClub = homeId ? clubsMap[homeId] : null;
+      const awayClub = awayId ? clubsMap[awayId] : null;
+
+      const homeName = homeClub ? homeClub.name_ko : 'TBD';
+      const awayName = awayClub ? awayClub.name_ko : 'TBD';
+
+      const homeSeed = homeId ? (seedMap[homeId] ? seedMap[homeId] : '') : '';
+      const awaySeed = awayId ? (seedMap[awayId] ? seedMap[awayId] : '') : '';
+
+      const homeMeta = homeClub ? getTeamMeta(homeClub.team_code, homeClub.name_ko) : null;
+      const awayMeta = awayClub ? getTeamMeta(awayClub.team_code, awayClub.name_ko) : null;
+
+      const { upperScores, lowerScores } = getSeriesScores(homeId, awayId, isBo3Advantage);
+
+      return (
+        <MatchSeries
+          stageTitle={title}
+          seriesLimit={seriesLimit}
+          upperSeedTitle={homeSeed}
+          upperTeamName={homeName}
+          upperTeamSymbol={homeMeta?.symbol || undefined}
+          upperTeamColor={homeMeta?.color || undefined}
+          upperScoreSeries={upperScores}
+          lowerSeedTitle={awaySeed}
+          lowerTeamName={awayName}
+          lowerTeamSymbol={awayMeta?.symbol || undefined}
+          lowerTeamColor={awayMeta?.color || undefined}
+          lowerScoreSeries={lowerScores}
+        />
+      );
+    };
+
+    return (
+      <div className="bracket-view">
+        <div className="bracket-col">
+          <div className="bracket-col__header">8강전 (Bo3, 1승선취)</div>
+          <div className="bracket-col__nodes">
+            {renderNode("8강 1경기", data.q1.home, data.q1.away, true, 3)}
+            {renderNode("8강 2경기", data.q2.home, data.q2.away, true, 3)}
+            {renderNode("8강 3경기", data.q3.home, data.q3.away, true, 3)}
+            {renderNode("8강 4경기", data.q4.home, data.q4.away, true, 3)}
+          </div>
+        </div>
+
+        <div className="bracket-col">
+          <div className="bracket-col__header">준결승전 (Bo5)</div>
+          <div className="bracket-col__nodes">
+            {renderNode("준결승 1경기", data.s1.home, data.s1.away, false, 5)}
+            {renderNode("준결승 2경기", data.s2.home, data.s2.away, false, 5)}
+          </div>
+        </div>
+
+        <div className="bracket-col">
+          <div className="bracket-col__header">결승전 (Bo7)</div>
+          <div className="bracket-col__nodes bracket-col__nodes--center">
+            {renderNode("KROWN SERIES", data.f.home, data.f.away, false, 7)}
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <section className="section section--black section--first">
@@ -159,105 +535,205 @@ export default function AppSeasonStandingSection({
         <div className={`progress-status ${isSectionLoaded ? 'loaded' : 'loading'}`}>
           <div className="progress-status__season-title">KLB {seasonYear}</div>
           <div className="progress-status__steps">
-            <div className="progress-status__step progress-status__step--active">
+            <div className={`progress-status__step progress-status__step--${selectedStep === 1 ? 'active' : 'inactive'} ${currentStep === 1 ? 'progress-status__step--current' : ''}`} onClick={() => setSelectedStep(1)}>
               <span className="progress-status__step-num">1</span>
-              <span className="progress-status__step-text">정규리그 전반</span>
+              <span className="progress-status__step-text">
+                정규리그 전반
+                {currentStep === 1 && <FaCircle className="progress-status__current-dot" />}
+              </span>
             </div>
             <div className="progress-status__connector"></div>
-            <div className="progress-status__step progress-status__step--inactive">
+            <div className={`progress-status__step progress-status__step--${selectedStep === 2 ? 'active' : 'inactive'} ${currentStep === 2 ? 'progress-status__step--current' : ''}`} onClick={() => setSelectedStep(2)}>
               <span className="progress-status__step-num">2</span>
-              <span className="progress-status__step-text">인터리그</span>
+              <span className="progress-status__step-text">
+                인터리그
+                {currentStep === 2 && <FaCircle className="progress-status__current-dot" />}
+              </span>
             </div>
             <div className="progress-status__connector"></div>
-            <div className="progress-status__step progress-status__step--inactive">
+            <div className={`progress-status__step progress-status__step--${selectedStep === 3 ? 'active' : 'inactive'} ${currentStep === 3 ? 'progress-status__step--current' : ''}`} onClick={() => setSelectedStep(3)}>
               <span className="progress-status__step-num">3</span>
-              <span className="progress-status__step-text">정규리그 후반</span>
+              <span className="progress-status__step-text">
+                정규리그 후반
+                {currentStep === 3 && <FaCircle className="progress-status__current-dot" />}
+              </span>
             </div>
             <div className="progress-status__connector"></div>
-            <div className="progress-status__step progress-status__step--inactive">
+            <div className={`progress-status__step progress-status__step--${selectedStep === 4 ? 'active' : 'inactive'} ${currentStep === 4 ? 'progress-status__step--current' : ''}`} onClick={() => setSelectedStep(4)}>
               <span className="progress-status__step-num">4</span>
-              <span className="progress-status__step-text">포스트 리그</span>
+              <span className="progress-status__step-text">
+                포스트 리그
+                {currentStep === 4 && <FaCircle className="progress-status__current-dot" />}
+              </span>
             </div>
             <div className="progress-status__connector"></div>
-            <div className="progress-status__step progress-status__step--inactive">
+            <div className={`progress-status__step progress-status__step--${selectedStep === 5 ? 'active' : 'inactive'} ${currentStep === 5 ? 'progress-status__step--current' : ''}`} onClick={() => setSelectedStep(5)}>
               <span className="progress-status__step-num">5</span>
-              <span className="progress-status__step-text">포스트 파이널</span>
+              <span className="progress-status__step-text">
+                포스트 파이널
+                {currentStep === 5 && <FaCircle className="progress-status__current-dot" />}
+              </span>
             </div>
           </div>
         </div>
 
-        {/* 리그별 순위표 */}
-        <div className={`standings ${isSectionLoaded ? 'loaded' : 'loading'}`}>
-          <div className="standings__header">
-            <h3 className="standings__title">
-              {matchDate.getMonth() + 1}.{matchDate.getDate()} {LEAGUES.find(l => l.code === activeLeague)?.name}
-            </h3>
-            <div className="standings__tabs">
-              {LEAGUES.map((league) => (
-                <button
-                  key={league.code}
-                  className={`standings__tab ${activeLeague === league.code ? 'standings__tab--active' : ''}`}
-                  onClick={() => setActiveLeague(league.code)}
-                >
-                  {league.code}
+        {/* 선택된 시즌 단계(selectedStep)에 따른 분기 렌더링 */}
+        {selectedStep === 5 ? (
+          <div className={`standings ${isSectionLoaded ? 'loaded' : 'loading'}`}>
+            {renderBracket()}
+          </div>
+        ) : selectedStep === 4 ? (
+          <div className={`standings ${isSectionLoaded ? 'loaded' : 'loading'}`}>
+            <div className="standings__header">
+              <h3 className="standings__title">
+                {matchDate.getMonth() + 1}.{matchDate.getDate()} 크라운 정예리그
+              </h3>
+              <div className="standings__tabs">
+                <button className="standings__tab standings__tab--active">
+                  KROWN ELITE
                 </button>
-              ))}
+              </div>
+            </div>
+
+            <div className="standings__table-wrapper">
+              <table className="standings__table">
+                <thead>
+                  <tr>
+                    <th className="standings__rank-col">순위</th>
+                    <th className="standings__team-col">구단</th>
+                    <th>경기</th>
+                    <th>승</th>
+                    <th>무</th>
+                    <th>패</th>
+                    <th>승률</th>
+                    <th>게임차</th>
+                    <th>연속</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {getEliteStandings().map((row, idx) => {
+                    const club = clubsMap[row.club_id];
+                    const clubName = club ? club.name_ko : '로딩중...';
+                    const teamCode = club ? club.team_code : '';
+                    const meta = getTeamMeta(teamCode, clubName);
+                    const seedText = seedMap[row.club_id] ? ` (${seedMap[row.club_id]})` : '';
+
+                    const isTied = getEliteStandings().filter(item => item.rank === row.rank).length > 1;
+                    const displayRank = isTied ? `T${row.rank}` : row.rank;
+
+                    return (
+                      <tr key={`${row.club_id}-${idx}`}>
+                        <td className={`standings__rank ${row.rank <= 8 ? 'standings__rank--playoff' : ''}`}>{displayRank}</td>
+                        <td className="standings__team-name">
+                          <div className="standings__team-cell">
+                            <div
+                              className="standings__team-logo-placeholder"
+                              style={{ color: meta.color }}
+                            >
+                              {meta.symbol}
+                            </div>
+                            <span className="standings__team-text">
+                              {clubName}
+                              <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', marginLeft: '6px' }}>{seedText}</span>
+                            </span>
+                          </div>
+                        </td>
+                        <td>{row.games_played}</td>
+                        <td>{row.wins}</td>
+                        <td>{row.draws}</td>
+                        <td>{row.losses}</td>
+                        <td className="standings__pct">{formatPct(row.win_rate)}</td>
+                        <td>{formatGb(row.games_back)}</td>
+                        <td>{formatStreak(row.streak)}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
           </div>
-
-          <div className="standings__table-wrapper">
-            <table className="standings__table">
-              <thead>
-                <tr>
-                  <th className="standings__rank-col">순위</th>
-                  <th className="standings__team-col">구단</th>
-                  <th>경기</th>
-                  <th>승</th>
-                  <th>무</th>
-                  <th>패</th>
-                  <th>승률</th>
-                  <th>게임차</th>
-                  <th>연속</th>
-                </tr>
-              </thead>
-              <tbody>
-                {allStandings[activeLeague].map((row, idx) => {
-                  const club = clubsMap[row.club_id];
-                  const clubName = club ? club.name_ko : '로딩중...';
-                  const teamCode = club ? club.team_code : '';
-                  const meta = getTeamMeta(teamCode, clubName);
-
-                  const isTied = allStandings[activeLeague].filter(item => item.rank === row.rank).length > 1;
-                  const displayRank = isTied ? `T${row.rank}` : row.rank;
-
-                  return (
-                    <tr key={`${row.club_id}-${idx}`}>
-                      <td className={`standings__rank ${row.rank <= 4 ? 'standings__rank--playoff' : ''}`}>{displayRank}</td>
-                      <td className="standings__team-name">
-                        <div className="standings__team-cell">
-                          <div
-                            className="standings__team-logo-placeholder"
-                            style={{ color: meta.color }}
-                          >
-                            {meta.symbol}
-                          </div>
-                          <span className="standings__team-text">{clubName}</span>
-                        </div>
-                      </td>
-                      <td>{row.games_played}</td>
-                      <td>{row.wins}</td>
-                      <td>{row.draws}</td>
-                      <td>{row.losses}</td>
-                      <td className="standings__pct">{formatPct(row.win_rate)}</td>
-                      <td>{formatGb(row.games_back)}</td>
-                      <td>{formatStreak(row.streak)}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+        ) : selectedStep === 2 ? (
+          <div className={`standings ${isSectionLoaded ? 'loaded' : 'loading'}`}>
+            <div className="standings__header">
+              <h3 className="standings__title">KLB 인터리그</h3>
+            </div>
+            <div style={{ padding: '80px 16px', textAlign: 'center', color: 'rgba(255,255,255,0.35)', fontFamily: 'var(--sans)', fontSize: 'var(--fs-sm)' }}>
+              현재 진행되거나 예정된 인터리그 일정이 존재하지 않습니다.
+            </div>
           </div>
-        </div>
+        ) : (
+          <div className={`standings ${isSectionLoaded ? 'loaded' : 'loading'}`}>
+            <div className="standings__header">
+              <h3 className="standings__title">
+                {matchDate.getMonth() + 1}.{matchDate.getDate()} {LEAGUES.find(l => l.code === activeLeague)?.name}
+              </h3>
+              <div className="standings__tabs">
+                {LEAGUES.map((league) => (
+                  <button
+                    key={league.code}
+                    className={`standings__tab ${activeLeague === league.code ? 'standings__tab--active' : ''}`}
+                    onClick={() => setActiveLeague(league.code)}
+                  >
+                    {league.code}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="standings__table-wrapper">
+              <table className="standings__table">
+                <thead>
+                  <tr>
+                    <th className="standings__rank-col">순위</th>
+                    <th className="standings__team-col">구단</th>
+                    <th>경기</th>
+                    <th>승</th>
+                    <th>무</th>
+                    <th>패</th>
+                    <th>승률</th>
+                    <th>게임차</th>
+                    <th>연속</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {allStandings[activeLeague].map((row, idx) => {
+                    const club = clubsMap[row.club_id];
+                    const clubName = club ? club.name_ko : '로딩중...';
+                    const teamCode = club ? club.team_code : '';
+                    const meta = getTeamMeta(teamCode, clubName);
+
+                    const isTied = allStandings[activeLeague].filter(item => item.rank === row.rank).length > 1;
+                    const displayRank = isTied ? `T${row.rank}` : row.rank;
+
+                    return (
+                      <tr key={`${row.club_id}-${idx}`}>
+                        <td className={`standings__rank ${row.rank <= 4 ? 'standings__rank--playoff' : ''}`}>{displayRank}</td>
+                        <td className="standings__team-name">
+                          <div className="standings__team-cell">
+                            <div
+                              className="standings__team-logo-placeholder"
+                              style={{ color: meta.color }}
+                            >
+                              {meta.symbol}
+                            </div>
+                            <span className="standings__team-text">{clubName}</span>
+                          </div>
+                        </td>
+                        <td>{row.games_played}</td>
+                        <td>{row.wins}</td>
+                        <td>{row.draws}</td>
+                        <td>{row.losses}</td>
+                        <td className="standings__pct">{formatPct(row.win_rate)}</td>
+                        <td>{formatGb(row.games_back)}</td>
+                        <td>{formatStreak(row.streak)}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
       </div>
     </section>
   );
