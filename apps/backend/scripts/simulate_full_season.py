@@ -330,7 +330,8 @@ def run_knockout_stage(top_8_clubs, elite_end_day: int):
                 home_club_id=home_club_id,
                 away_club_id=away_club_id,
                 sim_day=day1,
-                status=MatchStatus.SCHEDULED
+                status=MatchStatus.SCHEDULED,
+                limit_extra_innings=False
             )
             run_match(m1)
             session.add(m1)
@@ -368,7 +369,8 @@ def run_knockout_stage(top_8_clubs, elite_end_day: int):
                 home_club_id=home_club_id,
                 away_club_id=away_club_id,
                 sim_day=day2,
-                status=MatchStatus.SCHEDULED
+                status=MatchStatus.SCHEDULED,
+                limit_extra_innings=False
             )
             run_match(m2)
             session.add(m2)
@@ -427,7 +429,13 @@ def run_knockout_stage(top_8_clubs, elite_end_day: int):
             ]):
                 if (win == 3 or loss == 3): continue
                 is_home = game_num in [1, 2, 5]
-                m = Match(home_club_id=(h_id if is_home else a_id), away_club_id=(a_id if is_home else h_id), sim_day=sim_day, status=MatchStatus.SCHEDULED)
+                m = Match(
+                    home_club_id=(h_id if is_home else a_id),
+                    away_club_id=(a_id if is_home else h_id),
+                    sim_day=sim_day,
+                    status=MatchStatus.SCHEDULED,
+                    limit_extra_innings=False
+                )
                 run_match(m); session.add(m); session.flush()
                 if (m.home_score > m.away_score if is_home else m.away_score > m.home_score):
                     if i == 0: s1_wins += 1 
@@ -485,7 +493,8 @@ def run_knockout_stage(top_8_clubs, elite_end_day: int):
                 home_club_id=actual_home,
                 away_club_id=actual_away,
                 sim_day=sim_day,
-                status=MatchStatus.SCHEDULED
+                status=MatchStatus.SCHEDULED,
+                limit_extra_innings=False
             )
             run_match(m)
             session.add(m)

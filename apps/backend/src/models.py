@@ -118,6 +118,7 @@ class Match(SQLModel, table=True):
     home_club_id: int    = Field(foreign_key="club.id")
     sim_day: int         = Field(index=True)
     status: MatchStatus  = Field(default=MatchStatus.SCHEDULED, index=True)
+    limit_extra_innings: bool = Field()
     
     # 경기 예정이거나 취소 상태일 때는 Null(None) 허용
     home_score: Optional[int] = Field(default=None)
@@ -139,6 +140,7 @@ class MatchPlaceholder(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     round: str  # "ROUND_OF_8", "SEMI_FINAL", "FINAL"
     sim_day: int  # 경기가 치러질 예정 시뮬레이션 일자
+    limit_extra_innings: bool = Field()
     
     # 8강처럼 최초 구단이 고정된 경우에만 값을 가짐
     home_club_id: Optional[int] = Field(default=None, foreign_key="club.id")
@@ -154,7 +156,7 @@ class MatchPlaceholder(SQLModel, table=True):
 
 
 # ##### 인게임 인스트럭션 로그 모델부 시작
-# ##### 인스트럭션 로그는 db 릴레이션이 아닌 json 형태로 저장
+# 인스트럭션 로그는 db 릴레이션이 아닌 json 형태로 저장
 
 class IngameEvent(SQLModel):
     event_type: IngameEventType
@@ -250,6 +252,11 @@ IngameEventConcrete = Annotated[
 
 
 class IngameInstructionLog(SQLModel):
+    '''
+    인게임 시뮬레이션의 전체 진행 과정을 기록한 인스트럭션 로그 모델.
+    이 모델은 Match 모델의 match_log 컬럼에 JSON 형태로 저장되며, 시뮬레이션 재생 및 분석에 사용됨.
+    더 많은 변수를 표현할 수 있고 현실적인 시뮬레이션을 위해 이벤트 기준 나열이 아닌 시간 기준(sim_timestamp)으로 정렬된 이벤트 시퀀스를 저장함.
+    '''
     simulation_version: str
     logged_events: list[IngameEventConcrete]
 

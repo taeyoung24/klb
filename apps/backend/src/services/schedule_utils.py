@@ -87,7 +87,8 @@ def generate_regular_schedule(clubs: list[Club], year: int, base_sim_day: int) -
                     home_club_id=home_club.id,
                     away_club_id=away_club.id,
                     sim_day=current_day,
-                    status=MatchStatus.SCHEDULED
+                    status=MatchStatus.SCHEDULED,
+                    limit_extra_innings=True
                 ))
                 
     return matches
@@ -160,14 +161,16 @@ def generate_krown_elite_schedule(clubs: list[Club], base_sim_day: int) -> list[
                 home_club_id=club_a.id,
                 away_club_id=club_b.id,
                 sim_day=day1,
-                status=MatchStatus.SCHEDULED
+                status=MatchStatus.SCHEDULED,
+                limit_extra_innings=True
             ))
             # 2차전: club_b 홈 (경기일: day2)
             matches.append(Match(
                 home_club_id=club_b.id,
                 away_club_id=club_a.id,
                 sim_day=day2,
-                status=MatchStatus.SCHEDULED
+                status=MatchStatus.SCHEDULED,
+                limit_extra_innings=True
             ))
 
     # 매치들을 sim_day 순서대로 정렬하여 반환
@@ -188,10 +191,10 @@ def generate_knockout_schedule(clubs: list[Club], base_sim_day: int) -> list[Mat
     # 1. 8강전 플레이스홀더 (4개)
     # 대진 매칭: #1 vs #8 (q1), #4 vs #5 (q2), #2 vs #7 (q3), #3 vs #6 (q4)
     # Bo3이므로 8강전의 시뮬레이션 일자는 base_sim_day ~ base_sim_day + 1일차 예정
-    q1 = MatchPlaceholder(round="ROUND_OF_8", sim_day=base_sim_day, home_club_id=clubs[0].id, away_club_id=clubs[7].id)
-    q2 = MatchPlaceholder(round="ROUND_OF_8", sim_day=base_sim_day, home_club_id=clubs[3].id, away_club_id=clubs[4].id)
-    q3 = MatchPlaceholder(round="ROUND_OF_8", sim_day=base_sim_day, home_club_id=clubs[1].id, away_club_id=clubs[6].id)
-    q4 = MatchPlaceholder(round="ROUND_OF_8", sim_day=base_sim_day, home_club_id=clubs[2].id, away_club_id=clubs[5].id)
+    q1 = MatchPlaceholder(round="ROUND_OF_8", sim_day=base_sim_day, home_club_id=clubs[0].id, away_club_id=clubs[7].id, limit_extra_innings=False)
+    q2 = MatchPlaceholder(round="ROUND_OF_8", sim_day=base_sim_day, home_club_id=clubs[3].id, away_club_id=clubs[4].id, limit_extra_innings=False)
+    q3 = MatchPlaceholder(round="ROUND_OF_8", sim_day=base_sim_day, home_club_id=clubs[1].id, away_club_id=clubs[6].id, limit_extra_innings=False)
+    q4 = MatchPlaceholder(round="ROUND_OF_8", sim_day=base_sim_day, home_club_id=clubs[2].id, away_club_id=clubs[5].id, limit_extra_innings=False)
     
     placeholders.extend([q1, q2, q3, q4])
     
@@ -199,8 +202,8 @@ def generate_knockout_schedule(clubs: list[Club], base_sim_day: int) -> list[Mat
     # 4강 1경기: 8강 1경기(q1) 승자 vs 8강 2경기(q2) 승자
     # 4강 2경기: 8강 3경기(q3) 승자 vs 8강 4경기(q4) 승자
     # Bo5이므로 4강전의 sim_day는 base_sim_day + 3 ~ base_sim_day + 9일차 예정 (중간 휴식일 포함)
-    s1 = MatchPlaceholder(round="SEMI_FINAL", sim_day=base_sim_day + 3)
-    s2 = MatchPlaceholder(round="SEMI_FINAL", sim_day=base_sim_day + 3)
+    s1 = MatchPlaceholder(round="SEMI_FINAL", sim_day=base_sim_day + 3, limit_extra_innings=False)
+    s2 = MatchPlaceholder(round="SEMI_FINAL", sim_day=base_sim_day + 3, limit_extra_innings=False)
     
     # DB 저장 전 ID 매핑 헬퍼를 위해 임시 인메모리 속성 연결
     setattr(s1, "_home_parent", q1)
@@ -213,7 +216,7 @@ def generate_knockout_schedule(clubs: list[Club], base_sim_day: int) -> list[Mat
     # 3. 결승전 플레이스홀더 (1개)
     # 4강 1경기(s1) 승자 vs 4강 2경기(s2) 승자
     # Bo7이므로 결승전의 sim_day는 base_sim_day + 11 ~ base_sim_day + 19일차 예정 (3일 경기 후 1일 휴식 패턴)
-    f = MatchPlaceholder(round="FINAL", sim_day=base_sim_day + 11)
+    f = MatchPlaceholder(round="FINAL", sim_day=base_sim_day + 11, limit_extra_innings=False)
     
     setattr(f, "_home_parent", s1)
     setattr(f, "_away_parent", s2)

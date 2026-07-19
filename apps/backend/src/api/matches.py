@@ -1,6 +1,7 @@
 from typing import Optional
 from fastapi import APIRouter, Depends
 from sqlmodel import Session, select, asc
+from sqlalchemy.orm import defer
 from src.models import Match, Club
 from src.services.common import get_session
 
@@ -14,7 +15,10 @@ def get_matches(
     status: Optional[str] = None,
     session: Session = Depends(get_session)
 ):
-    query = select(Match)
+    query = select(Match).options(
+        defer(Match.match_log),  # type: ignore
+        defer(Match.match_log_json)  # type: ignore
+    )
     
     if club_id is not None:
         query = query.where((Match.home_club_id == club_id) | (Match.away_club_id == club_id))
