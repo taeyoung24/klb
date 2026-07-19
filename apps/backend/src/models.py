@@ -1,8 +1,43 @@
 from datetime import datetime
-from typing import Any, Optional
+from typing import Any, Optional, Annotated, Union, Literal
 from sqlmodel import SQLModel, Field, JSON
+from sqlalchemy import Column
+from sqlalchemy.types import TypeDecorator
 
-from .enums import MatchStatus, IngameRole, RosterStatus
+from .enums import (
+    MatchStatus,
+    IngameRole,
+    RosterStatus,
+    IngameEventType,
+    IngameGameState,
+    IngamePitchType,
+    IngamePitchResult,
+    IngameContactType,
+    IngameFieldingAction,
+    IngameBaseRunReason,
+    IngameBaseRunResult,
+)
+
+class IngameInstructionLogType(TypeDecorator):
+    """Pydantic IngameInstructionLog 모델을 데이터베이스 JSON 컬럼과 자동으로 매핑하는 커스텀 타입"""
+    impl = JSON
+    cache_ok = True
+
+    def process_bind_param(self, value, dialect):
+        if value is None:
+            return None
+        if hasattr(value, "model_dump"):
+            return value.model_dump()
+        return value
+
+    def process_result_value(self, value, dialect):
+        if value is None:
+            return None
+        # 선언 순서 문제를 피하기 위해 globals()에서 IngameInstructionLog 조회
+        model_cls = globals().get("IngameInstructionLog")
+        if model_cls:
+            return model_cls.model_validate(value)
+        return value
 
 class WorldState(SQLModel, table=True):
     """
@@ -90,6 +125,12 @@ class Match(SQLModel, table=True):
     
     # 끝난 매치에 대한 raw 레벨 가공 JSON 인스트럭션 로그 (Data-Driven Playback)
     match_log_json: Optional[dict[str, Any]] = Field(default=None, sa_type=JSON)
+    
+    # 구조화된 인게임 로그 객체 컬럼 (Pydantic 모델 타입으로 자동 직렬화/역직렬화)
+    match_log: Optional['IngameInstructionLog'] = Field(
+        default=None,
+        sa_column=Column(IngameInstructionLogType)
+    )
 
 class MatchPlaceholder(SQLModel, table=True):
     """
@@ -109,3 +150,107 @@ class MatchPlaceholder(SQLModel, table=True):
 
     # 이 플레이스홀더를 통해 실제로 생성된 경기 ID (추적 용도)
     actual_match_id: Optional[int] = Field(default=None, foreign_key="match.id")
+
+
+
+# ##### 인게임 인스트럭션 로그 모델부 시작
+# ##### 인스트럭션 로그는 db 릴레이션이 아닌 json 형태로 저장
+
+class IngameEvent(SQLModel):
+    event_type: IngameEventType
+    sim_timestamp: float # 초 단위, 소수점 허용 (밀리초)
+
+
+class IngameNoticeEvent(IngameEvent):
+    event_type: Literal[IngameEventType.NOTICE] = IngameEventType.NOTICE
+    message: str
+
+
+class IngameGameStateEvent(IngameEvent):
+    event_type: Literal[IngameEventType.GAME_STATE] = IngameEventType.GAME_STATE
+    state_type: IngameGameState
+    inning: int
+    is_top: bool
+    home_score: int
+    away_score: int
+
+
+class IngameBatterEnterEvent(IngameEvent):
+    event_type: Literal[IngameEventType.BATTER_ENTER] = IngameEventType.BATTER_ENTER
+    batter_id: int
+    pitcher_id: int
+
+
+class IngamePitchStartEvent(IngameEvent):
+    event_type: Literal[IngameEventType.PITCH_START] = IngameEventType.PITCH_START
+    pitcher_id: int
+    pitch_type: IngamePitchType
+
+
+class IngamePitchEvent(IngameEvent):
+    event_type: Literal[IngameEventType.PITCH] = IngameEventType.PITCH
+    pitcher_id: int
+    batter_id: int
+    result: IngamePitchResult
+
+
+class IngameBatContactEvent(IngameEvent):
+    event_type: Literal[IngameEventType.BAT_CONTACT] = IngameEventType.BAT_CONTACT
+    batter_id: int
+    contact_type: IngameContactType
+    hit_velocity: float
+    launch_angle: float
+
+
+class IngameFieldingActionEvent(IngameEvent):
+    event_type: Literal[IngameEventType.FIELDING_ACTION] = IngameEventType.FIELDING_ACTION
+    fielder_id: int
+    action_type: IngameFieldingAction
+
+
+class IngameThrowActionEvent(IngameEvent):
+    event_type: Literal[IngameEventType.THROW_ACTION] = IngameEventType.THROW_ACTION
+    thrower_id: int
+    receiver_id: int
+    target_base: int
+    is_successful: bool
+
+
+class IngameBaseRunStartEvent(IngameEvent):
+    event_type: Literal[IngameEventType.BASE_RUN_START] = IngameEventType.BASE_RUN_START
+    runner_id: int
+    start_base: int
+    target_base: int
+    reason: IngameBaseRunReason
+
+
+class IngameBaseRunResultEvent(IngameEvent):
+    event_type: Literal[IngameEventType.BASE_RUN_RESULT] = IngameEventType.BASE_RUN_RESULT
+    runner_id: int
+    target_base: int
+    result: IngameBaseRunResult
+
+
+# discriminator를 사용하여 event_type 값에 따라 올바른 자식 클래스로 자동 역직렬화되도록 지정합니다.
+IngameEventConcrete = Annotated[
+    Union[
+        IngameNoticeEvent,
+        IngameGameStateEvent,
+        IngameBatterEnterEvent,
+        IngamePitchStartEvent,
+        IngamePitchEvent,
+        IngameBatContactEvent,
+        IngameFieldingActionEvent,
+        IngameThrowActionEvent,
+        IngameBaseRunStartEvent,
+        IngameBaseRunResultEvent
+    ],
+    Field(discriminator="event_type")
+]
+
+
+class IngameInstructionLog(SQLModel):
+    simulation_version: str
+    logged_events: list[IngameEventConcrete]
+
+

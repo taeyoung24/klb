@@ -4,10 +4,10 @@ import { getStandings, type DailyClubStanding } from '../api/standings'
 import './AppSeasonStandingSection.css'
 
 const LEAGUES = [
-  { code: 'AL' as const, id: 1, name: '아젤리아 리그' },
-  { code: 'CL' as const, id: 2, name: '카멜리아 리그' },
-  { code: 'GL' as const, id: 3, name: '젠티아나 리그' },
-  { code: 'ML' as const, id: 4, name: '매그놀리아 리그' },
+  { code: 'AL' as const, id: 1, name: '아젤리아' },
+  { code: 'CL' as const, id: 2, name: '카멜리아' },
+  { code: 'GL' as const, id: 3, name: '젠티아나' },
+  { code: 'ML' as const, id: 4, name: '매그놀리아' },
 ];
 
 const TEAM_META: Record<string, { color: string; symbol: string }> = {
@@ -209,7 +209,7 @@ export default function AppSeasonStandingSection({
             <table className="standings__table">
               <thead>
                 <tr>
-                  <th>순위</th>
+                  <th className="standings__rank-col">순위</th>
                   <th className="standings__team-col">구단</th>
                   <th>경기</th>
                   <th>승</th>
@@ -227,9 +227,12 @@ export default function AppSeasonStandingSection({
                   const teamCode = club ? club.team_code : '';
                   const meta = getTeamMeta(teamCode, clubName);
 
+                  const isTied = allStandings[activeLeague].filter(item => item.rank === row.rank).length > 1;
+                  const displayRank = isTied ? `T${row.rank}` : row.rank;
+
                   return (
                     <tr key={`${row.club_id}-${idx}`}>
-                      <td className="standings__rank">{row.rank}</td>
+                      <td className={`standings__rank ${row.rank <= 4 ? 'standings__rank--playoff' : ''}`}>{displayRank}</td>
                       <td className="standings__team-name">
                         <div className="standings__team-cell">
                           <div

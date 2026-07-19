@@ -227,10 +227,19 @@ section.section--first {
   min-width: 600px;
 }
 
-.standings__table th.standings__team-col,
+.standings__table th.standings__team-col {
+  text-align: center;
+  width: 200px;
+}
+
 .standings__table td.standings__team-name {
   text-align: left;
   width: 200px;
+}
+
+.standings__table th.standings__rank-col,
+.standings__table td.standings__rank {
+  width: 40px;
 }
 
 .standings__table th {
@@ -245,7 +254,7 @@ section.section--first {
 }
 
 .standings__table td {
-  padding: 12px 16px;
+  padding: 12px 12px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.04);
 }
 
@@ -265,6 +274,18 @@ section.section--first {
   font-weight: var(--fw-bold);
   color: #ffffff;
   font-family: var(--heading);
+  position: relative;
+}
+
+/* 1~4위 포스트시즌 진출 표시선 (정렬에 영향 주지 않는 absolute 구조) */
+.standings__rank--playoff::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  width: 3px;
+  background: #ffffff;
 }
 
 .standings__team-name {

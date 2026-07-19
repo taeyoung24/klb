@@ -23,11 +23,8 @@ def generate_regular_schedule(clubs: list[Club], year: int, base_sim_day: int) -
 
     # 1월 1일 대비 첫 화요일까지 경과된 날짜
     days_elapsed = (first_tuesday - jan_first).days
-    temp_start_sim_day = base_sim_day + days_elapsed
+    start_sim_day = base_sim_day + days_elapsed
 
-    # 시스템 요일 상 화요일(sim_day % 7 == 1)이 되도록 역방향 보정
-    system_weekday_offset = (temp_start_sim_day % 7 - 1 + 7) % 7
-    start_sim_day = temp_start_sim_day - system_weekday_offset
         
     # 1. 48개 시리즈 대진 매칭 조합 생성
     def get_round_robin_matchings():

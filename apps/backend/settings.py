@@ -14,6 +14,7 @@ DISCORD_REPORT_WH_URL  = os.environ['DISCORD_REPORT_WH_URL']
 class CONFIG:
     version = "1.0.0"
     base_datetime = datetime(2026, 1, 1, 0, 0, 0)
+    simulation_version = "0.1.0"
 
 
 class DISCORD_CONSTANTS:

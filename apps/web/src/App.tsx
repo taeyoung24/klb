@@ -59,7 +59,7 @@ function App() {
           <span className="header__logo-text">KLB</span>
         </a>
         {/* 모바일 메뉴바 버튼 */}
-        <button 
+        <button
           className={`header__menu-btn ${isMobileMenuOpen ? 'header__menu-btn--open' : ''}`}
           onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
           aria-label="Toggle menu"
@@ -79,13 +79,13 @@ function App() {
               <a className={`header__nav-link ${currentHash === '#league-shortcut' ? 'header__nav-link--active' : ''}`} href="#league-shortcut">리그 바로가기</a>
             </li>
             <li className="header__nav-item">
-              <a className={`header__nav-link header__nav-link--live ${currentHash === '#live' ? 'header__nav-link--active' : ''}`} href="#live">LIVE</a>
-            </li>
-            <li className="header__nav-item">
               <a className={`header__nav-link ${currentHash === '#community' ? 'header__nav-link--active' : ''}`} href="#community">커뮤니티</a>
             </li>
             <li className="header__nav-item">
               <a className={`header__nav-link ${currentHash === '#archive' ? 'header__nav-link--active' : ''}`} href="#archive">자료실</a>
+            </li>
+            <li className="header__nav-item">
+              <a className={`header__nav-link header__nav-link--live ${currentHash === '#live' ? 'header__nav-link--active' : ''}`} href="#live">LIVE</a>
             </li>
           </ul>
         </nav>
