@@ -4,11 +4,13 @@ services:
   klb-db:
     image: postgres:16-alpine
     container_name: klb_postgres_container
+    # 로컬 개발 전용 계정 정보 (실제 배포 시 비밀번호 변경 및 환경변수 분리 필요)
     environment:
       POSTGRES_USER: klb_admin
       POSTGRES_PASSWORD: klb_password
       POSTGRES_DB: klb_dev
     ports:
+      # 로컬 PC의 기존 PostgreSQL(5432) 포트 충돌 방지를 위해 호스트 포트를 5433으로 매핑
       - "5433:5432"
     volumes:
       - klb_postgres_data:/var/lib/postgresql/data
