@@ -207,6 +207,11 @@ export default function AppSeasonStandingSection({
   const isSectionLoaded = isSeasonYearLoaded && isStandingsLoaded && Object.keys(clubsMap).length > 0;
 
   const simDay = getSimDayFromDate(matchDate, seasonYear || 2026);
+  const isOpening = simDay >= 62;
+  const isSecondHalf = simDay >= 146;
+  const isPostSeason = simDay >= 229;
+  const isKnockout = simDay >= 286;
+
   let currentStep = 1;
   if (simDay < 146) {
     currentStep = 1;
@@ -350,6 +355,18 @@ export default function AppSeasonStandingSection({
 
   // 5단계 토너먼트 대진 결과 집계 로직
   const getKnockoutResults = () => {
+    if (!isKnockout) {
+      return {
+        q1: { round: 'ROUND_OF_8', id: 'q1', home: null, away: null, wins: { c1_wins: 0, c2_wins: 0 }, winner: null },
+        q2: { round: 'ROUND_OF_8', id: 'q2', home: null, away: null, wins: { c1_wins: 0, c2_wins: 0 }, winner: null },
+        q3: { round: 'ROUND_OF_8', id: 'q3', home: null, away: null, wins: { c1_wins: 0, c2_wins: 0 }, winner: null },
+        q4: { round: 'ROUND_OF_8', id: 'q4', home: null, away: null, wins: { c1_wins: 0, c2_wins: 0 }, winner: null },
+        s1: { home: null, away: null, wins: { c1_wins: 0, c2_wins: 0 }, winner: null },
+        s2: { home: null, away: null, wins: { c1_wins: 0, c2_wins: 0 }, winner: null },
+        f: { home: null, away: null, wins: { c1_wins: 0, c2_wins: 0 }, winner: null }
+      };
+    }
+
     const eliteStandings = getEliteStandings();
     const top8 = eliteStandings.slice(0, 8).map(r => r.club_id);
     const clubsList = Object.keys(clubsMap).map(Number).slice(0, 8);
@@ -625,43 +642,64 @@ export default function AppSeasonStandingSection({
                   </tr>
                 </thead>
                 <tbody>
-                  {getEliteStandings().map((row, idx) => {
-                    const club = clubsMap[row.club_id];
-                    const clubName = club ? club.name_ko : '로딩중...';
-                    const teamCode = club ? club.team_code : '';
-                    const meta = getTeamMeta(teamCode, clubName);
-                    const seedText = seedMap[row.club_id] ? ` (${seedMap[row.club_id]})` : '';
-
-                    const isTied = getEliteStandings().filter(item => item.rank === row.rank).length > 1;
-                    const displayRank = isTied ? `T${row.rank}` : row.rank;
-
-                    return (
-                      <tr key={`${row.club_id}-${idx}`}>
-                        <td className={`standings__rank ${row.rank <= 8 ? 'standings__rank--playoff' : ''}`}>{displayRank}</td>
+                  {!isPostSeason ? (
+                    Array.from({ length: 16 }).map((_, idx) => (
+                      <tr key={`post-placeholder-${idx}`}>
+                        <td className={`standings__rank ${idx < 8 ? 'standings__rank--playoff' : ''}`}>{idx + 1}</td>
                         <td className="standings__team-name">
                           <div className="standings__team-cell">
-                            <div
-                              className="standings__team-logo-placeholder"
-                              style={{ color: meta.color }}
-                            >
-                              {meta.symbol}
-                            </div>
-                            <span className="standings__team-text">
-                              {clubName}
-                              <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', marginLeft: '6px' }}>{seedText}</span>
-                            </span>
+                            <div className="standings__team-logo-placeholder" style={{ color: "rgba(255,255,255,0.2)" }}>?</div>
+                            <span className="standings__team-text" style={{ color: "rgba(255,255,255,0.4)" }}>TBD</span>
                           </div>
                         </td>
-                        <td>{row.games_played}</td>
-                        <td>{row.wins}</td>
-                        <td>{row.draws}</td>
-                        <td>{row.losses}</td>
-                        <td className="standings__pct">{formatPct(row.win_rate)}</td>
-                        <td>{formatGb(row.games_back)}</td>
-                        <td>{formatStreak(row.streak)}</td>
+                        <td>-</td>
+                        <td>-</td>
+                        <td>-</td>
+                        <td>-</td>
+                        <td className="standings__pct">-</td>
+                        <td>-</td>
+                        <td>-</td>
                       </tr>
-                    );
-                  })}
+                    ))
+                  ) : (
+                    getEliteStandings().map((row, idx) => {
+                      const club = clubsMap[row.club_id];
+                      const clubName = club ? club.name_ko : '로딩중...';
+                      const teamCode = club ? club.team_code : '';
+                      const meta = getTeamMeta(teamCode, clubName);
+                      const seedText = seedMap[row.club_id] ? ` (${seedMap[row.club_id]})` : '';
+
+                      const isTied = getEliteStandings().filter(item => item.rank === row.rank).length > 1;
+                      const displayRank = isTied ? `T${row.rank}` : row.rank;
+
+                      return (
+                        <tr key={`${row.club_id}-${idx}`}>
+                          <td className={`standings__rank ${row.rank <= 8 ? 'standings__rank--playoff' : ''}`}>{displayRank}</td>
+                          <td className="standings__team-name">
+                            <div className="standings__team-cell">
+                              <div
+                                className="standings__team-logo-placeholder"
+                                style={{ color: meta.color }}
+                              >
+                                {meta.symbol}
+                              </div>
+                              <span className="standings__team-text">
+                                {clubName}
+                                <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', marginLeft: '6px' }}>{seedText}</span>
+                              </span>
+                            </div>
+                          </td>
+                          <td>{row.games_played}</td>
+                          <td>{row.wins}</td>
+                          <td>{row.draws}</td>
+                          <td>{row.losses}</td>
+                          <td className="standings__pct">{formatPct(row.win_rate)}</td>
+                          <td>{formatGb(row.games_back)}</td>
+                          <td>{formatStreak(row.streak)}</td>
+                        </tr>
+                      );
+                    })
+                  )}
                 </tbody>
               </table>
             </div>
@@ -710,39 +748,63 @@ export default function AppSeasonStandingSection({
                   </tr>
                 </thead>
                 <tbody>
-                  {allStandings[activeLeague].map((row, idx) => {
-                    const club = clubsMap[row.club_id];
-                    const clubName = club ? club.name_ko : '로딩중...';
-                    const teamCode = club ? club.team_code : '';
-                    const meta = getTeamMeta(teamCode, clubName);
-
-                    const isTied = allStandings[activeLeague].filter(item => item.rank === row.rank).length > 1;
-                    const displayRank = isTied ? `T${row.rank}` : row.rank;
-
-                    return (
-                      <tr key={`${row.club_id}-${idx}`}>
-                        <td className={`standings__rank ${row.rank <= 4 ? 'standings__rank--playoff' : ''}`}>{displayRank}</td>
+                  {selectedStep === 3 && !isSecondHalf ? (
+                    Array.from({ length: 10 }).map((_, idx) => (
+                      <tr key={`secondhalf-placeholder-${idx}`}>
+                        <td className="standings__rank">{idx + 1}</td>
                         <td className="standings__team-name">
                           <div className="standings__team-cell">
-                            <div
-                              className="standings__team-logo-placeholder"
-                              style={{ color: meta.color }}
-                            >
-                              {meta.symbol}
-                            </div>
-                            <span className="standings__team-text">{clubName}</span>
+                            <div className="standings__team-logo-placeholder" style={{ color: "rgba(255,255,255,0.2)" }}>?</div>
+                            <span className="standings__team-text" style={{ color: "rgba(255,255,255,0.4)" }}>TBD</span>
                           </div>
                         </td>
-                        <td>{row.games_played}</td>
-                        <td>{row.wins}</td>
-                        <td>{row.draws}</td>
-                        <td>{row.losses}</td>
-                        <td className="standings__pct">{formatPct(row.win_rate)}</td>
-                        <td>{formatGb(row.games_back)}</td>
-                        <td>{formatStreak(row.streak)}</td>
+                        <td>-</td>
+                        <td>-</td>
+                        <td>-</td>
+                        <td>-</td>
+                        <td className="standings__pct">-</td>
+                        <td>-</td>
+                        <td>-</td>
                       </tr>
-                    );
-                  })}
+                    ))
+                  ) : (() => {
+                    const standingsList = allStandings[activeLeague];
+                    const isZeroGames = !isOpening || standingsList.every(row => row.games_played === 0);
+
+                    return standingsList.map((row, idx) => {
+                      const club = clubsMap[row.club_id];
+                      const clubName = club ? club.name_ko : '로딩중...';
+                      const teamCode = club ? club.team_code : '';
+                      const meta = getTeamMeta(teamCode, clubName);
+
+                      const isTied = standingsList.filter(item => item.rank === row.rank).length > 1;
+                      const displayRank = isZeroGames ? "-" : (isTied ? `T${row.rank}` : row.rank);
+
+                      return (
+                        <tr key={`${row.club_id}-${idx}`}>
+                          <td className={`standings__rank ${!isZeroGames && row.rank <= 4 ? 'standings__rank--playoff' : ''}`}>{displayRank}</td>
+                          <td className="standings__team-name">
+                            <div className="standings__team-cell">
+                              <div
+                                className="standings__team-logo-placeholder"
+                                style={{ color: meta.color }}
+                              >
+                                {meta.symbol}
+                              </div>
+                              <span className="standings__team-text">{clubName}</span>
+                            </div>
+                          </td>
+                          <td>{isZeroGames ? "-" : row.games_played}</td>
+                          <td>{isZeroGames ? "-" : row.wins}</td>
+                          <td>{isZeroGames ? "-" : row.draws}</td>
+                          <td>{isZeroGames ? "-" : row.losses}</td>
+                          <td className="standings__pct">{isZeroGames ? "-" : formatPct(row.win_rate)}</td>
+                          <td>{isZeroGames ? "-" : formatGb(row.games_back)}</td>
+                          <td>{isZeroGames ? "-" : formatStreak(row.streak)}</td>
+                        </tr>
+                      );
+                    });
+                  })()}
                 </tbody>
               </table>
             </div>
