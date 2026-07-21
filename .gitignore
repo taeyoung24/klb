@@ -47,6 +47,8 @@ site/
 *storybook.log
 storybook-static
 
+out/
+
 # Environment variables
 .env
 .env.production
