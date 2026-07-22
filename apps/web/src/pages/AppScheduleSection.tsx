@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { FiChevronLeft, FiChevronRight } from 'react-icons/fi'
 import { getClubs, type Club } from '../api/clubs'
 import { getMatches, type Match } from '../api/matches'
@@ -97,40 +97,40 @@ export default function AppScheduleSection({
 }: AppScheduleSectionProps) {
   const [activeTier, setActiveTier] = useState<'1군' | '2군' | '3군'>('1군');
   const [activeLeagueFilter, setActiveLeagueFilter] = useState<string>('전체');
-  
+
   const [clubsMap, setClubsMap] = useState<Record<number, Club>>({});
   const [matches, setMatches] = useState<Match[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
   // 1. 전체 구단 정보 조회
   useEffect(() => {
-     getClubs()
-       .then(list => {
-         const map: Record<number, Club> = {};
-         list.forEach(c => {
-           map[c.id] = c;
-         });
-         setClubsMap(map);
-       })
-       .catch(e => {
-         console.error("Failed to fetch clubs", e);
-       });
+    getClubs()
+      .then(list => {
+        const map: Record<number, Club> = {};
+        list.forEach(c => {
+          map[c.id] = c;
+        });
+        setClubsMap(map);
+      })
+      .catch(e => {
+        console.error("Failed to fetch clubs", e);
+      });
   }, []);
 
   // 2. 선택 날짜(sim_day)에 따른 매치 목록 조회
   useEffect(() => {
-     const simDay = getSimDayFromDate(matchDate, 2026);
-     setIsLoading(true);
-     getMatches({ sim_day: simDay })
-       .then(res => {
-         setMatches(res);
-         setIsLoading(false);
-       })
-       .catch(e => {
-         console.error("Failed to fetch matches", e);
-         setMatches([]);
-         setIsLoading(false);
-       });
+    const simDay = getSimDayFromDate(matchDate, 2026);
+    setIsLoading(true);
+    getMatches({ sim_day: simDay })
+      .then(res => {
+        setMatches(res);
+        setIsLoading(false);
+      })
+      .catch(e => {
+        console.error("Failed to fetch matches", e);
+        setMatches([]);
+        setIsLoading(false);
+      });
   }, [matchDate]);
 
   return (
@@ -215,7 +215,7 @@ export default function AppScheduleSection({
               filtered.forEach(match => {
                 const homeClub = clubsMap[match.home_club_id];
                 const leagueId = homeClub?.league_id || 1;
-                
+
                 // 매핑용 이름 획득
                 let groupKey = '기타 리그';
                 const foundEntry = Object.entries(LEAGUE_MAPPING).find(([_, val]) => val.id === leagueId);
@@ -245,7 +245,7 @@ export default function AppScheduleSection({
                       const homeMeta = getTeamMeta(homeClub?.team_code || '', homeName);
 
                       return (
-                        <div key={match.id} className="match-card">
+                        <a key={match.id} href="#match-detail" className="match-card">
                           <div className="match-card__status-col">
                             <span className={`match-card__status-badge match-card__status-badge--${match.status === 'COMPLETED' ? 'ended' : match.status === 'IN_PROGRESS' ? 'live' : 'upcoming'}`}>
                               {getStatusLabel(match.status)}
@@ -284,7 +284,7 @@ export default function AppScheduleSection({
                           <div className="match-card__venue-col">
                             <span className="match-card__venue">{homeClub?.stadium_name_ko || '야구장'}</span>
                           </div>
-                        </div>
+                        </a>
                       );
                     })}
                   </div>

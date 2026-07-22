@@ -1,11 +1,16 @@
-import { useState, useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import './App.css'
-import Intro from './pages/Intro'
-import LeagueShortcut from './pages/LeagueShortcut'
-import AppSeasonStandingSection from './pages/AppSeasonStandingSection'
+import { getSystemInfo } from './api/system'
 import AppNewsSection from './pages/AppNewsSection'
 import AppScheduleSection from './pages/AppScheduleSection'
-import { getSystemInfo } from './api/system'
+import AppSeasonStandingSection from './pages/AppSeasonStandingSection'
+import Intro from './pages/Intro'
+import LeagueShortcut from './pages/LeagueShortcut'
+import MatchDetail from './pages/MatchDetail'
+import AzaleaLeagueApp from './pages/league-al/App'
+import CamelliaLeagueApp from './pages/league-cl/App'
+import GentianaLeagueApp from './pages/league-gl/App'
+import MagnoliaLeagueApp from './pages/league-ml/App'
 
 function App() {
   const [currentHash, setCurrentHash] = useState(window.location.hash || '#home')
@@ -17,6 +22,7 @@ function App() {
 
   useEffect(() => {
     setIsMobileMenuOpen(false)
+    window.scrollTo(0, 0)
   }, [currentHash])
 
   useEffect(() => {
@@ -49,6 +55,19 @@ function App() {
     const nextDate = new Date(matchDate)
     nextDate.setDate(nextDate.getDate() + days)
     setMatchDate(nextDate)
+  }
+
+  if (currentHash === '#league-al') {
+    return <AzaleaLeagueApp />
+  }
+  if (currentHash === '#league-cl') {
+    return <CamelliaLeagueApp />
+  }
+  if (currentHash === '#league-gl') {
+    return <GentianaLeagueApp />
+  }
+  if (currentHash === '#league-ml') {
+    return <MagnoliaLeagueApp />
   }
 
   return (
@@ -95,6 +114,8 @@ function App() {
         <Intro />
       ) : currentHash === '#league-shortcut' ? (
         <LeagueShortcut />
+      ) : currentHash === '#match-detail' ? (
+        <MatchDetail />
       ) : ['#schedule', '#live', '#community', '#archive'].includes(currentHash) ? (
         <div className="empty-page" />
       ) : (
@@ -120,7 +141,7 @@ function App() {
               <span className="footer__logo-text">KLB</span>
             </div>
             <p className="footer__desc">
-              Krown League Baseball은 대한민국 야구의 새로운 역사와 혁신을 만들어갑니다.
+              Krown League Baseball은 여러분의 역사를 간직합니다.
             </p>
           </div>
           <div className="footer__links-section">

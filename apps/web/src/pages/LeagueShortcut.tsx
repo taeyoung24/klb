@@ -50,8 +50,11 @@ export default function LeagueShortcut() {
     <div className="league-shortcut">
       <div className="league-shortcut__container">
         {leagues.map((league) => (
-          <div 
+          <a 
             key={league.abbreviation}
+            href={`#league-${league.abbreviation.toLowerCase()}`}
+            target="_blank"
+            rel="noopener noreferrer"
             className={`league-card league-card--${league.color}`}
             style={{ '--glow-color': league.accentColor } as React.CSSProperties}
           >
@@ -71,7 +74,7 @@ export default function LeagueShortcut() {
               <h2 className="league-card__title">{league.name}</h2>
               <span className="league-card__subtitle">{league.koreanName}</span>
             </div>
-          </div>
+          </a>
         ))}
       </div>
     </div>

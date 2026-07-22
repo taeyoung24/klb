@@ -30,6 +30,8 @@
   border-right: 1px solid rgba(255, 255, 255, 0.05);
   transition: all 0.7s cubic-bezier(0.16, 1, 0.3, 1);
   cursor: pointer; /* 영역 전체를 클릭할 수 있게 포인터형 커서 적용 */
+  text-decoration: none; /* <a> 태그 밑줄 제거 */
+  color: inherit;
 }
 
 .league-card:last-child {
