@@ -4,6 +4,10 @@ import { getSystemInfo } from './api/system'
 import AppNewsSection from './pages/AppNewsSection'
 import AppScheduleSection from './pages/AppScheduleSection'
 import AppSeasonStandingSection from './pages/AppSeasonStandingSection'
+import Archive from './pages/Archive'
+import Records from './pages/Records'
+import Schedule from './pages/Schedule'
+import Live from './pages/Live'
 import Intro from './pages/Intro'
 import LeagueShortcut from './pages/LeagueShortcut'
 import MatchDetail from './pages/MatchDetail'
@@ -14,7 +18,8 @@ import MagnoliaLeagueApp from './pages/league-ml/App'
 
 function App() {
   const [currentHash, setCurrentHash] = useState(window.location.hash || '#home')
-  const [matchDate, setMatchDate] = useState<Date>(new Date("2026-07-17"))
+  const [latestDate, setLatestDate] = useState<Date>(new Date("2026-07-17"))
+  const [scheduleDate, setScheduleDate] = useState<Date>(new Date("2026-07-17"))
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [seasonYear, setSeasonYear] = useState<number | null>(null)
@@ -30,7 +35,9 @@ function App() {
       .then(info => {
         setSeasonYear(info.season_year)
         const [y, m, d] = info.current_date.split('-')
-        setMatchDate(new Date(Number(y), Number(m) - 1, Number(d)))
+        const systemDate = new Date(Number(y), Number(m) - 1, Number(d))
+        setLatestDate(systemDate)
+        setScheduleDate(systemDate)
         setIsSeasonYearLoaded(true)
       })
       .catch(e => {
@@ -51,10 +58,10 @@ function App() {
     }
   }, [])
 
-  const handleDateChange = (days: number) => {
-    const nextDate = new Date(matchDate)
+  const handleScheduleDateChange = (days: number) => {
+    const nextDate = new Date(scheduleDate)
     nextDate.setDate(nextDate.getDate() + days)
-    setMatchDate(nextDate)
+    setScheduleDate(nextDate)
   }
 
   if (currentHash === '#league-al') {
@@ -98,7 +105,7 @@ function App() {
               <a className={`header__nav-link ${currentHash === '#league-shortcut' ? 'header__nav-link--active' : ''}`} href="#league-shortcut">리그 바로가기</a>
             </li>
             <li className="header__nav-item">
-              <a className={`header__nav-link ${currentHash === '#community' ? 'header__nav-link--active' : ''}`} href="#community">커뮤니티</a>
+              <a className={`header__nav-link ${currentHash === '#records' ? 'header__nav-link--active' : ''}`} href="#records">기록실</a>
             </li>
             <li className="header__nav-item">
               <a className={`header__nav-link ${currentHash === '#archive' ? 'header__nav-link--active' : ''}`} href="#archive">자료실</a>
@@ -116,19 +123,25 @@ function App() {
         <LeagueShortcut />
       ) : currentHash === '#match-detail' ? (
         <MatchDetail />
-      ) : ['#schedule', '#live', '#community', '#archive'].includes(currentHash) ? (
-        <div className="empty-page" />
+      ) : currentHash === '#archive' ? (
+        <Archive />
+      ) : currentHash === '#records' ? (
+        <Records />
+      ) : currentHash === '#schedule' ? (
+        <Schedule />
+      ) : currentHash === '#live' ? (
+        <Live />
       ) : (
         <>
           <AppSeasonStandingSection
-            matchDate={matchDate}
+            matchDate={latestDate}
             seasonYear={seasonYear}
             isSeasonYearLoaded={isSeasonYearLoaded}
           />
           <AppNewsSection />
           <AppScheduleSection
-            matchDate={matchDate}
-            onDateChange={handleDateChange}
+            matchDate={scheduleDate}
+            onDateChange={handleScheduleDateChange}
           />
         </>
       )}

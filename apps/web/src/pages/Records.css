@@ -1,0 +1,154 @@
+/* ==========================================================================
+   Records Page Style (BEM Convention - Light Theme)
+   ========================================================================== */
+
+.records {
+  width: 100%;
+  min-height: 100vh;
+  background-color: #ffffff;
+  color: #1e293b;
+  padding: 120px 24px 80px 24px;
+  box-sizing: border-box;
+  font-family: var(--sans);
+}
+
+.records__container {
+  max-width: 1080px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+/* --------------------------------------------------------------------------
+   Header Title Section
+   -------------------------------------------------------------------------- */
+.records__header {
+  border-bottom: 2px solid #e2e8f0;
+  padding-bottom: 20px;
+}
+
+.records__title {
+  font-size: var(--fs-3xl);
+  font-weight: var(--fw-bold);
+  color: #0f172a;
+  margin: 0 0 8px 0;
+}
+
+.records__subtitle {
+  font-size: var(--fs-sm);
+  color: #64748b;
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* --------------------------------------------------------------------------
+   Tab Navigation
+   -------------------------------------------------------------------------- */
+.records__tabs {
+  display: flex;
+  gap: 8px;
+  border-bottom: 1px solid #e2e8f0;
+  padding-bottom: 0;
+}
+
+.records__tab-btn {
+  background: none;
+  border: none;
+  color: #64748b;
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-bold);
+  padding: 12px 24px;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+}
+
+.records__tab-btn--active {
+  color: #0f172a;
+  border-bottom: 2px solid #0f172a;
+}
+
+/* --------------------------------------------------------------------------
+   Table Area
+   -------------------------------------------------------------------------- */
+.records__table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+}
+
+.records__table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: center;
+  font-size: var(--fs-sm);
+}
+
+.records__table th,
+.records__table td {
+  padding: 14px 16px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.records__table th {
+  background-color: #f8fafc;
+  color: #475569;
+  font-weight: var(--fw-bold);
+  font-size: var(--fs-xs);
+}
+
+.records__th-rank {
+  width: 60px;
+}
+
+.records__th-player {
+  text-align: left;
+  min-width: 100px;
+}
+
+.records__th-team {
+  text-align: left;
+  min-width: 140px;
+}
+
+.records__td-rank {
+  font-weight: var(--fw-bold);
+  color: #64748b;
+}
+
+.records__td-rank--top {
+  color: #dc2626;
+}
+
+.records__td-player {
+  text-align: left;
+  font-weight: var(--fw-bold);
+  color: #0f172a;
+}
+
+.records__td-team {
+  text-align: left;
+  color: #475569;
+}
+
+.records__th-highlight {
+  background-color: #eff6ff !important;
+  color: #1d4ed8 !important;
+}
+
+.records__td-highlight {
+  font-weight: var(--fw-bold);
+  color: #1d4ed8;
+  background-color: #f8fafc;
+}
+
+/* --------------------------------------------------------------------------
+   Responsive Design
+   -------------------------------------------------------------------------- */
+@media (max-width: 640px) {
+  .records {
+    padding: 100px 16px 60px 16px;
+  }
+}

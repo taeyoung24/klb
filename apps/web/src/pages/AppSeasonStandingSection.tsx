@@ -1,9 +1,9 @@
-import { useState, useEffect } from 'react'
-import { getClubs, type Club } from '../api/clubs'
-import { getStandings, type DailyClubStanding } from '../api/standings'
-import { getMatches, type Match } from '../api/matches'
-import { getSystemInfo } from '../api/system'
+import { useEffect, useState } from 'react'
 import { FaCircle } from 'react-icons/fa'
+import { getClubs, type Club } from '../api/clubs'
+import { getMatches, type Match } from '../api/matches'
+import { getStandings, type DailyClubStanding } from '../api/standings'
+import { getSystemInfo } from '../api/system'
 import MatchSeries from '../components/MatchSeries/MatchSeries'
 import './AppSeasonStandingSection.css'
 
@@ -664,9 +664,9 @@ export default function AppSeasonStandingSection({
                   ) : (
                     getEliteStandings().map((row, idx) => {
                       const club = clubsMap[row.club_id];
-                      const clubName = club ? club.name_ko : '로딩중...';
+                      const clubFullName = club ? (club.hometown_ko ? `${club.hometown_ko} ${club.name_ko}` : club.name_ko) : '로딩중...';
                       const teamCode = club ? club.team_code : '';
-                      const meta = getTeamMeta(teamCode, clubName);
+                      const meta = getTeamMeta(teamCode, clubFullName);
                       const seedText = seedMap[row.club_id] ? ` (${seedMap[row.club_id]})` : '';
 
                       const isTied = getEliteStandings().filter(item => item.rank === row.rank).length > 1;
@@ -684,7 +684,7 @@ export default function AppSeasonStandingSection({
                                 {meta.symbol}
                               </div>
                               <span className="standings__team-text">
-                                {clubName}
+                                {clubFullName}
                                 <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', marginLeft: '6px' }}>{seedText}</span>
                               </span>
                             </div>
@@ -773,9 +773,9 @@ export default function AppSeasonStandingSection({
 
                     return standingsList.map((row, idx) => {
                       const club = clubsMap[row.club_id];
-                      const clubName = club ? club.name_ko : '로딩중...';
+                      const clubFullName = club ? (club.hometown_ko ? `${club.hometown_ko} ${club.name_ko}` : club.name_ko) : '로딩중...';
                       const teamCode = club ? club.team_code : '';
-                      const meta = getTeamMeta(teamCode, clubName);
+                      const meta = getTeamMeta(teamCode, clubFullName);
 
                       const isTied = standingsList.filter(item => item.rank === row.rank).length > 1;
                       const displayRank = isZeroGames ? "-" : (isTied ? `T${row.rank}` : row.rank);
@@ -791,7 +791,7 @@ export default function AppSeasonStandingSection({
                               >
                                 {meta.symbol}
                               </div>
-                              <span className="standings__team-text">{clubName}</span>
+                              <span className="standings__team-text">{clubFullName}</span>
                             </div>
                           </td>
                           <td>{isZeroGames ? "-" : row.games_played}</td>

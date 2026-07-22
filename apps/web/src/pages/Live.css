@@ -1,0 +1,250 @@
+/* ==========================================================================
+   Live Page Style (BEM Convention - Black Theme / No Hover Actions)
+   ========================================================================== */
+
+.live {
+  width: 100%;
+  min-height: 100vh;
+  background-color: #0b0c10;
+  color: #ffffff;
+  padding: 120px 24px 80px 24px;
+  box-sizing: border-box;
+  font-family: var(--sans);
+}
+
+.live__container {
+  max-width: 1080px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+/* --------------------------------------------------------------------------
+   Header Section
+   -------------------------------------------------------------------------- */
+.live__header {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding-bottom: 20px;
+}
+
+.live__title-box {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.live__badge-pulse {
+  background-color: #e01e3c;
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: var(--fw-bold);
+  padding: 3px 8px;
+  border-radius: 4px;
+  text-transform: uppercase;
+}
+
+.live__title {
+  font-size: var(--fs-3xl);
+  font-weight: var(--fw-bold);
+  color: #ffffff;
+  margin: 0;
+}
+
+.live__subtitle {
+  font-size: var(--fs-sm);
+  color: rgba(255, 255, 255, 0.6);
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* --------------------------------------------------------------------------
+   Live Card Grid (Card List)
+   -------------------------------------------------------------------------- */
+.live__grid {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.live__card {
+  background: linear-gradient(180deg, #14171f 0%, #1a1e29 100%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.live__card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.live__league-tag {
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-bold);
+  color: rgba(255, 255, 255, 0.5);
+  background-color: rgba(255, 255, 255, 0.06);
+  padding: 4px 10px;
+  border-radius: 4px;
+}
+
+.live__inning-tag {
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-bold);
+  color: #e01e3c;
+  background-color: rgba(224, 30, 60, 0.15);
+  padding: 4px 10px;
+  border-radius: 4px;
+}
+
+/* --------------------------------------------------------------------------
+   Match Hero (Score & Teams Layout)
+   -------------------------------------------------------------------------- */
+.live__match-hero {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+}
+
+.live__team {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex: 1;
+}
+
+.live__team--away {
+  justify-content: flex-end;
+}
+
+.live__team--home {
+  justify-content: flex-start;
+}
+
+.live__logo-circle {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background-color: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--heading);
+  font-size: var(--fs-xl);
+  font-weight: var(--fw-bold);
+  flex-shrink: 0;
+}
+
+.live__team-name {
+  font-size: var(--fs-lg);
+  font-weight: var(--fw-bold);
+  color: #ffffff;
+  min-width: 110px;
+}
+
+.live__team--away .live__team-name {
+  text-align: right;
+}
+
+.live__team--home .live__team-name {
+  text-align: left;
+}
+
+.live__score-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background-color: rgba(0, 0, 0, 0.3);
+  padding: 6px 20px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.live__score {
+  font-family: var(--heading);
+  font-size: 36px;
+  font-weight: 800;
+  color: #ffffff;
+}
+
+.live__divider {
+  font-family: var(--heading);
+  font-size: 20px;
+  font-weight: 800;
+  color: rgba(255, 255, 255, 0.3);
+}
+
+/* --------------------------------------------------------------------------
+   Card Footer & Watch Button
+   -------------------------------------------------------------------------- */
+.live__card-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  padding-top: 16px;
+}
+
+.live__stadium {
+  font-size: var(--fs-xs);
+  color: rgba(255, 255, 255, 0.5);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.live__footer-icon {
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.live__watch-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background-color: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-bold);
+  padding: 8px 16px;
+  border-radius: 6px;
+  text-decoration: none;
+}
+
+.live__watch-icon {
+  font-size: 12px;
+  color: #e01e3c;
+}
+
+/* --------------------------------------------------------------------------
+   Responsive Design
+   -------------------------------------------------------------------------- */
+@media (max-width: 640px) {
+  .live__match-hero {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .live__team--away,
+  .live__team--home {
+    justify-content: center;
+  }
+
+  .live__team--away .live__team-name,
+  .live__team--home .live__team-name {
+    text-align: center;
+  }
+
+  .live__card-footer {
+    flex-direction: column;
+    gap: 12px;
+    align-items: center;
+  }
+}

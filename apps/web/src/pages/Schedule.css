@@ -1,0 +1,321 @@
+/* ==========================================================================
+   Schedule Page Style (BEM Convention - Light Theme)
+   ========================================================================== */
+
+.schedule {
+  width: 100%;
+  min-height: 100vh;
+  background-color: #ffffff;
+  color: #1e293b;
+  padding: 120px 24px 80px 24px;
+  box-sizing: border-box;
+  font-family: var(--sans);
+}
+
+.schedule__container {
+  max-width: 1180px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+/* --------------------------------------------------------------------------
+   Header Section
+   -------------------------------------------------------------------------- */
+.schedule__header {
+  border-bottom: 2px solid #e2e8f0;
+  padding-bottom: 20px;
+}
+
+.schedule__title {
+  font-size: var(--fs-3xl);
+  font-weight: var(--fw-bold);
+  color: #0f172a;
+  margin: 0 0 8px 0;
+}
+
+.schedule__subtitle {
+  font-size: var(--fs-sm);
+  color: #64748b;
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* --------------------------------------------------------------------------
+   Calendar & Detail Panel Layout
+   -------------------------------------------------------------------------- */
+.schedule__body {
+  display: grid;
+  grid-template-columns: 1fr 380px;
+  gap: 24px;
+  align-items: start;
+}
+
+/* --------------------------------------------------------------------------
+   Calendar Card
+   -------------------------------------------------------------------------- */
+.schedule__calendar-card {
+  background-color: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.schedule__month-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid #f1f5f9;
+  padding-bottom: 16px;
+}
+
+.schedule__month-label {
+  font-size: var(--fs-xl);
+  font-weight: var(--fw-bold);
+  color: #0f172a;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.schedule__calendar-icon {
+  color: #2563eb;
+}
+
+.schedule__month-nav-btn {
+  background-color: #f8fafc;
+  border: 1px solid #cbd5e1;
+  color: #475569;
+  width: 36px;
+  height: 36px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+/* Week Header */
+.schedule__week-header {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  text-align: center;
+  font-weight: var(--fw-bold);
+  font-size: var(--fs-xs);
+  color: #64748b;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.schedule__week-day--sun {
+  color: #dc2626;
+}
+
+.schedule__week-day--sat {
+  color: #2563eb;
+}
+
+/* Days Grid */
+.schedule__days-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+}
+
+.schedule__day-cell {
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  min-height: 80px;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  cursor: pointer;
+  box-sizing: border-box;
+}
+
+.schedule__day-cell--empty {
+  background-color: transparent;
+  border-color: transparent;
+  cursor: default;
+}
+
+.schedule__day-cell--selected {
+  background-color: #eff6ff;
+  border: 2px solid #2563eb;
+}
+
+.schedule__day-cell--has-matches {
+  background-color: #ffffff;
+}
+
+.schedule__day-num {
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-bold);
+  color: #1e293b;
+}
+
+.schedule__day-num--sun {
+  color: #dc2626;
+}
+
+.schedule__day-num--sat {
+  color: #2563eb;
+}
+
+.schedule__match-indicator {
+  margin-top: auto;
+}
+
+.schedule__match-count {
+  font-size: 10px;
+  font-weight: var(--fw-bold);
+  background-color: #dbeafe;
+  color: #1e40af;
+  padding: 2px 6px;
+  border-radius: 4px;
+  display: inline-block;
+}
+
+/* --------------------------------------------------------------------------
+   Detail Panel
+   -------------------------------------------------------------------------- */
+.schedule__detail-panel {
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.schedule__detail-title {
+  font-size: var(--fs-md);
+  font-weight: var(--fw-bold);
+  color: #0f172a;
+  margin: 0;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.schedule__match-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.schedule__match-card {
+  background-color: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 16px;
+  text-decoration: none;
+  color: inherit;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.schedule__match-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.schedule__match-league {
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-bold);
+  color: #475569;
+}
+
+.schedule__match-status {
+  font-size: 10px;
+  font-weight: var(--fw-bold);
+  padding: 2px 6px;
+  border-radius: 3px;
+}
+
+.schedule__match-status--종료 {
+  background-color: #f1f5f9;
+  color: #64748b;
+}
+
+.schedule__match-status--예정 {
+  background-color: #dbeafe;
+  color: #1d4ed8;
+}
+
+.schedule__match-teams {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 0;
+}
+
+.schedule__team-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+}
+
+.schedule__team-info--home {
+  justify-content: flex-end;
+}
+
+.schedule__team-name {
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-bold);
+  color: #0f172a;
+}
+
+.schedule__team-score {
+  font-size: var(--fs-lg);
+  font-weight: var(--fw-bold);
+  color: #2563eb;
+}
+
+.schedule__vs-divider {
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-bold);
+  color: #94a3b8;
+  padding: 0 12px;
+}
+
+.schedule__match-footer {
+  display: flex;
+  gap: 16px;
+  font-size: var(--fs-xs);
+  color: #64748b;
+  border-top: 1px solid #f1f5f9;
+  padding-top: 8px;
+}
+
+.schedule__match-info-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.schedule__no-matches {
+  padding: 40px 0;
+  text-align: center;
+  color: #94a3b8;
+  font-size: var(--fs-sm);
+}
+
+/* --------------------------------------------------------------------------
+   Responsive Design
+   -------------------------------------------------------------------------- */
+@media (max-width: 900px) {
+  .schedule__body {
+    grid-template-columns: 1fr;
+  }
+}

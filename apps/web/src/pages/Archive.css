@@ -1,0 +1,263 @@
+/* ==========================================================================
+   Archive Page Style (BEM Convention - Light Theme)
+   ========================================================================== */
+
+.archive {
+  width: 100%;
+  min-height: 100vh;
+  background-color: #ffffff;
+  color: #1e293b;
+  padding: 120px 24px 80px 24px;
+  box-sizing: border-box;
+  font-family: var(--sans);
+}
+
+.archive__container {
+  max-width: 1080px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+/* --------------------------------------------------------------------------
+   Header Title Section
+   -------------------------------------------------------------------------- */
+.archive__header {
+  border-bottom: 2px solid #e2e8f0;
+  padding-bottom: 20px;
+}
+
+.archive__title {
+  font-size: var(--fs-3xl);
+  font-weight: var(--fw-bold);
+  color: #0f172a;
+  margin: 0 0 8px 0;
+}
+
+.archive__subtitle {
+  font-size: var(--fs-sm);
+  color: #64748b;
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* --------------------------------------------------------------------------
+   Controls Section (Search & Category Filter)
+   -------------------------------------------------------------------------- */
+.archive__controls {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.archive__search-box {
+  position: relative;
+  width: 100%;
+  max-width: 480px;
+}
+
+.archive__search-icon {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #94a3b8;
+  font-size: 14px;
+}
+
+.archive__search-input {
+  width: 100%;
+  padding: 12px 14px 12px 40px;
+  background-color: #f8fafc;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  font-size: var(--fs-sm);
+  color: #0f172a;
+  box-sizing: border-box;
+  outline: none;
+}
+
+.archive__search-input:focus {
+  border-color: #2563eb;
+  background-color: #ffffff;
+}
+
+.archive__categories {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.archive__category-btn {
+  background-color: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  color: #475569;
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-bold);
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.archive__category-btn--active {
+  background-color: #0f172a;
+  color: #ffffff;
+  border-color: #0f172a;
+}
+
+/* --------------------------------------------------------------------------
+   Archive Item List
+   -------------------------------------------------------------------------- */
+.archive__list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.archive__item {
+  background-color: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.archive__item-icon {
+  width: 48px;
+  height: 48px;
+  background-color: #f8fafc;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.archive__icon {
+  font-size: 24px;
+}
+
+.archive__icon--pdf {
+  color: #dc2626;
+}
+
+.archive__icon--docx {
+  color: #2563eb;
+}
+
+.archive__icon--xlsx {
+  color: #16a34a;
+}
+
+.archive__item-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.archive__item-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.archive__item-tag {
+  font-size: 11px;
+  font-weight: var(--fw-bold);
+  padding: 2px 8px;
+  border-radius: 3px;
+}
+
+.archive__item-tag--rules {
+  background-color: #fee2e2;
+  color: #991b1b;
+}
+
+.archive__item-tag--forms {
+  background-color: #dbeafe;
+  color: #1e40af;
+}
+
+.archive__item-tag--guides {
+  background-color: #fef3c7;
+  color: #92400e;
+}
+
+.archive__item-tag--reports {
+  background-color: #dcfce7;
+  color: #166534;
+}
+
+.archive__item-date {
+  font-size: var(--fs-xs);
+  color: #94a3b8;
+}
+
+.archive__item-title {
+  font-size: var(--fs-md);
+  font-weight: var(--fw-bold);
+  color: #0f172a;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.archive__item-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--fs-xs);
+  color: #64748b;
+}
+
+.archive__item-divider {
+  color: #cbd5e1;
+}
+
+.archive__download-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background-color: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  color: #1e293b;
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-bold);
+  padding: 10px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.archive__download-icon {
+  font-size: 12px;
+  color: #475569;
+}
+
+.archive__empty {
+  padding: 60px 0;
+  text-align: center;
+  color: #94a3b8;
+  font-size: var(--fs-sm);
+  background-color: #f8fafc;
+  border: 1px dashed #cbd5e1;
+  border-radius: 8px;
+}
+
+/* --------------------------------------------------------------------------
+   Responsive Design
+   -------------------------------------------------------------------------- */
+@media (max-width: 640px) {
+  .archive__item {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .archive__download-btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
