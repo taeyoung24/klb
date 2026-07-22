@@ -161,14 +161,14 @@ function App() {
             <div className="footer__link-group">
               <h4 className="footer__link-title">League</h4>
               <a href="#intro" className="footer__link">소개</a>
-              <a href="#schedule" className="footer__link">일정 진행</a>
-              <a href="#league-shortcut" className="footer__link">리그 및 구단</a>
+              <a href="#schedule" className="footer__link">통합 일정</a>
+              <a href="#league-shortcut" className="footer__link">리그 바로가기</a>
             </div>
             <div className="footer__link-group">
               <h4 className="footer__link-title">Support</h4>
-              <a href="#live" className="footer__link">LIVE</a>
-              <a href="#community" className="footer__link">커뮤니티</a>
+              <a href="#records" className="footer__link">기록실</a>
               <a href="#archive" className="footer__link">자료실</a>
+              <a href="#live" className="footer__link">LIVE</a>
               <a href="#terms" className="footer__link">이용약관</a>
             </div>
           </div>
