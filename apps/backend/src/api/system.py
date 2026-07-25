@@ -32,7 +32,7 @@ def get_system_info(session: Session = Depends(get_session)):
     
     current_date = CONFIG.base_datetime + timedelta(days=current_sim_day - 1)
     
-    host_league = get_playoff_host_league(session, max_regular_day=168)
+    host_league = get_playoff_host_league(session, max_regular_day=228)
     
     return SystemInfo(
         season_year=current_date.year,

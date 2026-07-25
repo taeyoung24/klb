@@ -78,7 +78,8 @@ const formatPct = (pct: number) => {
 
 const formatGb = (gb: number) => {
   if (gb === 0) return "-";
-  return (gb / 10).toFixed(1);
+  const val = gb / 10;
+  return val % 1 === 0 ? val.toString() : val.toFixed(1);
 };
 
 const formatStreak = (streak: number) => {
@@ -117,6 +118,8 @@ export default function AppSeasonStandingSection({
   const [eliteMatches, setEliteMatches] = useState<Match[]>([]);
   const [knockoutMatches, setKnockoutMatches] = useState<Match[]>([]);
   const [hostLeagueName, setHostLeagueName] = useState<string | null>(null);
+  const [hostLeagueId, setHostLeagueId] = useState<number>(1);
+  const [eliteStandings, setEliteStandings] = useState<DailyClubStanding[]>([]);
 
   useEffect(() => {
     getClubs()
@@ -138,6 +141,9 @@ export default function AppSeasonStandingSection({
         if (info.host_league_name) {
           setHostLeagueName(info.host_league_name);
         }
+        if (info.host_league_id) {
+          setHostLeagueId(info.host_league_id);
+        }
       })
       .catch(e => {
         console.error("Failed to fetch host league region", e);
@@ -145,11 +151,12 @@ export default function AppSeasonStandingSection({
   }, []);
 
   useEffect(() => {
-    const simDay = getSimDayFromDate(matchDate, seasonYear || 2026);
+    const rawSimDay = getSimDayFromDate(matchDate, seasonYear || 2026);
+    const regSimDay = Math.min(rawSimDay, 228);
     setIsStandingsLoaded(false);
 
     Promise.all(
-      LEAGUES.map(league => getStandings(league.id, simDay))
+      LEAGUES.map(league => getStandings(league.id, regSimDay, false))
     )
       .then(([alData, clData, glData, mlData]) => {
         setAllStandings({
@@ -171,6 +178,18 @@ export default function AppSeasonStandingSection({
         setIsStandingsLoaded(true);
       });
   }, [matchDate, seasonYear]);
+
+  useEffect(() => {
+    const simDay = getSimDayFromDate(matchDate, seasonYear || 2026);
+    if (simDay >= 229) {
+      getStandings(hostLeagueId, simDay, true)
+        .then(data => setEliteStandings(data))
+        .catch(e => {
+          console.error("Failed to fetch elite standings snapshot", e);
+          setEliteStandings([]);
+        });
+    }
+  }, [matchDate, seasonYear, hostLeagueId]);
 
   useEffect(() => {
     const finalSimDay = 228;
@@ -662,19 +681,16 @@ export default function AppSeasonStandingSection({
                       </tr>
                     ))
                   ) : (
-                    getEliteStandings().map((row, idx) => {
+                    (eliteStandings.length > 0 ? eliteStandings : getEliteStandings()).map((row, idx) => {
                       const club = clubsMap[row.club_id];
                       const clubFullName = club ? (club.hometown_ko ? `${club.hometown_ko} ${club.name_ko}` : club.name_ko) : '로딩중...';
                       const teamCode = club ? club.team_code : '';
                       const meta = getTeamMeta(teamCode, clubFullName);
                       const seedText = seedMap[row.club_id] ? ` (${seedMap[row.club_id]})` : '';
 
-                      const isTied = getEliteStandings().filter(item => item.rank === row.rank).length > 1;
-                      const displayRank = isTied ? `T${row.rank}` : row.rank;
-
                       return (
                         <tr key={`${row.club_id}-${idx}`}>
-                          <td className={`standings__rank ${row.rank <= 8 ? 'standings__rank--playoff' : ''}`}>{displayRank}</td>
+                          <td className={`standings__rank ${row.rank <= 8 ? 'standings__rank--playoff' : ''}`}>{row.rank}</td>
                           <td className="standings__team-name">
                             <div className="standings__team-cell">
                               <div

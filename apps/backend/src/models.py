@@ -90,12 +90,13 @@ class Player(SQLModel, table=True):
     
 class DailyClubStanding(SQLModel, table=True):
     """
-    매일의 정규 시즌 리그 순위 스냅샷 장부 (통합 단일 테이블).
+    매일의 정규 시즌 및 포스트시즌(정예리그) 리그 순위 스냅샷 장부 (통합 단일 테이블).
     """
     id: int         = Field(default=None, primary_key=True)
     sim_day: int    = Field(index=True)
     league_id: int  = Field(foreign_key="league.id")
     club_id: int    = Field(foreign_key="club.id")
+    is_postseason: bool = Field(default=False, index=True)
     
     rank: int
     win_rate: float

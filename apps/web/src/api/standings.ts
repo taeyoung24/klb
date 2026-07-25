@@ -5,6 +5,7 @@ export interface DailyClubStanding {
   sim_day: number;
   league_id: number;
   club_id: number;
+  is_postseason?: boolean;
   rank: number;
   win_rate: number;
   games_back: number;
@@ -17,9 +18,17 @@ export interface DailyClubStanding {
   era: number;
 }
 
-export const getStandings = async (leagueId: number, simDay?: number): Promise<DailyClubStanding[]> => {
+export const getStandings = async (
+  leagueId: number,
+  simDay?: number,
+  isPostseason?: boolean
+): Promise<DailyClubStanding[]> => {
   const response = await client.get<DailyClubStanding[]>('/standings', {
-    params: { league_id: leagueId, ...(simDay !== undefined ? { sim_day: simDay } : {}) },
+    params: {
+      league_id: leagueId,
+      ...(simDay !== undefined ? { sim_day: simDay } : {}),
+      ...(isPostseason !== undefined ? { is_postseason: isPostseason } : {}),
+    },
   });
   return response.data;
 };

@@ -374,3 +374,266 @@ def get_playoff_host_league(session: Session, max_regular_day: int = 168) -> Opt
     host_league_id = max(league_win_sums, key=lambda k: league_win_sums[k])
     return session.get(League, host_league_id)
 
+
+def get_previous_elite_season_rank(session: Session, club_id: int, current_sim_day: int) -> Optional[int]:
+    """
+    전년도 정예리그(포스트리그) 최종 순위를 조회합니다.
+    전년도 기록이 없는 경우(최초 시즌) None을 반환합니다.
+    """
+    prev_standing = session.exec(
+        select(DailyClubStanding)
+        .where(DailyClubStanding.club_id == club_id)
+        .where(DailyClubStanding.sim_day < current_sim_day - 100)
+        .order_by(desc(DailyClubStanding.sim_day))
+    ).first()
+
+    return prev_standing.rank if prev_standing else None
+
+
+def resolve_elite_league_ties(
+    session: Session,
+    ranking_list: list[dict],
+    elite_start_day: int,
+    elite_end_day: int,
+    regular_max_day: int = 168,
+) -> list[dict]:
+    """
+    크라운 정예리그 최종 순위표(ranking_list)에서 동률 승률 팀들에 대해
+    추가 경기 생성 없이 6단계 순위 결정 기준을 적용하여 1~16위 단일 순위를 확정하여 반환합니다.
+
+    [6단계 동률 해소 기준]
+    1. 1순위: 정예리그 상대 전적(H2H) 승률 (H2H Win Rate)
+    2. 2순위: 정규시즌 시드 (정규시즌 rank가 우세한/낮은 숫자 팀 상위)
+    3. 3순위: 정규시즌 승률 (정규시즌 win_rate가 높은 팀 상위)
+    4. 4순위: 정예리그 상대 전적 다득점 (H2H Total Runs Scored)
+    5. 5순위: 전년도 정예리그/포스트리그 최종 시드/순위 (rank가 우세한/낮은 숫자 팀 상위)
+    6. 6순위: 무작위 (Random)
+    """
+    if not ranking_list:
+        return []
+
+    # 정규시즌 최종 standing 스냅샷 사전 획득 (club_id -> DailyClubStanding)
+    reg_standings = session.exec(
+        select(DailyClubStanding)
+        .where(DailyClubStanding.sim_day == regular_max_day)
+    ).all()
+    reg_map = {s.club_id: s for s in reg_standings}
+
+    # 정예리그 내 전체 완료된 경기 획득 (H2H 및 다득점 계산용)
+    elite_matches = session.exec(
+        select(Match)
+        .where(Match.sim_day >= elite_start_day)
+        .where(Match.sim_day <= elite_end_day)
+        .where(Match.status == MatchStatus.COMPLETED)
+    ).all()
+
+    # 승률 및 승수 기준 1차 그룹핑
+    groups: list[list[dict]] = []
+    sorted_base = sorted(ranking_list, key=lambda x: (x["win_rate"], x["wins"]), reverse=True)
+
+    for item in sorted_base:
+        if not groups:
+            groups.append([item])
+        else:
+            prev = groups[-1][0]
+            if item["win_rate"] == prev["win_rate"] and item["wins"] == prev["wins"]:
+                groups[-1].append(item)
+            else:
+                groups.append([item])
+
+    final_ranking_list: list[dict] = []
+
+    for grp in groups:
+        if len(grp) == 1:
+            final_ranking_list.append(grp[0])
+        else:
+            tied_club_ids = [item["club"].id for item in grp]
+            item_map = {item["club"].id: item for item in grp}
+
+            # 동률 그룹 내 H2H 통계 계산
+            h2h_stats = {cid: {"wins": 0, "losses": 0, "runs_scored": 0} for cid in tied_club_ids}
+            for m in elite_matches:
+                if m.home_club_id in h2h_stats and m.away_club_id in h2h_stats:
+                    h_score = m.home_score if m.home_score is not None else 0
+                    a_score = m.away_score if m.away_score is not None else 0
+
+                    h2h_stats[m.home_club_id]["runs_scored"] += h_score
+                    h2h_stats[m.away_club_id]["runs_scored"] += a_score
+
+                    if h_score > a_score:
+                        h2h_stats[m.home_club_id]["wins"] += 1
+                        h2h_stats[m.away_club_id]["losses"] += 1
+                    elif a_score > h_score:
+                        h2h_stats[m.away_club_id]["wins"] += 1
+                        h2h_stats[m.home_club_id]["losses"] += 1
+
+            # 6단계 정렬 키 헬퍼
+            def get_elite_tiebreaker_sort_key(cid: int) -> tuple[float, float, float, float, float, float]:
+                # 1순위: 정예리그 H2H 승률
+                w = h2h_stats[cid]["wins"]
+                l = h2h_stats[cid]["losses"]
+                h2h_win_rate = w / (w + l) if (w + l) > 0 else 0.0
+
+                # 2순위 & 3순위: 정규시즌 시드(rank) & 정규시즌 승률(win_rate)
+                reg_std = reg_map.get(cid)
+                reg_seed = reg_std.rank if reg_std else 999
+                reg_win_rate = reg_std.win_rate if reg_std else 0.0
+
+                # 4순위: 정예리그 H2H 다득점
+                h2h_runs = h2h_stats[cid]["runs_scored"]
+
+                # 5순위: 전년도 정예리그 순위
+                prev_rank = get_previous_elite_season_rank(session, cid, elite_start_day)
+                prev_rank_score = prev_rank if prev_rank is not None else 999
+
+                # 6순위: 무작위 (랜덤)
+                rand_val = random.random()
+
+                return (
+                    h2h_win_rate,
+                    -float(reg_seed),
+                    reg_win_rate,
+                    float(h2h_runs),
+                    -float(prev_rank_score),
+                    rand_val,
+                )
+
+            sorted_ids = sorted(tied_club_ids, key=get_elite_tiebreaker_sort_key, reverse=True)
+            for cid in sorted_ids:
+                final_ranking_list.append(item_map[cid])
+
+    return final_ranking_list
+
+
+def update_elite_daily_standings(
+    session: Session,
+    sim_day: int,
+    elite_start_day: int,
+    host_league_id: int,
+    playoff_club_ids: list[int],
+    regular_max_day: int = 168,
+):
+    """
+    지정된 sim_day(정예리그 기간)까지 완료된 정예리그 매치 결과를 바탕으로
+    16개 참가 구단의 성적, streak, games_back을 계산하고 6단계 타이브레이크를 적용하여
+    DailyClubStanding 스냅샷 (is_postseason=True, league_id=host_league_id)을 DB에 저장합니다.
+    """
+    elite_matches = session.exec(
+        select(Match)
+        .where(Match.sim_day >= elite_start_day)
+        .where(Match.sim_day <= sim_day)
+        .where(Match.status == MatchStatus.COMPLETED)
+    ).all()
+
+    stats: dict[int, dict] = {
+        cid: {
+            "club_id": cid,
+            "wins": 0,
+            "losses": 0,
+            "draws": 0,
+            "games_played": 0,
+            "win_rate": 0.0,
+            "streak": 0,
+        }
+        for cid in playoff_club_ids
+    }
+
+    for m in elite_matches:
+        if m.home_club_id in stats and m.away_club_id in stats:
+            stats[m.home_club_id]["games_played"] += 1
+            stats[m.away_club_id]["games_played"] += 1
+            h_score = m.home_score if m.home_score is not None else 0
+            a_score = m.away_score if m.away_score is not None else 0
+
+            if h_score > a_score:
+                stats[m.home_club_id]["wins"] += 1
+                stats[m.away_club_id]["losses"] += 1
+            elif h_score < a_score:
+                stats[m.away_club_id]["wins"] += 1
+                stats[m.home_club_id]["losses"] += 1
+            else:
+                stats[m.home_club_id]["draws"] += 1
+                stats[m.away_club_id]["draws"] += 1
+
+    for cid, s in stats.items():
+        w_l = s["wins"] + s["losses"]
+        s["win_rate"] = s["wins"] / w_l if w_l > 0 else 0.0
+
+    for cid in playoff_club_ids:
+        club_matches = sorted(
+            [m for m in elite_matches if m.home_club_id == cid or m.away_club_id == cid],
+            key=lambda x: x.sim_day,
+            reverse=True,
+        )
+        streak = 0
+        if club_matches:
+            first = club_matches[0]
+            fh_s = first.home_score if first.home_score is not None else 0
+            fa_s = first.away_score if first.away_score is not None else 0
+            is_win = (first.home_club_id == cid and fh_s > fa_s) or (first.away_club_id == cid and fa_s > fh_s)
+            is_loss = (first.home_club_id == cid and fh_s < fa_s) or (first.away_club_id == cid and fa_s < fh_s)
+
+            if is_win:
+                streak = 1
+                for m in club_matches[1:]:
+                    hs = m.home_score if m.home_score is not None else 0
+                    aws = m.away_score if m.away_score is not None else 0
+                    if (m.home_club_id == cid and hs > aws) or (m.away_club_id == cid and aws > hs):
+                        streak += 1
+                    else:
+                        break
+            elif is_loss:
+                streak = -1
+                for m in club_matches[1:]:
+                    hs = m.home_score if m.home_score is not None else 0
+                    aws = m.away_score if m.away_score is not None else 0
+                    if (m.home_club_id == cid and hs < aws) or (m.away_club_id == cid and aws < hs):
+                        streak -= 1
+                    else:
+                        break
+        stats[cid]["streak"] = streak
+
+    ranking_list = [
+        {
+            "club": session.get(Club, cid),
+            "wins": s["wins"],
+            "losses": s["losses"],
+            "draws": s["draws"],
+            "win_rate": s["win_rate"],
+        }
+        for cid, s in stats.items()
+    ]
+    resolved_ranking = resolve_elite_league_ties(
+        session, ranking_list, elite_start_day, sim_day, regular_max_day
+    )
+
+    ordered_cids = [item["club"].id for item in resolved_ranking if item["club"] is not None]
+
+    first_cid = ordered_cids[0] if ordered_cids else playoff_club_ids[0]
+    wins_1st = stats[first_cid]["wins"]
+    losses_1st = stats[first_cid]["losses"]
+
+    for rank_idx, cid in enumerate(ordered_cids, 1):
+        s = stats[cid]
+        games_back = int(((wins_1st - s["wins"]) + (s["losses"] - losses_1st)) / 2 * 10)
+        rec = DailyClubStanding(
+            sim_day=sim_day,
+            league_id=host_league_id,
+            club_id=cid,
+            is_postseason=True,
+            rank=rank_idx,
+            win_rate=s["win_rate"],
+            games_back=max(0, games_back),
+            wins=s["wins"],
+            draws=s["draws"],
+            losses=s["losses"],
+            games_played=s["games_played"],
+            streak=s["streak"],
+            batting_average=0.0,
+            era=0.0,
+        )
+        session.add(rec)
+
+    session.commit()
+
+

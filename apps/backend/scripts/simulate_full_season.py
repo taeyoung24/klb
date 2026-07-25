@@ -16,7 +16,13 @@ from src.services.schedule_utils import (
     generate_tiebreaker_schedule,
 )
 from src.services.ingame import run_match
-from src.services.standing import update_daily_standings, apply_tiebreaker_rules_to_standings
+from src.services.standing import (
+    update_daily_standings,
+    apply_tiebreaker_rules_to_standings,
+    resolve_elite_league_ties,
+    update_elite_daily_standings,
+    get_playoff_host_league,
+)
 from src.utils.logger import logger
 
 engine = create_engine(DATABASE_URL)
@@ -245,6 +251,9 @@ def run_krown_elite_league(playoff_clubs, max_regular_day: int) -> tuple[list[Cl
         session.commit()
         logger.info(f"정예리그 {len(matches)}경기 일정 적재 완료 (Sim Day {start_day} -> {end_day})")
 
+        host_league = get_playoff_host_league(session, max_regular_day)
+        host_league_id = host_league.id if host_league is not None else 1
+
         # 3. 30일 동안 하루씩 시뮬레이션
         for day in range(start_day, end_day + 1):
             day_matches = session.exec(
@@ -256,6 +265,14 @@ def run_krown_elite_league(playoff_clubs, max_regular_day: int) -> tuple[list[Cl
             for match in day_matches:
                 run_match(match)
                 session.add(match)
+
+            update_elite_daily_standings(
+                session=session,
+                sim_day=day,
+                elite_start_day=start_day,
+                host_league_id=host_league_id,
+                playoff_club_ids=[c.id for c in playoff_clubs],
+            )
 
             world_state = session.exec(select(WorldState).where(WorldState.id == 1)).first()
             if world_state is None:
@@ -306,8 +323,13 @@ def run_krown_elite_league(playoff_clubs, max_regular_day: int) -> tuple[list[Cl
                 "win_rate": win_rate
             })
 
-        # 승률 -> 승리 수 내림차순 정렬
-        ranking_list.sort(key=lambda x: (x["win_rate"], x["wins"]), reverse=True)
+        # 6단계 동률 해소 절차 적용 (타이브레이크 경기 없음)
+        ranking_list = resolve_elite_league_ties(
+            session=session,
+            ranking_list=ranking_list,
+            elite_start_day=start_day,
+            elite_end_day=end_day,
+        )
 
         logger.info("\n--- [정예리그 최종 순위표] ---")
         for rank, item in enumerate(ranking_list, 1):
