@@ -261,3 +261,17 @@ def save_knockout_placeholders(session, placeholders: list[MatchPlaceholder]) ->
     session.flush()
     
     return placeholders
+
+
+def generate_tiebreaker_schedule(home_club_id: int, away_club_id: int, sim_day: int) -> Match:
+    """
+    정규리그 타이브레이크 단판 순위결정전 경기 일정 객체를 생성하는 함수.
+    타이브레이크 경기는 끝장 승부이므로 limit_extra_innings=False(연장 무제한)가 적용됩니다.
+    """
+    return Match(
+        home_club_id=home_club_id,
+        away_club_id=away_club_id,
+        sim_day=sim_day,
+        status=MatchStatus.SCHEDULED,
+        limit_extra_innings=False,
+    )

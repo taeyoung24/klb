@@ -13,9 +13,10 @@ from src.services.schedule_utils import (
     generate_krown_elite_schedule,
     generate_knockout_schedule,
     save_knockout_placeholders,
+    generate_tiebreaker_schedule,
 )
 from src.services.ingame import run_match
-from src.services.standing import update_daily_standings
+from src.services.standing import update_daily_standings, apply_tiebreaker_rules_to_standings
 from src.utils.logger import logger
 
 engine = create_engine(DATABASE_URL)
@@ -139,6 +140,33 @@ def run_regular_season() -> int:
 
             if day % 20 == 0 or day == max_regular_day:
                 logger.info(f"[Sim Day {day}] 정규리그 진행 중... (완료)")
+
+        # 정규시즌 마감 후 동률 팀 타이브레이크 규정 적용
+        tb_day = max_regular_day + 1
+        has_tb_matches = False
+        leagues = session.exec(select(League)).all()
+        for league in leagues:
+            tb_matches = apply_tiebreaker_rules_to_standings(
+                session, league.id, max_regular_day, is_season_final=True
+            )
+            if tb_matches:
+                has_tb_matches = True
+                logger.info(f"[{league.name_ko}] 2팀 승자승 동률 발생으로 타이브레이크 순위결정전({len(tb_matches)}경기) 진행")
+                for home_id, away_id in tb_matches:
+                    tb_match = generate_tiebreaker_schedule(home_id, away_id, tb_day)
+                    run_match(tb_match)
+                    session.add(tb_match)
+                    h_club = session.get(Club, home_id)
+                    a_club = session.get(Club, away_id)
+                    h_name = h_club.name_ko if h_club is not None else str(home_id)
+                    a_name = a_club.name_ko if a_club is not None else str(away_id)
+                    logger.info(f"  [타이브레이크 매치] {h_name}(홈) vs {a_name}(원정) 경기 완료")
+
+        if has_tb_matches:
+            session.commit()
+            update_daily_standings(session, tb_day)
+            for league in leagues:
+                apply_tiebreaker_rules_to_standings(session, league.id, tb_day, is_season_final=False)
 
     logger.success(f"정규시즌 {max_regular_day}일 일정이 성공적으로 완료되었습니다.")
     return max_regular_day
@@ -307,11 +335,16 @@ def run_knockout_stage(top_8_clubs, elite_end_day: int):
         session.commit()
         placeholders = session.exec(select(MatchPlaceholder)).all()
 
-    q_nodes = sorted([p for p in placeholders if p.round == "ROUND_OF_8"], key=lambda x: x.id)
-    s_nodes = sorted([p for p in placeholders if p.round == "SEMI_FINAL"], key=lambda x: x.id)
+    q_nodes = sorted([p for p in placeholders if p.round == "ROUND_OF_8"], key=lambda x: x.id) # type: ignore
+    s_nodes = sorted([p for p in placeholders if p.round == "SEMI_FINAL"], key=lambda x: x.id) # type: ignore
     f_node = [p for p in placeholders if p.round == "FINAL"][0]
 
     q_winners = {} # q_node.id: winner_club_id
+
+    def get_higher_seed(c1_id: int, c2_id: int) -> tuple[int, int]:
+        idx1: int = [c.id for c in top_8_clubs].index(c1_id)
+        idx2: int = [c.id for c in top_8_clubs].index(c2_id)
+        return (c1_id, c2_id) if idx1 < idx2 else (c2_id, c1_id)
 
     # 1. 8강 1차전 (Day = elite_end_day + 2) - 동시 진행
     day1 = elite_end_day + 2
@@ -325,6 +358,9 @@ def run_knockout_stage(top_8_clubs, elite_end_day: int):
 
             home_club = session.get(Club, home_club_id)
             away_club = session.get(Club, away_club_id)
+
+            if home_club is None or away_club is None:
+                raise RuntimeError("One of the clubs in the knockout matchup does not exist.")
             
             m1 = Match(
                 home_club_id=home_club_id,
@@ -381,23 +417,25 @@ def run_knockout_stage(top_8_clubs, elite_end_day: int):
             if home_score > away_score:
                 q_winners[idx] = home_club_id
                 logger.info(
-                    f"  [8강 2차전] {session.get(Club, home_club_id).name_ko} 최종 2승 1패 진출! "
+                    f"  [8강 2차전] {session.get(Club, home_club_id).name_ko} 최종 2승 1패 진출! " # type: ignore
                     f"({home_score}:{away_score} 승)"
                 )
             else:
                 q_winners[idx] = away_club_id
                 logger.info(
-                    f"  [8강 2차전] {session.get(Club, away_club_id).name_ko} 대역전 2승 1패 진출! "
+                    f"  [8강 2차전] {session.get(Club, away_club_id).name_ko} 대역전 2승 1패 진출! " # type: ignore
                     f"({home_score}:{away_score} 패)"
                 )
 
         db_s1 = session.get(MatchPlaceholder, s_nodes[0].id)
         db_s2 = session.get(MatchPlaceholder, s_nodes[1].id)
-        def get_higher_seed(c1_id, c2_id):
-            idx1 = [c.id for c in top_8_clubs].index(c1_id)
-            idx2 = [c.id for c in top_8_clubs].index(c2_id)
-            return (c1_id, c2_id) if idx1 < idx2 else (c2_id, c1_id)
-
+        if db_s1 is None or db_s2 is None:
+            raise RuntimeError("Semi-final placeholders not found in DB.")
+        
+        s1_home: int
+        s1_away: int
+        s2_home: int
+        s2_away: int
         s1_home, s1_away = get_higher_seed(q_winners[0], q_winners[1])
         s2_home, s2_away = get_higher_seed(q_winners[2], q_winners[3])
         db_s1.home_club_id = s1_home
@@ -413,47 +451,81 @@ def run_knockout_stage(top_8_clubs, elite_end_day: int):
     
     with Session(engine) as session:
         db_s1, db_s2 = session.get(MatchPlaceholder, s_nodes[0].id), session.get(MatchPlaceholder, s_nodes[1].id)
-        s1_home_club, s1_away_club = session.get(Club, db_s1.home_club_id), session.get(Club, db_s1.away_club_id)
-        s2_home_club, s2_away_club = session.get(Club, db_s2.home_club_id), session.get(Club, db_s2.away_club_id)
+        if db_s1 is None or db_s2 is None:
+            raise RuntimeError("Semi-final placeholders not found in DB.")
+        
+        s1_home_id, s1_away_id = db_s1.home_club_id, db_s1.away_club_id
+        s2_home_id, s2_away_id = db_s2.home_club_id, db_s2.away_club_id
+        if s1_home_id is None or s1_away_id is None or s2_home_id is None or s2_away_id is None:
+            raise RuntimeError("Semi-final teams are not fully assigned.")
+
+        s1_home_club = session.get(Club, s1_home_id)
+        s1_away_club = session.get(Club, s1_away_id)
+        s2_home_club = session.get(Club, s2_home_id)
+        s2_away_club = session.get(Club, s2_away_id)
+        if s1_home_club is None or s1_away_club is None or s2_home_club is None or s2_away_club is None:
+            raise RuntimeError("Semi-final clubs not found in DB.")
+
         s1_wins, s1_losses, s2_wins, s2_losses = 0, 0, 0, 0
         semi_offsets = {1: 0, 2: 1, 3: 3, 4: 4, 5: 6}
         semi_end_day = semi_start_day
 
         for game_num in range(1, 6):
-            if (s1_wins == 3 or s1_losses == 3) and (s2_wins == 3 or s2_losses == 3): break
+            if (s1_wins == 3 or s1_losses == 3) and (s2_wins == 3 or s2_losses == 3):
+                break
             sim_day = semi_start_day + semi_offsets[game_num]
             semi_end_day = sim_day
-            for i, (win, loss, home, away, h_club, a_club, h_id, a_id) in enumerate([
-                [s1_wins, s1_losses, s1_home_club, s1_away_club, s1_home_club, s1_away_club, db_s1.home_club_id, db_s1.away_club_id],
-                [s2_wins, s2_losses, s2_home_club, s2_away_club, s2_home_club, s2_away_club, db_s2.home_club_id, db_s2.away_club_id]
-            ]):
-                if (win == 3 or loss == 3): continue
+
+            series_list: list[tuple[int, int, int, int, Club, Club]] = [
+                (s1_wins, s1_losses, s1_home_id, s1_away_id, s1_home_club, s1_away_club),
+                (s2_wins, s2_losses, s2_home_id, s2_away_id, s2_home_club, s2_away_club),
+            ]
+
+            for i, (win, loss, h_id, a_id, h_club, a_club) in enumerate(series_list):
+                if win == 3 or loss == 3:
+                    continue
                 is_home = game_num in [1, 2, 5]
+                home_team_id = h_id if is_home else a_id
+                away_team_id = a_id if is_home else h_id
+                home_team_club = h_club if is_home else a_club
+                away_team_club = a_club if is_home else h_club
+
                 m = Match(
-                    home_club_id=(h_id if is_home else a_id),
-                    away_club_id=(a_id if is_home else h_id),
+                    home_club_id=home_team_id,
+                    away_club_id=away_team_id,
                     sim_day=sim_day,
                     status=MatchStatus.SCHEDULED,
-                    limit_extra_innings=False
+                    limit_extra_innings=False,
                 )
-                run_match(m); session.add(m); session.flush()
+                run_match(m)
+                session.add(m)
+                session.flush()
+
+                if m.home_score is None or m.away_score is None:
+                    raise RuntimeError("Match scores are not recorded after simulation.")
+
                 if (m.home_score > m.away_score if is_home else m.away_score > m.home_score):
-                    if i == 0: s1_wins += 1 
-                    else: s2_wins += 1
+                    if i == 0:
+                        s1_wins += 1
+                    else:
+                        s2_wins += 1
                 else:
-                    if i == 0: s1_losses += 1
-                    else: s2_losses += 1
-                logger.info(f"  [4강 {i+1}경기] {game_num}차전: {(h_club if is_home else a_club).name_ko} vs {(a_club if is_home else h_club).name_ko}")
+                    if i == 0:
+                        s1_losses += 1
+                    else:
+                        s2_losses += 1
+
+                logger.info(f"  [4강 {i+1}경기] {game_num}차전: {home_team_club.name_ko} vs {away_team_club.name_ko}")
             session.commit()
         
         db_f = session.get(MatchPlaceholder, f_node.id)
-        def get_higher_seed(c1_id, c2_id):
-            idx1 = [c.id for c in top_8_clubs].index(c1_id)
-            idx2 = [c.id for c in top_8_clubs].index(c2_id)
-            return (c1_id, c2_id) if idx1 < idx2 else (c2_id, c1_id)
-        f_home, f_away = get_higher_seed((db_s1.home_club_id if s1_wins == 3 else db_s1.away_club_id), (db_s2.home_club_id if s2_wins == 3 else db_s2.away_club_id))
-        db_f.home_club_id, db_f.away_club_id = f_home, f_away
-        session.commit()
+        if db_f is not None and db_s1 is not None and db_s2 is not None:
+            s1_winner_id = db_s1.home_club_id if s1_wins == 3 else db_s1.away_club_id
+            s2_winner_id = db_s2.home_club_id if s2_wins == 3 else db_s2.away_club_id
+            if s1_winner_id is not None and s2_winner_id is not None:
+                f_home, f_away = get_higher_seed(s1_winner_id, s2_winner_id)
+                db_f.home_club_id, db_f.away_club_id = f_home, f_away
+                session.commit()
 
     logger.info("\n>>> 결승전(Krown Series) 시뮬레이션 시작 (Bo7, 3일 경기 후 1일 휴식)")
     final_start_day = semi_end_day + 2

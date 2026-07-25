@@ -353,3 +353,19 @@ class IngameInstructionLog(SQLModel):
     logged_events: list[IngameEventConcrete]
 
 
+class IngameScoreboard(SQLModel):
+    current_inning: int
+    is_top: bool
+    balls: int
+    strikes: int
+    outs: int
+    away_innings: list[int]
+    away_r: int
+    away_h: int
+    away_e: int
+    away_b: int
+    home_innings: list[int]
+    home_r: int
+    home_h: int
+    home_e: int
+    home_b: int
