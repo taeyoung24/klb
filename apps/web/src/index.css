@@ -53,6 +53,44 @@
   font-display: block;
 }
 
+/* Wanted Sans */
+@font-face {
+  font-family: 'Wanted Sans';
+  src: url('/fonts/WANTEDSANS-REGULAR.TTF') format('truetype');
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Wanted Sans';
+  src: url('/fonts/WANTEDSANS-MEDIUM.TTF') format('truetype');
+  font-weight: 500;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Wanted Sans';
+  src: url('/fonts/WANTEDSANS-SEMIBOLD.TTF') format('truetype');
+  font-weight: 600;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Wanted Sans';
+  src: url('/fonts/WANTEDSANS-BOLD.TTF') format('truetype');
+  font-weight: 700;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Wanted Sans';
+  src: url('/fonts/WANTEDSANS-EXTRABOLD.TTF') format('truetype');
+  font-weight: 800;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Wanted Sans';
+  src: url('/fonts/WANTEDSANS-BLACK.TTF') format('truetype');
+  font-weight: 900;
+  font-display: swap;
+}
+
 :root {
   --text: #6b6375;
   --text-h: #08060d;
@@ -66,8 +104,9 @@
   --shadow:
     rgba(0, 0, 0, 0.1) 0 10px 15px -3px, rgba(0, 0, 0, 0.05) 0 4px 6px -2px;
 
-  --sans: 'Paperlogy', system-ui, 'Segoe UI', Roboto, sans-serif;
-  --heading: 'Paperlogy', system-ui, 'Segoe UI', Roboto, sans-serif;
+  --sans: 'Wanted Sans', system-ui, 'Segoe UI', Roboto, sans-serif;
+  --heading: 'Wanted Sans', system-ui, 'Segoe UI', Roboto, sans-serif;
+  --display: 'Paperlogy', system-ui, 'Segoe UI', Roboto, sans-serif;
   --mono: ui-monospace, Consolas, monospace;
 
   /* Typography Weights */
@@ -183,4 +222,9 @@ code {
   line-height: 135%;
   padding: 4px 8px;
   background: var(--code-bg);
+}
+
+/* Impact & Logo Font Utility */
+.font-display {
+  font-family: var(--display);
 }
