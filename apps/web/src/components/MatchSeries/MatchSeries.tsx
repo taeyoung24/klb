@@ -1,5 +1,5 @@
 import React from 'react';
-import styles from './MatchSeries.module.css';
+import './MatchSeries.css';
 
 interface MatchSeriesProps {
   stageTitle: string;
@@ -63,11 +63,11 @@ const MatchSeries: React.FC<MatchSeriesProps> = ({
       
       const isLoser = score !== undefined && opponentScore !== undefined && score < opponentScore;
       
-      let scoreClasses = styles.scoreItem;
+      let scoreClasses = 'match-series__score-item';
       if (score === undefined) {
-        scoreClasses += ` ${styles.scoreEmpty}`;
+        scoreClasses += ' match-series__score-item--empty';
       } else if (isLoser) {
-        scoreClasses += ` ${styles.scoreLoser}`;
+        scoreClasses += ' match-series__score-item--loser';
       }
 
       result.push(
@@ -80,71 +80,66 @@ const MatchSeries: React.FC<MatchSeriesProps> = ({
   };
 
   const getTeamClasses = (isUpper: boolean) => {
-    if (!isSeriesFinished) return `${styles.teamBox} ${styles.defaultTeam}`;
+    if (!isSeriesFinished) return 'match-series__team-box match-series__team-box--default';
     
     const isWinner = isUpper ? upperIsWinner : lowerIsWinner;
-    return `${styles.teamBox} ${styles.defaultTeam} ${isWinner ? styles.winner : styles.loser}`;
+    return `match-series__team-box match-series__team-box--default ${
+      isWinner ? 'match-series__team-box--winner' : 'match-series__team-box--loser'
+    }`;
   };
 
   const renderLogo = (imgSrc?: string, symbol?: string, color?: string) => {
     if (imgSrc) {
-      return <img src={imgSrc} alt="" className={styles.teamLogo} />;
+      return <img src={imgSrc} alt="" className="match-series__team-logo" />;
     }
     if (symbol) {
       return (
         <div 
-          className={styles.logoPlaceholder} 
+          className="match-series__logo-placeholder" 
           style={{ 
             color: color || '#ffffff', 
-            border: `1px solid ${color || 'rgba(255,255,255,0.2)'}`,
-            background: 'rgba(0,0,0,0.3)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontFamily: 'var(--sans)',
-            fontSize: '10px',
-            fontWeight: 'bold',
+            border: `1px solid ${color || 'rgba(255, 255, 255, 0.2)'}`,
           }}
         >
           {symbol}
         </div>
       );
     }
-    return <div className={styles.logoPlaceholder} />;
+    return <div className="match-series__logo-placeholder" />;
   };
 
   return (
-    <div className={styles.container}>
-      <div className={styles.stageTitle}>{stageTitle}</div>
-      <div className={styles.teamsContainer}>
+    <div className="match-series">
+      <div className="match-series__stage-title">{stageTitle}</div>
+      <div className="match-series__teams">
         {/* Upper Team */}
         <div className={getTeamClasses(true)}>
-          <div className={styles.teamInfoWrapper}>
-            <div className={styles.logoWrapper}>
+          <div className="match-series__team-info">
+            <div className="match-series__logo-wrapper">
               {renderLogo(upperTeamImage, upperTeamSymbol, upperTeamColor)}
             </div>
-            <div className={styles.teamText}>
-              {upperSeedTitle && <div className={styles.seedTitle}>{upperSeedTitle}</div>}
-              <div className={styles.teamName}>{upperTeamName}</div>
+            <div className="match-series__team-text">
+              {upperSeedTitle && <div className="match-series__seed-title">{upperSeedTitle}</div>}
+              <div className="match-series__team-name">{upperTeamName}</div>
             </div>
           </div>
-          <div className={styles.scoresWrapper}>
+          <div className="match-series__scores">
             {renderScores(upperScoreSeries, lowerScoreSeries, seriesCount)}
           </div>
         </div>
 
         {/* Lower Team */}
         <div className={getTeamClasses(false)}>
-          <div className={styles.teamInfoWrapper}>
-            <div className={styles.logoWrapper}>
+          <div className="match-series__team-info">
+            <div className="match-series__logo-wrapper">
               {renderLogo(lowerTeamImage, lowerTeamSymbol, lowerTeamColor)}
             </div>
-            <div className={styles.teamText}>
-              {lowerSeedTitle && <div className={styles.seedTitle}>{lowerSeedTitle}</div>}
-              <div className={styles.teamName}>{lowerTeamName}</div>
+            <div className="match-series__team-text">
+              {lowerSeedTitle && <div className="match-series__seed-title">{lowerSeedTitle}</div>}
+              <div className="match-series__team-name">{lowerTeamName}</div>
             </div>
           </div>
-          <div className={styles.scoresWrapper}>
+          <div className="match-series__scores">
             {renderScores(lowerScoreSeries, upperScoreSeries, seriesCount)}
           </div>
         </div>
