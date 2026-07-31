@@ -2,7 +2,6 @@
   name_ko: 아젤리아 리그
   mascot_ko: 진달래
   league_code: AL
-  lore: ""
   clubs:
 
   - name: Comets
@@ -13,7 +12,6 @@
     abbr_name: D. Comets
     stadium_name: Dormir Stadium
     stadium_name_ko: 도르미르 스타디움
-    lore: ""
 
   - name: Enders
     name_ko: 엔더스
@@ -23,7 +21,6 @@
     abbr_name: P. Enders
     stadium_name: Paustalo Stadium
     stadium_name_ko: 퍼스톨로 스타디움
-    lore: ""
 
   - name: Phantoms
     name_ko: 팬텀즈
@@ -33,7 +30,6 @@
     abbr_name: W. Phantoms
     stadium_name: Wheelo Central Ballpark
     stadium_name_ko: 휠로 센트럴볼파크
-    lore: ""
 
   - name: Pumpkins
     name_ko: 펌킨스
@@ -43,7 +39,6 @@
     abbr_name: P. Pumpkins
     stadium_name: Pumpkinland
     stadium_name_ko: 펌킨랜드
-    lore: ""
 
   - name: Guardians
     name_ko: 가디언즈
@@ -53,7 +48,6 @@
     abbr_name: R. Guardians
     stadium_name: Rotreeban Stadium
     stadium_name_ko: 로트리반 스타디움
-    lore: ""
 
   - name: Saturns
     name_ko: 새턴즈
@@ -63,7 +57,6 @@
     abbr_name: D. Saturns
     stadium_name: Duntle Park
     stadium_name_ko: 던틀 파크
-    lore: ""
 
   - name: Sentinels
     name_ko: 센티넬즈
@@ -73,7 +66,6 @@
     abbr_name: H. Sentinels
     stadium_name: Haltous Park
     stadium_name_ko: 할토스 파크
-    lore: ""
     
   - name: Valiants
     name_ko: 밸리언츠
@@ -83,7 +75,6 @@
     abbr_name: K. Valiants
     stadium_name: Karsnil Dome
     stadium_name_ko: 카즈닐 돔
-    lore: ""
     
   - name: Whales
     name_ko: 웨일스
@@ -93,7 +84,6 @@
     abbr_name: Y. Whales
     stadium_name: Yoshido Field
     stadium_name_ko: 요시도 필드
-    lore: ""
     
   - name: Zeniths
     name_ko: 제니스
@@ -103,13 +93,11 @@
     abbr_name: B. Zeniths
     stadium_name: Barsnhels Field
     stadium_name_ko: 바즈넬스 필드
-    lore: ""
 
 - name: Camellia League
   name_ko: 카멜리아 리그
   mascot_ko: 동백
   league_code: CL
-  lore: ""
   clubs:
     
   - name: Archers
@@ -120,7 +108,6 @@
     abbr_name: R. Archers
     stadium_name: Rotlen Field
     stadium_name_ko: 라틀렌 필드
-    lore: ""
     
   - name: Black Cats
     name_ko: 블랙캣츠
@@ -130,7 +117,6 @@
     abbr_name: E. Black Cats
     stadium_name: Ensai Cats Field
     stadium_name_ko: 엔사이 캣츠 필드
-    lore: ""
     
   - name: Dinos
     name_ko: 다이노스
@@ -140,7 +126,6 @@
     abbr_name: J. Dinos
     stadium_name: Jultonpark
     stadium_name_ko: 쥴톤파크
-    lore: ""
     
   - name: Flames
     name_ko: 플레임즈
@@ -150,7 +135,6 @@
     abbr_name: E. Flames
     stadium_name: Ellipril Park
     stadium_name_ko: 엘리프릴 파크
-    lore: ""
     
   - name: Firsters
     name_ko: 퍼스터즈
@@ -160,7 +144,6 @@
     abbr_name: L. Firsters
     stadium_name: Firsters Ballpark
     stadium_name_ko: 퍼스터즈 볼파크
-    lore: ""
     
   - name: Heros
     name_ko: 히어로즈
@@ -170,7 +153,6 @@
     abbr_name: U. Heros
     stadium_name: Ureme Heros Field
     stadium_name_ko: 유림 히어로즈 필드
-    lore: ""
     
   - name: Red Hunters
     name_ko: 레드헌터즈
@@ -180,7 +162,6 @@
     abbr_name: H. Red Hunters
     stadium_name: Hellenvits Field
     stadium_name_ko: 헬렌빗스 필드
-    lore: ""
     
   - name: Solarians
     name_ko: 솔라리안즈
@@ -190,7 +171,6 @@
     abbr_name: C. Solarians
     stadium_name: Costria Park
     stadium_name_ko: 코스트리아 파크
-    lore: ""
     
   - name: Tales
     name_ko: 태일즈
@@ -200,7 +180,6 @@
     abbr_name: M. Tales
     stadium_name: Tale Stadium
     stadium_name_ko: 태일 스타디움
-    lore: ""
     
   - name: Treasures
     name_ko: 트레져스
@@ -210,13 +189,11 @@
     abbr_name: U. Treasures
     stadium_name: Undger Stadium
     stadium_name_ko: 언져 스타디움
-    lore: ""
 
 - name: Gentiana League
   name_ko: 젠티아나 리그
   mascot_ko: 용담
   league_code: GL
-  lore: ""
   clubs:
 
   - name: Crystals
@@ -227,7 +204,6 @@
     abbr_name: W. Crystals
     stadium_name: Widgery Ballpark
     stadium_name_ko: 위져리 볼파크
-    lore: ""
     
   - name: Falcons
     name_ko: 팔콘스
@@ -237,7 +213,6 @@
     abbr_name: O. Falcons
     stadium_name: Ovestaln Ballpark
     stadium_name_ko: 오베스톤 볼파크
-    lore: ""
 
   - name: Freezers
     name_ko: 프리져스
@@ -247,7 +222,6 @@
     abbr_name: N. Freezers
     stadium_name: Freezers Field
     stadium_name_ko: 프리져스 필드
-    lore: ""
 
   - name: Glitters
     name_ko: 글리터즈
@@ -257,7 +231,6 @@
     abbr_name: R. Glitters
     stadium_name: Glitterland
     stadium_name_ko: 글리터랜드
-    lore: ""
     
   - name: Knights
     name_ko: 나이츠
@@ -267,7 +240,6 @@
     abbr_name: T. Knights
     stadium_name: Talus Ballpark
     stadium_name_ko: 탈루스 볼파크
-    lore: ""
     
   - name: Pegasus
     name_ko: 페가수스
@@ -277,7 +249,6 @@
     abbr_name: V. Pegasus
     stadium_name: Voky Dome
     stadium_name_ko: 보키 돔
-    lore: ""
 
   - name: Swans
     name_ko: 스완스
@@ -287,7 +258,6 @@
     abbr_name: G. Swans
     stadium_name: Gersway Lake Field
     stadium_name_ko: 져스웨이 래이크필드
-    lore: ""
     
   - name: Voyagers
     name_ko: 보이져스
@@ -297,7 +267,6 @@
     abbr_name: I. Voyagers
     stadium_name: Istaa Dome
     stadium_name_ko: 이스타 돔
-    lore: ""
 
   - name: Wyverns
     name_ko: 와이번스
@@ -307,7 +276,6 @@
     abbr_name: T. Wyverns
     stadium_name: Thorl Stadium
     stadium_name_ko: 솔 스타디움
-    lore: ""
     
   - name: Bears
     name_ko: 베어스
@@ -317,13 +285,11 @@
     abbr_name: H. Bears
     stadium_name: Holia Dome
     stadium_name_ko: 할리아 돔
-    lore: ""
 
 - name: Magnolia League
   name_ko: 매그놀리아 리그
   mascot_ko: 목련
   league_code: ML
-  lore: ""
   clubs:
 
   - name: Blue Birds
@@ -334,7 +300,6 @@
     abbr_name: H. Blue Birds
     stadium_name: Halosy Field
     stadium_name_ko: 할로지 필드
-    lore: ""
     
   - name: Dragons
     name_ko: 드래곤즈
@@ -344,7 +309,6 @@
     abbr_name: P. Dragons
     stadium_name: Pedelo Dome
     stadium_name_ko: 페델로 돔
-    lore: ""
     
   - name: Eagles
     name_ko: 이글스
@@ -354,7 +318,6 @@
     abbr_name: C. Eagles
     stadium_name: Calupia Stadium
     stadium_name_ko: 칼루피아 스타디움
-    lore: ""
     
   - name: Eternals
     name_ko: 이터널스
@@ -364,7 +327,6 @@
     abbr_name: G. Eternals
     stadium_name: Genpill Dome
     stadium_name_ko: 젠필 돔
-    lore: ""
     
   - name: Giants
     name_ko: 자이언츠
@@ -374,7 +336,6 @@
     abbr_name: F. Giants
     stadium_name: Fiamor Dome
     stadium_name_ko: 피아모어 돔
-    lore: ""
     
   - name: Lunarians
     name_ko: 루나리안즈
@@ -384,7 +345,6 @@
     abbr_name: A. Lunarians
     stadium_name: Aione Lunarfield
     stadium_name_ko: 아이원 루나필드
-    lore: ""
     
   - name: Stellars
     name_ko: 스텔라즈
@@ -394,7 +354,6 @@
     abbr_name: P. Stellars
     stadium_name: Popplehill Ballpark
     stadium_name_ko: 파플힐 볼파크
-    lore: ""
     
   - name: Panthers
     name_ko: 팬서스
@@ -404,7 +363,6 @@
     abbr_name: R. Panthers
     stadium_name: Raswell Dome
     stadium_name_ko: 라즈웰 돔
-    lore: ""
     
   - name: Unicorns
     name_ko: 유니콘즈
@@ -414,7 +372,6 @@
     abbr_name: N. Unicorns
     stadium_name: N-World Park
     stadium_name_ko: 엔월드파크
-    lore: ""
     
   - name: Black Crowns
     name_ko: 블랙크라운즈
@@ -424,4 +381,3 @@
     abbr_name: V. Black Crowns
     stadium_name: Vastown Stadium
     stadium_name_ko: 바스타운 스타디움
-    lore: ""

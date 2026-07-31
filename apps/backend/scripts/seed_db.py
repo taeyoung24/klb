@@ -32,7 +32,6 @@ def main():
                 name_ko=league_rawdata["name_ko"],
                 mascot_ko=league_rawdata["mascot_ko"],
                 league_code=league_rawdata["league_code"],
-                lore=league_rawdata["lore"]
             )
             session.add(league)
             session.commit()

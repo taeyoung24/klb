@@ -54,7 +54,6 @@ class League(SQLModel, table=True):
     name_ko: str
     mascot_ko: str
     league_code: str
-    lore: str
 
 class Club(SQLModel, table=True):
     id: int = Field(default=None, primary_key=True)
