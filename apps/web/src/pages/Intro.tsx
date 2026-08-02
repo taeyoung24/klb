@@ -204,9 +204,9 @@ export default function Intro() {
           <p className="intro-legacy__desc">
             수많은 지역, 대륙 간 얽히고 얽힌 이야기가 있습니다.
           </p>
-          <div className="intro-legacy__map-placeholder">
-            <span className="intro-legacy__map-placeholder-text">MAP AREA (준비 중)</span>
-          </div>
+          <a href="#world-map" className="intro-legacy__map-placeholder">
+            <span className="intro-legacy__map-placeholder-text">인터랙티브 세계관 지도 바로가기 →</span>
+          </a>
         </div>
       </section>
 

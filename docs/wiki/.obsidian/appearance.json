@@ -1,3 +1,6 @@
 {
-  "accentColor": "#5c7bf5"
+  "accentColor": "#5c7bf5",
+  "interfaceFontFamily": "Wanted Sans",
+  "textFontFamily": "Wanted Sans,D2Coding",
+  "monospaceFontFamily": "Wanted Sans"
 }

@@ -16,6 +16,8 @@ import CamelliaLeagueApp from './pages/league-cl/App'
 import GentianaLeagueApp from './pages/league-gl/App'
 import MagnoliaLeagueApp from './pages/league-ml/App'
 
+import WorldMap from './pages/world-map'
+
 function App() {
   const [currentHash, setCurrentHash] = useState(window.location.hash || '#home')
   const [latestDate, setLatestDate] = useState<Date>(new Date("2026-07-17"))
@@ -64,6 +66,9 @@ function App() {
     setScheduleDate(nextDate)
   }
 
+  if (currentHash === '#world-map') {
+    return <WorldMap />
+  }
   if (currentHash === '#league-al') {
     return <AzaleaLeagueApp />
   }

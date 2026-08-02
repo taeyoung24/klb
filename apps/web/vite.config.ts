@@ -3,6 +3,8 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { fileURLToPath, URL } from 'node:url';
 
+import glsl from 'vite-plugin-glsl';
+
 // https://vite.dev/config/
 import path from 'node:path';
 import { storybookTest } from '@storybook/addon-vitest/vitest-plugin';
@@ -11,7 +13,7 @@ const dirname = typeof __dirname !== 'undefined' ? __dirname : path.dirname(file
 
 // More info at: https://storybook.js.org/docs/next/writing-tests/integrations/vitest-addon
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), glsl()],
   resolve: {
     alias: {
       'src': fileURLToPath(new URL('./src', import.meta.url))

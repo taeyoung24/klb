@@ -1014,3 +1014,38 @@
   line-height: 1.5;
   color: rgba(255, 255, 255, 0.5);
 }
+
+.intro-legacy__map-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  max-width: 900px;
+  height: 280px;
+  margin: 40px auto 0;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px dashed rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.intro-legacy__map-placeholder:hover {
+  background: rgba(56, 189, 248, 0.05);
+  border-color: rgba(56, 189, 248, 0.5);
+  border-style: solid;
+  transform: translateY(-2px);
+}
+
+.intro-legacy__map-placeholder-text {
+  font-family: var(--sans);
+  font-size: var(--fs-md);
+  font-weight: var(--fw-bold);
+  color: rgba(255, 255, 255, 0.7);
+  transition: color 0.3s ease;
+}
+
+.intro-legacy__map-placeholder:hover .intro-legacy__map-placeholder-text {
+  color: #38bdf8;
+}

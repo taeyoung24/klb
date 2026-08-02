@@ -20,16 +20,16 @@
               "icon": "lucide-file",
               "title": "README"
             },
-            "group": "6865d50342bf69f9"
+            "group": "e30a70b2365f25bc"
           }
         ]
       },
       {
-        "id": "f384dd2ad26d1893",
+        "id": "4e093678ebb39792",
         "type": "tabs",
         "children": [
           {
-            "id": "162f449c4ff4af2d",
+            "id": "6ebdd83125377543",
             "type": "leaf",
             "state": {
               "type": "localgraph",
@@ -64,7 +64,7 @@
               "icon": "lucide-git-fork",
               "title": "Graph of README"
             },
-            "group": "6865d50342bf69f9"
+            "group": "e30a70b2365f25bc"
           }
         ]
       }
@@ -235,7 +235,9 @@
   },
   "active": "9344743eb7cf11c0",
   "lastOpenFiles": [
-    "worldview/overview.md",
-    "README.md"
+    "leagues/overview.md",
+    "README.md",
+    "clubs/README.md",
+    "worldview/overview.md"
   ]
 }
