@@ -13,7 +13,7 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "worldview/overview.md",
+                "file": "leagues/overview.md",
                 "mode": "source",
                 "source": false
               },
@@ -34,7 +34,7 @@
             "state": {
               "type": "localgraph",
               "state": {
-                "file": "worldview/overview.md",
+                "file": "leagues/overview.md",
                 "options": {
                   "collapse-filter": true,
                   "search": "",
@@ -235,9 +235,9 @@
   },
   "active": "9344743eb7cf11c0",
   "lastOpenFiles": [
+    "worldview/overview.md",
     "README.md",
     "leagues/overview.md",
-    "clubs/README.md",
-    "worldview/overview.md"
+    "clubs/README.md"
   ]
 }
