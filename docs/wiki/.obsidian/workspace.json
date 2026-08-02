@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "README.md",
+                "file": "worldview/overview.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "README"
+              "title": "overview"
             },
             "group": "e30a70b2365f25bc"
           }
@@ -34,7 +34,7 @@
             "state": {
               "type": "localgraph",
               "state": {
-                "file": "README.md",
+                "file": "worldview/overview.md",
                 "options": {
                   "collapse-filter": true,
                   "search": "",
@@ -62,7 +62,7 @@
                 }
               },
               "icon": "lucide-git-fork",
-              "title": "Graph of README"
+              "title": "Graph of overview"
             },
             "group": "e30a70b2365f25bc"
           }
@@ -235,8 +235,8 @@
   },
   "active": "9344743eb7cf11c0",
   "lastOpenFiles": [
-    "leagues/overview.md",
     "README.md",
+    "leagues/overview.md",
     "clubs/README.md",
     "worldview/overview.md"
   ]
