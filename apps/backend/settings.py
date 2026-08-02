@@ -10,6 +10,8 @@ DATABASE_URL           = os.environ['DATABASE_URL']
 DISCORD_LOG_WH_URL     = os.environ['DISCORD_LOG_WH_URL']
 DISCORD_REPORT_WH_URL  = os.environ['DISCORD_REPORT_WH_URL']
 
+OPENROUTER_API_KEY     = os.environ['OPENROUTER_API_KEY']
+
 
 class CONFIG:
     version = "1.0.0"
