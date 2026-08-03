@@ -29,7 +29,7 @@ FALLBACK_MODELS = [
     "google/gemma-4-31b-it:free",
     "google/gemma-4-31b-it",
 ]
-INDEX_PATH = "./outputs/faiss_index_store"
+INDEX_PATH = "./out/faiss_index_store_v2"
 
 # 프로젝트 루트의 docs/wiki 경로 정밀 계산 (worldview.py -> services -> src -> backend -> apps -> 프로젝트 루트)
 CURRENT_FILE = Path(__file__).resolve()
@@ -170,8 +170,9 @@ async def _get_or_create_vectorstore(force_update=False, session: Optional[World
 
     md_docs = load_wiki_markdown_documents()
 
-    chunk_size = 1200
-    chunk_overlap = 300
+    # 정밀 핀포인트 검색을 위해 chunk_size=650, chunk_overlap=150 적용
+    chunk_size = 650
+    chunk_overlap = 150
     text_splitter = RecursiveCharacterTextSplitter(
         chunk_size=chunk_size,
         chunk_overlap=chunk_overlap,
@@ -180,7 +181,7 @@ async def _get_or_create_vectorstore(force_update=False, session: Optional[World
 
     splits = text_splitter.split_documents(md_docs)
     if session:
-        session.update_status(TaskStatus.INDEXING, f"{len(splits)}개 위키 청크 FAISS 인덱싱 중...")
+        session.update_status(TaskStatus.INDEXING, f"{len(splits)}개 정밀 위키 청크(650자) FAISS 인덱싱 중...")
 
     def _create_and_save_index():
         try:
@@ -268,7 +269,7 @@ def get_session(session_id: str) -> Optional[WorldviewSession]:
     return _sessions.get(session_id)
 
 
-async def ask_question_async(session_id: str, question: str, force_update: bool = False):
+async def ask_question_async(session_id: str, question: str, force_update: bool = False, max_hops: int = 5):
     session = get_session(session_id)
     if not session:
         raise ValueError(f"존재하지 않는 세션입니다: {session_id}")
@@ -283,37 +284,97 @@ async def ask_question_async(session_id: str, question: str, force_update: bool 
         # 2. 대화 히스토리 분할 & 3쌍 이전 대화 LLM 요약 압축
         summary_context_str, recent_pairs = await _process_history_and_get_pairs(session)
 
-        # 3. 위키 관련 문서 검색 (MultiQueryRetriever)
-        session.update_status(TaskStatus.SEARCHING, "위키 문서에서 관련 정보를 검색 중입니다...")
+        # 3. 멀티홉(Multi-hop Iterative) 검색 시작 (기본 최대 깊이: 5)
+        MAX_HOPS = max_hops
+        base_retriever = vectorstore.as_retriever(search_kwargs={"k": 5})
+        
+        collected_docs_dict: Dict[str, Document] = {}  # page_content 기준 중복 제거 저장소
+        current_query = question
 
-        base_retriever = vectorstore.as_retriever(search_kwargs={"k": 7})
-        multi_query_template = """당신은 Krown League Baseball(KLB) 세계관 검색 어시스턴트입니다.
-사용자의 질문과 이전 대화 흐름을 함께 분석하여, 벡터 데이터베이스에서 관련 세계관/리그/구단 위키 문서를 잘 검색할 수 있도록 3개의 다른 검색 질문으로 변환하세요.
-각 질문은 반드시 줄바꿈으로만 구분해야 합니다.
+        for hop in range(1, MAX_HOPS + 1):
+            session.update_status(
+                TaskStatus.SEARCHING, 
+                f"멀티홉 위키 검색 중 ({hop}/{MAX_HOPS}단계) [검색어: '{current_query}']"
+            )
 
-질문: {question}"""
+            # 현재 쿼리로 문서 검색
+            new_docs = await base_retriever.ainvoke(current_query)
+            added_count = 0
+            for doc in new_docs:
+                key = doc.page_content.strip()
+                if key not in collected_docs_dict:
+                    collected_docs_dict[key] = doc
+                    added_count += 1
 
-        multi_query_prompt = PromptTemplate(input_variables=["question"], template=multi_query_template)
-        retriever = MultiQueryRetriever.from_llm(
-            retriever=base_retriever,
-            llm=cast(BaseLanguageModel, llm),
-            prompt=multi_query_prompt
-        )
+            logger.info(f"[Hop {hop}/{MAX_HOPS}] '{current_query}' ➔ {len(new_docs)}개 중 {added_count}개 신규 문서 추가 (총 {len(collected_docs_dict)}개)")
 
-        docs = await retriever.ainvoke(question)
+            # 최대 홉에 도달한 경우 추가 평가 없이 반복 종료
+            if hop == MAX_HOPS:
+                logger.info(f"최대 멀티홉 수({MAX_HOPS})에 도달하여 검색을 종료합니다.")
+                break
 
+            # 현재까지 수집된 문서 맥락 구성
+            formatted_docs_preview = []
+            for d in collected_docs_dict.values():
+                source = d.metadata.get("source_file", "unknown")
+                headers = " > ".join([v for k, v in d.metadata.items() if "Header" in k])
+                location_info = f"[출처: {source}" + (f" | 위치: {headers}]" if headers else "]")
+                formatted_docs_preview.append(f"{location_info}\n{d.page_content}")
+            current_context_preview = "\n\n---\n\n".join(formatted_docs_preview)
+
+            # LLM에게 추가 검색 필요 여부 판단 요청
+            hop_decision_prompt = f"""당신은 Krown League Baseball(KLB) 세계관 위키 멀티홉 검색 에이전트입니다.
+사용자의 질문에 완벽하고 정확하게 답변하기 위해 추가적인 위키 검색이 필요한지 판단하세요.
+
+[사용자 질문]
+{question}
+
+[이전 대화 요약 맥락]
+{summary_context_str}
+
+[현재까지 수집된 위키 발췌문 ({len(collected_docs_dict)}개)]
+{current_context_preview}
+
+[지침]
+1. 수집된 발췌문만으로 사용자 질문에 충분히 일관성 있게 답변할 수 있다면 정확히 'FINISH'라고 응답하세요.
+2. 언급된 연관 구단, 인물, 사건, 규칙 등 추가 꼬리물기 검색이 필요하다면 'SEARCH: <검색할 새로운 키워드 또는 문장>' 형식으로 정확히 한 줄만 응답하세요.
+3. 이미 수집된 내용과 거의 동일한 키워드로 재검색하지 마세요.
+
+응답 (FINISH 또는 SEARCH: ...):"""
+
+            try:
+                decision_res = await llm.ainvoke(hop_decision_prompt)
+                decision_text = str(decision_res.content).strip()
+                logger.info(f"[Hop {hop} Decision] {decision_text}")
+
+                if decision_text.startswith("FINISH") or "FINISH" in decision_text.split("\n")[0]:
+                    logger.info(f"LLM 판단: 정보 충분 (Hop {hop}에서 조기 종료)")
+                    break
+                elif decision_text.startswith("SEARCH:"):
+                    next_query = decision_text.replace("SEARCH:", "").strip()
+                    if next_query and next_query != current_query:
+                        current_query = next_query
+                    else:
+                        break
+                else:
+                    break
+            except Exception as e:
+                logger.warning(f"멀티홉 판단 LLM 호출 중 예외 발생: {e}")
+                break
+
+        # 4. 수집된 최종 멀티홉 문서 포맷팅
         formatted_docs = []
-        for d in docs:
+        for d in collected_docs_dict.values():
             source = d.metadata.get("source_file", "unknown")
             headers = " > ".join([v for k, v in d.metadata.items() if "Header" in k])
             location_info = f"[출처: {source}" + (f" | 위치: {headers}]" if headers else "]")
             formatted_docs.append(f"{location_info}\n{d.page_content}")
         context_str = "\n\n---\n\n".join(formatted_docs)
 
-        # 4. LLM 메시지 롤 구조화 (ChatPromptTemplate from_messages 튜플 배열 생성)
-        session.update_status(TaskStatus.GENERATING, "LLM이 구조화된 대화 턴과 위키 문서를 기반으로 답변을 생성하고 있습니다...")
+        # 5. LLM 메시지 롤 구조화 (ChatPromptTemplate from_messages 튜플 배열 생성)
+        session.update_status(TaskStatus.GENERATING, f"멀티홉 수집된 {len(collected_docs_dict)}개 위키 문서 기반으로 답변을 생성하고 있습니다...")
 
-        system_instruction = f"""당신은 Krown League Baseball(KLB) 세계관 및 위키에 대해 깊은 지식을 가진 전문 어시스턴트 '크라운(Krown)'입니다.
+        system_instruction = f"""당신은 Krown League Baseball(KLB) 세계관 및 위키에 대해 깊은 지식을 가진 전문 어시스턴트입니다.
 제공된 [이전 대화 요약 맥락], [최근 대화 턴], [KLB 위키 문서 발췌문]을 함께 고려하여 사용자의 질문에 친절하고 명확하게 한국어로 답변해 주세요.
 
 [지침]
@@ -331,7 +392,7 @@ async def ask_question_async(session_id: str, question: str, force_update: bool 
             message_tuples.append(("human", q_msg.content))
             message_tuples.append(("ai", a_msg.content))
 
-        current_human_prompt = f"""[KLB 위키 문서 발췌문]
+        current_human_prompt = f"""[KLB 위키 문서 발췌문 ({len(collected_docs_dict)}개 조합)]
 {context_str}
 
 [현재 질문]
