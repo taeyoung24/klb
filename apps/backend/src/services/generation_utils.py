@@ -3,8 +3,8 @@ import calendar
 from datetime import datetime
 from typing import Optional
 
-from src.enums import RosterStatus, IngameRole
-from src.models import Player
+from src.enums import RosterStatus, IngameRole, TurfType
+from src.models import Player, Stadium
 from src.utils.str_ext import generate_name
 
 # 주 포지션 9종 정의
@@ -22,34 +22,60 @@ PRIMARY_POSITIONS = [
 
 def generate_stats(height: float, weight: float, general: bool = False) -> dict:
     """
-    선수의 피지컬 조건에 비례하여 5대 스탯(speed, control, power, flexibility, focus)을 생성합니다.
-    general=False (고교 선수)인 경우 스탯 베이스가 낮게 잡힙니다.
+    선수의 5대 스탯(speed, control, power, flexibility, focus)을 생성합니다.
+    - 스탯 총합(오각형 면적): 정규분포를 따르며 general=False(고교)일 때 전체 총합 분포가 낮습니다.
+    - 개별 스탯: 총합 내에서 생 랜덤(Uniform) 가중치 비율로 분배됩니다.
     """
-    def random_stat():
-        if not general:
-            # 고교 선수: 평균치 하향 조정
-            base = 200 + random.random() * 350 # 200 ~ 550
-            variance = (random.random() - 0.5) * 150 # -75 ~ 75
-        else:
-            # 일반 선수: 기존 레거시 공식
-            base = 300 + random.random() * 400 # 300 ~ 700
-            variance = (random.random() - 0.5) * 200 # -100 ~ 100
-        return int(max(150, min(850, base + variance)))
+    # 1. 정규분포로 스탯 총합(면적) 결정
+    if not general:
+        # 고교 선수: 총합 평균 1850 (개별 평균 370), 표준편차 200
+        mean_total, std_total = 1850.0, 200.0
+        min_total, max_total = 1000, 2600
+    else:
+        # 일반 선수: 총합 평균 2500 (개별 평균 500), 표준편차 250
+        mean_total, std_total = 2500.0, 250.0
+        min_total, max_total = 1500, 3500
 
-    size_factor = (height - 175) * 3 + (weight - 75) * 2
-    base_power = random_stat()
-    power = int(max(150, min(850, base_power + size_factor)))
+    total_stat = int(max(min_total, min(max_total, random.gauss(mean_total, std_total))))
 
-    weight_factor = (78 - weight) * 3
-    base_speed = random_stat()
-    speed = int(max(150, min(850, base_speed + weight_factor)))
+    # 2. 피지컬 조건에 따른 성향 보정치 + 생 랜덤 가중치 (0.5 ~ 1.5)
+    size_factor = (height - 175) * 0.01 + (weight - 75) * 0.01
+    weight_factor = (78 - weight) * 0.01
+
+    w_power = max(0.1, random.uniform(0.5, 1.5) + size_factor)
+    w_speed = max(0.1, random.uniform(0.5, 1.5) + weight_factor)
+    w_control = random.uniform(0.5, 1.5)
+    w_flexibility = random.uniform(0.5, 1.5)
+    w_focus = random.uniform(0.5, 1.5)
+
+    weights = [w_speed, w_control, w_power, w_flexibility, w_focus]
+    total_weight = sum(weights)
+
+    # 3. 비율 기반 스탯 분배
+    raw_values = [w / total_weight * total_stat for w in weights]
+    stat_values = [int(round(v)) for v in raw_values]
+
+    # 최소/최대 스탯 안전범위 지정 (100 ~ 950)
+    for i in range(5):
+        stat_values[i] = max(100, min(950, stat_values[i]))
+
+    # 정수화 및 클램핑에 따른 합계 차이 보정 (총합이 정확히 total_stat이 되도록)
+    diff = total_stat - sum(stat_values)
+    while diff != 0:
+        idx = random.randint(0, 4)
+        if diff > 0 and stat_values[idx] < 950:
+            stat_values[idx] += 1
+            diff -= 1
+        elif diff < 0 and stat_values[idx] > 100:
+            stat_values[idx] -= 1
+            diff += 1
 
     return {
-        "speed": speed,
-        "control": random_stat(),
-        "power": power,
-        "flexibility": random_stat(),
-        "focus": random_stat()
+        "speed": stat_values[0],
+        "control": stat_values[1],
+        "power": stat_values[2],
+        "flexibility": stat_values[3],
+        "focus": stat_values[4]
     }
 
 def generate_player(
@@ -99,9 +125,14 @@ def generate_player(
     # 6. 인격(personality)
     personality_traits = [random.randint(0, 1000) for _ in range(4)]
 
+    # 7. 등번호 생성 ("00" ~ "99")
+    # TODO: 구단 내 등번호 중복 방지 및 고유 등번호 재할당 검증 로직 구현 필요 (26. 8. 3. Antigravity)
+    uniform_number = f"{random.randint(0, 99):02d}"
+
     return Player(
         name=generate_name(),
         club_id=club_id,
+        uniform_number=uniform_number,
         speed=stats["speed"],
         control=stats["control"],
         power=stats["power"],
@@ -113,4 +144,67 @@ def generate_player(
         birthday=birthday,
         height=height,
         weight=weight
+    )
+
+def generate_fence_profile(
+    left_dist: float = 98.0,
+    center_dist: float = 120.0,
+    right_dist: float = 98.0,
+    left_height: float = 2.5,
+    center_height: float = 2.5,
+    right_height: float = 2.5
+) -> list[dict[str, float]]:
+    """
+    구장의 극좌표계 기반 외야 펜스 기하 프로필 데이터를 생성합니다.
+    """
+    left_center_dist = round((left_dist + center_dist) / 2 + random.uniform(1.0, 3.0), 1)
+    right_center_dist = round((right_dist + center_dist) / 2 + random.uniform(1.0, 3.0), 1)
+
+    return [
+        {"angle": -45.0, "dist": round(left_dist, 1), "height": round(left_height, 1)},
+        {"angle": -22.5, "dist": left_center_dist, "height": round((left_height + center_height) / 2, 1)},
+        {"angle": 0.0, "dist": round(center_dist, 1), "height": round(center_height, 1)},
+        {"angle": 22.5, "dist": right_center_dist, "height": round((right_height + center_height) / 2, 1)},
+        {"angle": 45.0, "dist": round(right_dist, 1), "height": round(right_height, 1)},
+    ]
+
+def generate_stadium(name: str, name_ko: str) -> Stadium:
+    """
+    구장 이름(영어, 한글)을 기반으로 코어 시뮬레이터 물리 엔진용 구장 객체를 생성합니다.
+    """
+    is_dome = random.random() < 0.15
+    capacity = random.randint(15, 45) * 1000
+    turf_type = random.choices(
+        [TurfType.NATURAL, TurfType.ARTIFICIAL, TurfType.HYBRID],
+        weights=[0.7, 0.2, 0.1]
+    )[0]
+    altitude = round(random.uniform(5.0, 150.0), 1)
+
+    left_dist = random.uniform(95.0, 102.0)
+    center_dist = random.uniform(117.0, 125.0)
+    right_dist = random.uniform(95.0, 102.0)
+
+    left_height = random.uniform(2.0, 4.5)
+    center_height = random.uniform(2.0, 3.5)
+    right_height = random.uniform(2.0, 4.5)
+
+    fence_profile = generate_fence_profile(
+        left_dist=left_dist,
+        center_dist=center_dist,
+        right_dist=right_dist,
+        left_height=left_height,
+        center_height=center_height,
+        right_height=right_height
+    )
+    curvature = round(random.uniform(0.3, 0.8), 2)
+
+    return Stadium(
+        name=name,
+        name_ko=name_ko,
+        is_dome=is_dome,
+        capacity=capacity,
+        turf_type=turf_type,
+        altitude=altitude,
+        fence_profile=fence_profile,
+        curvature=curvature
     )

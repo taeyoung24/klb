@@ -1,5 +1,11 @@
 from enum import StrEnum
 
+class TurfType(StrEnum):
+    """구장 잔디 종류"""
+    NATURAL     = "NATURAL"    # 천연잔디
+    ARTIFICIAL  = "ARTIFICIAL" # 인조잔디
+    HYBRID      = "HYBRID"     # 하이브리드 잔디
+
 class MatchStatus(StrEnum):
     """경기 상태"""
     SCHEDULED    = "SCHEDULED" # 예정
