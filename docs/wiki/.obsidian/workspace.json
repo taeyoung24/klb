@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "leagues/overview.md",
+                "file": "worldview/geography.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "overview"
+              "title": "geography"
             },
             "group": "e30a70b2365f25bc"
           }
@@ -34,7 +34,7 @@
             "state": {
               "type": "localgraph",
               "state": {
-                "file": "leagues/overview.md",
+                "file": "worldview/geography.md",
                 "options": {
                   "collapse-filter": true,
                   "search": "",
@@ -62,7 +62,7 @@
                 }
               },
               "icon": "lucide-git-fork",
-              "title": "Graph of overview"
+              "title": "Graph of geography"
             },
             "group": "e30a70b2365f25bc"
           }
@@ -235,9 +235,15 @@
   },
   "active": "9344743eb7cf11c0",
   "lastOpenFiles": [
-    "worldview/overview.md",
     "README.md",
+    "worldview/overview.md",
+    "worldview/geography.md",
+    "worldview/history.md",
+    "clubs/medihals-tales.md",
     "leagues/overview.md",
+    "clubs/rossi-glitters.md",
+    "rules/index.md",
+    "clubs/azalea/comets.md",
     "clubs/README.md"
   ]
 }

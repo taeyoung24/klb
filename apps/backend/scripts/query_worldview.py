@@ -53,9 +53,10 @@ async def main():
         while not task.done():
             current_msg = f"[상태: {session.status.value}] {session.status_message}"
             if current_msg != last_status_msg:
-                print(f"\r⏳ {current_msg}", flush=True)
+                print(f"\r\033[K⏳ {current_msg}")
                 last_status_msg = current_msg
             await asyncio.sleep(0.2)
+        print()  # 개행 추가
 
         # 태스크 완료 결과 확인
         if session.status == TaskStatus.COMPLETED:

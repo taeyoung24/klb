@@ -16,6 +16,7 @@ router = APIRouter(prefix="/worldview", tags=["worldview"])
 class AskRequest(BaseModel):
     question: str = Field(description="세계관/위키 관련 질문", examples=["KLB 4대 리그에 대해 설명해줘"])
     force_update: bool = Field(default=False, description="FAISS 인덱스를 새로 강제 재구축할지 여부")
+    max_hops: int = Field(default=5, ge=1, le=10, description="멀티홉 검색 최대 수행 횟수 제한 (기본값: 5)")
 
 
 class ChatMessageResponse(BaseModel):
@@ -70,6 +71,7 @@ async def ask_worldview_question(session_id: str, request: AskRequest, backgroun
         session_id=session_id,
         question=request.question,
         force_update=request.force_update,
+        max_hops=request.max_hops,
     )
 
     return session
@@ -85,5 +87,6 @@ async def ask_single_question(request: AskRequest):
         session_id=session.session_id,
         question=request.question,
         force_update=request.force_update,
+        max_hops=request.max_hops,
     )
     return session
