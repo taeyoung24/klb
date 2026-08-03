@@ -213,9 +213,10 @@ export default function AppSeasonStandingSection({
 
     getMatches({ status: 'COMPLETED' })
       .then(matches => {
-        // 정예리그는 금요일 개막 보정에 따라 최대 284일차에 끝나므로, 285일을 확실한 안전 경계선으로 나눕니다.
-        const elite = matches.filter(m => m.sim_day >= 233 && m.sim_day <= 285);
-        const ko = matches.filter(m => m.sim_day >= 286);
+        // limit_extra_innings가 false인 경우 연장 무제한인 녹아웃(토너먼트) 경기
+        const postMatches = matches.filter(m => m.sim_day >= 229);
+        const ko = postMatches.filter(m => m.limit_extra_innings === false);
+        const elite = postMatches.filter(m => m.limit_extra_innings !== false);
 
         setEliteMatches(elite);
         setKnockoutMatches(ko);
@@ -229,7 +230,7 @@ export default function AppSeasonStandingSection({
   const isOpening = simDay >= 62;
   const isSecondHalf = simDay >= 146;
   const isPostSeason = simDay >= 229;
-  const isKnockout = simDay >= 286;
+  const isKnockout = simDay >= 229 && (knockoutMatches.length > 0 || simDay >= 275);
 
   let currentStep = 1;
   if (simDay < 146) {
@@ -391,12 +392,22 @@ export default function AppSeasonStandingSection({
     const clubsList = Object.keys(clubsMap).map(Number).slice(0, 8);
     const t8 = top8.length === 8 ? top8 : clubsList;
 
+    // 실제 knockoutMatches에서 8강 1차전 경기 4개를 순서대로 추출하여 대진 구단 매핑
+    const minSimDay = knockoutMatches.length > 0 ? Math.min(...knockoutMatches.map(m => m.sim_day)) : 0;
+    const q1stRoundMatches = knockoutMatches.filter(m => m.sim_day === minSimDay);
+
     const matchups = [
-      { round: 'ROUND_OF_8', id: 'q1', home: t8[0], away: t8[7] },
-      { round: 'ROUND_OF_8', id: 'q2', home: t8[3], away: t8[4] },
-      { round: 'ROUND_OF_8', id: 'q3', home: t8[1], away: t8[6] },
-      { round: 'ROUND_OF_8', id: 'q4', home: t8[2], away: t8[5] },
+      { round: 'ROUND_OF_8', id: 'q1', home: q1stRoundMatches[0]?.home_club_id ?? t8[0], away: q1stRoundMatches[0]?.away_club_id ?? t8[7] },
+      { round: 'ROUND_OF_8', id: 'q2', home: q1stRoundMatches[1]?.home_club_id ?? t8[3], away: q1stRoundMatches[1]?.away_club_id ?? t8[4] },
+      { round: 'ROUND_OF_8', id: 'q3', home: q1stRoundMatches[2]?.home_club_id ?? t8[1], away: q1stRoundMatches[2]?.away_club_id ?? t8[6] },
+      { round: 'ROUND_OF_8', id: 'q4', home: q1stRoundMatches[3]?.home_club_id ?? t8[2], away: q1stRoundMatches[3]?.away_club_id ?? t8[5] },
     ];
+
+    // 1. 8강 각 대진의 구단 세트
+    const q1_set = new Set([matchups[0].home, matchups[0].away]);
+    const q2_set = new Set([matchups[1].home, matchups[1].away]);
+    const q3_set = new Set([matchups[2].home, matchups[2].away]);
+    const q4_set = new Set([matchups[3].home, matchups[3].away]);
 
     const getWins = (c1: number, c2: number) => {
       let c1_wins = 1; // 8강 상위시드 1승 선치
@@ -432,8 +443,39 @@ export default function AppSeasonStandingSection({
       return idx1 < idx2 ? { home: c1, away: c2 } : { home: c2, away: c1 };
     };
 
-    const s1_teams = getHigherSeed(q1_winner, q2_winner);
-    const s2_teams = getHigherSeed(q3_winner, q4_winner);
+    // 2. 준결승 1경기(s1): q1 대진 구단 vs q2 대진 구단 간 경기 탐지
+    let s1_home: number | null = getHigherSeed(q1_winner, q2_winner).home;
+    let s1_away: number | null = getHigherSeed(q1_winner, q2_winner).away;
+
+    if (!s1_home || !s1_away) {
+      const matchS1 = knockoutMatches.find(m => 
+        (q1_set.has(m.home_club_id) && q2_set.has(m.away_club_id)) ||
+        (q2_set.has(m.home_club_id) && q1_set.has(m.away_club_id))
+      );
+      if (matchS1) {
+        const higher = getHigherSeed(matchS1.home_club_id, matchS1.away_club_id);
+        s1_home = higher.home;
+        s1_away = higher.away;
+      }
+    }
+    const s1_teams = { home: s1_home, away: s1_away };
+
+    // 3. 준결승 2경기(s2): q3 대진 구단 vs q4 대진 구단 간 경기 탐지
+    let s2_home: number | null = getHigherSeed(q3_winner, q4_winner).home;
+    let s2_away: number | null = getHigherSeed(q3_winner, q4_winner).away;
+
+    if (!s2_home || !s2_away) {
+      const matchS2 = knockoutMatches.find(m => 
+        (q3_set.has(m.home_club_id) && q4_set.has(m.away_club_id)) ||
+        (q4_set.has(m.home_club_id) && q3_set.has(m.away_club_id))
+      );
+      if (matchS2) {
+        const higher = getHigherSeed(matchS2.home_club_id, matchS2.away_club_id);
+        s2_home = higher.home;
+        s2_away = higher.away;
+      }
+    }
+    const s2_teams = { home: s2_home, away: s2_away };
 
     const getWinsBo5 = (c1: number | null, c2: number | null) => {
       if (!c1 || !c2) return { c1_wins: 0, c2_wins: 0 };
@@ -456,7 +498,25 @@ export default function AppSeasonStandingSection({
     const s2_res = getWinsBo5(s2_teams.home, s2_teams.away);
     const s2_winner = s2_res.c1_wins === 3 ? s2_teams.home : (s2_res.c2_wins === 3 ? s2_teams.away : null);
 
-    const f_teams = getHigherSeed(s1_winner, s2_winner);
+    // 4. 결승전(f): s1 참가 구단 vs s2 참가 구단 간 경기 탐지
+    const s1_set = new Set([s1_teams.home, s1_teams.away].filter(Boolean) as number[]);
+    const s2_set = new Set([s2_teams.home, s2_teams.away].filter(Boolean) as number[]);
+
+    let f_home: number | null = getHigherSeed(s1_winner, s2_winner).home;
+    let f_away: number | null = getHigherSeed(s1_winner, s2_winner).away;
+
+    if (!f_home || !f_away) {
+      const matchF = knockoutMatches.find(m => 
+        (s1_set.has(m.home_club_id) && s2_set.has(m.away_club_id)) ||
+        (s2_set.has(m.home_club_id) && s1_set.has(m.away_club_id))
+      );
+      if (matchF) {
+        const higher = getHigherSeed(matchF.home_club_id, matchF.away_club_id);
+        f_home = higher.home;
+        f_away = higher.away;
+      }
+    }
+    const f_teams = { home: f_home, away: f_away };
 
     const getWinsBo7 = (c1: number | null, c2: number | null) => {
       if (!c1 || !c2) return { c1_wins: 0, c2_wins: 0 };

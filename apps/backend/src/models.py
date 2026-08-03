@@ -147,6 +147,7 @@ class Match(SQLModel, table=True):
     id: int              = Field(default=None, primary_key=True)
     away_club_id: int    = Field(foreign_key="club.id")
     home_club_id: int    = Field(foreign_key="club.id")
+    stadium_id: Optional[int] = Field(default=None, foreign_key="stadium.id")
     sim_day: int         = Field(index=True)
     status: MatchStatus  = Field(default=MatchStatus.SCHEDULED, index=True)
     limit_extra_innings: bool = Field()
@@ -163,6 +164,8 @@ class Match(SQLModel, table=True):
         default=None,
         sa_column=Column(IngameInstructionLogType)
     )
+
+    stadium: Optional[Stadium] = Relationship()
 
 class MatchPlaceholder(SQLModel, table=True):
     """

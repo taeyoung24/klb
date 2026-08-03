@@ -275,6 +275,7 @@ def main():
         sim_day=1,
         away_club_id=1,
         home_club_id=2,
+        stadium_id=1,
         limit_extra_innings=True,
     )
 

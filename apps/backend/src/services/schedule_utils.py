@@ -1,5 +1,5 @@
 import datetime
-from typing import Optional
+from typing import Optional, Union
 from src.enums import MatchStatus
 from src.models import Match, Club, MatchPlaceholder
 
@@ -86,6 +86,7 @@ def generate_regular_schedule(clubs: list[Club], year: int, base_sim_day: int) -
                 matches.append(Match(
                     home_club_id=home_club.id,
                     away_club_id=away_club.id,
+                    stadium_id=home_club.home_stadium_id,
                     sim_day=current_day,
                     status=MatchStatus.SCHEDULED,
                     limit_extra_innings=True
@@ -160,6 +161,7 @@ def generate_krown_elite_schedule(clubs: list[Club], base_sim_day: int) -> list[
             matches.append(Match(
                 home_club_id=club_a.id,
                 away_club_id=club_b.id,
+                stadium_id=club_a.home_stadium_id,
                 sim_day=day1,
                 status=MatchStatus.SCHEDULED,
                 limit_extra_innings=True
@@ -168,6 +170,7 @@ def generate_krown_elite_schedule(clubs: list[Club], base_sim_day: int) -> list[
             matches.append(Match(
                 home_club_id=club_b.id,
                 away_club_id=club_a.id,
+                stadium_id=club_b.home_stadium_id,
                 sim_day=day2,
                 status=MatchStatus.SCHEDULED,
                 limit_extra_innings=True
@@ -263,14 +266,27 @@ def save_knockout_placeholders(session, placeholders: list[MatchPlaceholder]) ->
     return placeholders
 
 
-def generate_tiebreaker_schedule(home_club_id: int, away_club_id: int, sim_day: int) -> Match:
+def generate_tiebreaker_schedule(
+    home_club: Union[Club, int], 
+    away_club: Union[Club, int], 
+    sim_day: int,
+    stadium_id: Optional[int] = None
+) -> Match:
     """
     정규리그 타이브레이크 단판 순위결정전 경기 일정 객체를 생성하는 함수.
     타이브레이크 경기는 끝장 승부이므로 limit_extra_innings=False(연장 무제한)가 적용됩니다.
     """
+    home_club_id: int = home_club.id if isinstance(home_club, Club) else home_club
+    away_club_id: int = away_club.id if isinstance(away_club, Club) else away_club
+    
+    final_stadium_id: Optional[int] = stadium_id
+    if final_stadium_id is None and isinstance(home_club, Club):
+        final_stadium_id = home_club.home_stadium_id
+
     return Match(
         home_club_id=home_club_id,
         away_club_id=away_club_id,
+        stadium_id=final_stadium_id,
         sim_day=sim_day,
         status=MatchStatus.SCHEDULED,
         limit_extra_innings=False,

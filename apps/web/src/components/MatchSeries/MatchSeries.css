@@ -140,14 +140,13 @@
 }
 
 .match-series__score-item--empty {
-  opacity: 0.25;
+  opacity: 0.55;
   font-weight: var(--fw-regular);
   color: rgba(255, 255, 255, 0.4);
 }
 
 .match-series__score-item--loser {
-  opacity: 0.35;
-  color: rgba(255, 255, 255, 0.4);
+  opacity: 0.45;
 }
 
 .match-series__team-box--winner {

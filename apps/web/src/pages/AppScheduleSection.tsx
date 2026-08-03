@@ -282,7 +282,9 @@ export default function AppScheduleSection({
                           </div>
 
                           <div className="match-card__venue-col">
-                            <span className="match-card__venue">{homeClub?.stadium_name_ko || '야구장'}</span>
+                            <span className="match-card__venue">
+                              {match.stadium?.name_ko || homeClub?.home_stadium?.name_ko || homeClub?.stadium_name_ko || '야구장'}
+                            </span>
                           </div>
                         </a>
                       );

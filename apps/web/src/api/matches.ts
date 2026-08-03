@@ -1,13 +1,17 @@
 import client from './client';
+import type { Stadium } from './stadiums';
 
 export interface Match {
   id: number;
   away_club_id: number;
   home_club_id: number;
+  stadium_id?: number | null;
   sim_day: number;
   status: string; // 'SCHEDULED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELED'
+  limit_extra_innings?: boolean;
   home_score?: number | null;
   away_score?: number | null;
+  stadium?: Stadium | null;
 }
 
 export interface GetMatchesParams {

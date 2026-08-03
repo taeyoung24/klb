@@ -183,9 +183,9 @@ export default function Schedule() {
         }
       }
 
-      const stadiumStr = homeClub
+      const stadiumStr = m.stadium?.name_ko || homeClub?.home_stadium?.name_ko || (homeClub
         ? homeClub.stadium_name_ko || `${homeClub.hometown_ko} 야구장`
-        : '야구장';
+        : '야구장');
 
       return {
         id: m.id,

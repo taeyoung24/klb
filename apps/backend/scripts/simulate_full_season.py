@@ -49,7 +49,6 @@ def init_database():
                 name_ko=league_rawdata["name_ko"],
                 mascot_ko=league_rawdata["mascot_ko"],
                 league_code=league_rawdata["league_code"],
-                lore=league_rawdata["lore"]
             )
             session.add(league)
             session.commit()
@@ -387,6 +386,7 @@ def run_knockout_stage(top_8_clubs, elite_end_day: int):
             m1 = Match(
                 home_club_id=home_club_id,
                 away_club_id=away_club_id,
+                stadium_id=home_club.home_stadium_id,
                 sim_day=day1,
                 status=MatchStatus.SCHEDULED,
                 limit_extra_innings=False
@@ -422,10 +422,12 @@ def run_knockout_stage(top_8_clubs, elite_end_day: int):
 
             home_club_id = q.home_club_id
             away_club_id = q.away_club_id
+            home_club = session.get(Club, home_club_id)
             
             m2 = Match(
                 home_club_id=home_club_id,
                 away_club_id=away_club_id,
+                stadium_id=home_club.home_stadium_id if home_club else None,
                 sim_day=day2,
                 status=MatchStatus.SCHEDULED,
                 limit_extra_innings=False
@@ -515,6 +517,7 @@ def run_knockout_stage(top_8_clubs, elite_end_day: int):
                 m = Match(
                     home_club_id=home_team_id,
                     away_club_id=away_team_id,
+                    stadium_id=home_team_club.home_stadium_id,
                     sim_day=sim_day,
                     status=MatchStatus.SCHEDULED,
                     limit_extra_innings=False,
@@ -586,6 +589,7 @@ def run_knockout_stage(top_8_clubs, elite_end_day: int):
             m = Match(
                 home_club_id=actual_home,
                 away_club_id=actual_away,
+                stadium_id=actual_home_club.home_stadium_id,
                 sim_day=sim_day,
                 status=MatchStatus.SCHEDULED,
                 limit_extra_innings=False
