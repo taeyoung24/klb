@@ -16,6 +16,7 @@ from src.models import (
     IngameScoreboard,
 )
 from .simulation import simulate_plate_appearance
+from .lineup import select_starting_lineup
 from .utils import generate_mock_players
 
 
@@ -171,11 +172,11 @@ def get_scoreboard(match_log: IngameInstructionLog) -> IngameScoreboard:
     )
 
 
-def run_match(match: Match):
+def run_match(match: Match, session=None):
     """단일 매치를 시뮬레이션하여 세부 이벤트 대본을 남깁니다."""
-    # 1. 목데이터 기반 라인업 빌드
-    away_pitcher, away_batters = generate_mock_players(match.away_club_id)
-    home_pitcher, home_batters = generate_mock_players(match.home_club_id)
+    # 1. 라인업 추출 (DB 실제 선수 및 감독 선발 로직 캡슐화)
+    away_pitcher, away_batters = select_starting_lineup(match.away_club_id, session=session)
+    home_pitcher, home_batters = select_starting_lineup(match.home_club_id, session=session)
     
     # 2. 게임 상태 및 누적 점수 변수 초기화
     home_score = 0

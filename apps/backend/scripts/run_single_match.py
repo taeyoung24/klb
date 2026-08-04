@@ -12,6 +12,7 @@ if callable(reconfigure_stdout):
 
 from src.models import (
     Match,
+    Player,
     IngameNoticeEvent,
     IngameGameStateEvent,
     IngameBatterEnterEvent,
@@ -23,8 +24,17 @@ from src.models import (
     IngameBaseRunStartEvent,
     IngameBaseRunResultEvent,
 )
-from src.services.ingame import run_match, get_scoreboard
+from src.services.ingame import run_match, get_scoreboard, select_starting_lineup
 from src.utils.logger import logger
+
+
+def get_player_display_name(player_id: int, player_map: dict[int, Player]) -> str:
+    """선수 ID를 등번호와 선수 이름 포맷으로 변환합니다."""
+    player = player_map.get(player_id)
+    if player:
+        return f"#{player.uniform_number} {player.name}"
+    return f"선수 #{player_id}"
+
 
 
 def get_display_width(text: str) -> int:
@@ -129,6 +139,17 @@ def play_live_simulation(match: Match, update_interval: float = 0.1, speed: floa
     max_sim_time = sorted_events[-1].sim_timestamp
     total_events = len(sorted_events)
 
+    # 선수 ID -> 선수 객체 매핑 맵 생성
+    player_map: dict[int, Player] = {}
+    for club_id in (match.away_club_id, match.home_club_id):
+        if club_id is not None:
+            pitcher, batters = select_starting_lineup(club_id)
+            if pitcher and pitcher.id:
+                player_map[pitcher.id] = pitcher
+            for batter in batters:
+                if batter and batter.id:
+                    player_map[batter.id] = batter
+
     # 라이브 상태 변수 초기화
     inning = 1
     is_top = True
@@ -167,11 +188,14 @@ def play_live_simulation(match: Match, update_interval: float = 0.1, speed: floa
 
             elif isinstance(evt, IngameBatterEnterEvent):
                 balls, strikes = 0, 0
-                recent_logs.append(f"[타석] 타자 #{evt.batter_id} 등장 (투수 #{evt.pitcher_id})")
+                batter_str = get_player_display_name(evt.batter_id, player_map)
+                pitcher_str = get_player_display_name(evt.pitcher_id, player_map)
+                recent_logs.append(f"[타석] 타자 {batter_str} 등장 (투수 {pitcher_str})")
 
             elif isinstance(evt, IngamePitchStartEvent):
                 p_type = evt.pitch_type.value if hasattr(evt.pitch_type, "value") else str(evt.pitch_type)
-                recent_logs.append(f"[투구준비] 투수 #{evt.pitcher_id} -> {p_type} 투구 준비")
+                pitcher_str = get_player_display_name(evt.pitcher_id, player_map)
+                recent_logs.append(f"[투구준비] 투수 {pitcher_str} -> {p_type} 투구 준비")
 
             elif isinstance(evt, IngamePitchEvent):
                 p_res = evt.result.value if hasattr(evt.result, "value") else str(evt.result)
@@ -191,18 +215,22 @@ def play_live_simulation(match: Match, update_interval: float = 0.1, speed: floa
 
             elif isinstance(evt, IngameFieldingActionEvent):
                 act_type = evt.action_type.value if hasattr(evt.action_type, "value") else str(evt.action_type)
-                recent_logs.append(f"[수비] 야수 #{evt.fielder_id} - {act_type}")
+                fielder_str = get_player_display_name(evt.fielder_id, player_map)
+                recent_logs.append(f"[수비] 야수 {fielder_str} - {act_type}")
 
             elif isinstance(evt, IngameThrowActionEvent):
                 succ_str = "정송구" if evt.is_successful else "악송구/에러"
-                recent_logs.append(f"[송구] 야수 #{evt.thrower_id} -> {evt.target_base}루 ({succ_str})")
+                thrower_str = get_player_display_name(evt.thrower_id, player_map)
+                recent_logs.append(f"[송구] 야수 {thrower_str} -> {evt.target_base}루 ({succ_str})")
 
             elif isinstance(evt, IngameBaseRunStartEvent):
-                recent_logs.append(f"[주루출발] 주자 #{evt.runner_id} ({evt.start_base}루 -> {evt.target_base}루)")
+                runner_str = get_player_display_name(evt.runner_id, player_map)
+                recent_logs.append(f"[주루출발] 주자 {runner_str} ({evt.start_base}루 -> {evt.target_base}루)")
 
             elif isinstance(evt, IngameBaseRunResultEvent):
                 run_res = evt.result.value if hasattr(evt.result, "value") else str(evt.result)
                 res_upper = str(run_res).upper()
+                runner_str = get_player_display_name(evt.runner_id, player_map)
 
                 if "OUT" in res_upper:
                     outs += 1
@@ -217,7 +245,7 @@ def play_live_simulation(match: Match, update_interval: float = 0.1, speed: floa
                             away_score += 1
                         else:
                             home_score += 1
-                recent_logs.append(f"[주루결과] 주자 #{evt.runner_id} -> {evt.target_base}루 {run_res}")
+                recent_logs.append(f"[주루결과] 주자 {runner_str} -> {evt.target_base}루 {run_res}")
 
             event_idx += 1
 
