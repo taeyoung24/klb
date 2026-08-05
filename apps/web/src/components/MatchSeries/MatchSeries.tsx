@@ -15,6 +15,7 @@ interface MatchSeriesProps {
   lowerTeamCode?: string;
   lowerTeamImage?: string;
   lowerScoreSeries?: number[];
+  matchIds?: (number | null | undefined)[];
 }
 
 const MatchSeries: React.FC<MatchSeriesProps> = ({
@@ -30,7 +31,10 @@ const MatchSeries: React.FC<MatchSeriesProps> = ({
   lowerTeamCode,
   lowerTeamImage,
   lowerScoreSeries = [],
+  matchIds = [],
 }) => {
+  const [hoveredGameIndex, setHoveredGameIndex] = React.useState<number | null>(null);
+
   // Determine the number of score columns
   const maxLen = Math.max(upperScoreSeries.length, lowerScoreSeries.length);
   const seriesCount = seriesLimit || (maxLen === 0 ? 3 : (maxLen % 2 === 0 ? maxLen + 1 : maxLen));
@@ -52,6 +56,15 @@ const MatchSeries: React.FC<MatchSeriesProps> = ({
   const upperIsWinner = upperWins >= winsNeeded;
   const lowerIsWinner = lowerWins >= winsNeeded;
 
+  const handleScoreClick = (index: number) => {
+    const targetMatchId = matchIds[index];
+    if (targetMatchId) {
+      window.location.hash = `#match-detail?id=${targetMatchId}`;
+    } else {
+      window.location.hash = '#match-detail';
+    }
+  };
+
   const renderScores = (scores: number[], opponentScores: number[], count: number) => {
     const result = [];
     for (let i = 0; i < count; i++) {
@@ -59,6 +72,8 @@ const MatchSeries: React.FC<MatchSeriesProps> = ({
       const opponentScore = opponentScores[i];
       
       const isLoser = score !== undefined && opponentScore !== undefined && score < opponentScore;
+      const hasMatch = score !== undefined || (matchIds[i] !== undefined && matchIds[i] !== null);
+      const isHovered = hoveredGameIndex === i && hasMatch;
       
       let scoreClasses = 'match-series__score-item';
       if (score === undefined) {
@@ -67,8 +82,22 @@ const MatchSeries: React.FC<MatchSeriesProps> = ({
         scoreClasses += ' match-series__score-item--loser';
       }
 
+      if (hasMatch) {
+        scoreClasses += ' match-series__score-item--clickable';
+      }
+
+      if (isHovered) {
+        scoreClasses += ' match-series__score-item--hovered';
+      }
+
       result.push(
-        <span key={i} className={scoreClasses}>
+        <span
+          key={i}
+          className={scoreClasses}
+          onMouseEnter={() => hasMatch && setHoveredGameIndex(i)}
+          onMouseLeave={() => hasMatch && setHoveredGameIndex(null)}
+          onClick={() => hasMatch && handleScoreClick(i)}
+        >
           {score !== undefined ? score : '-'}
         </span>
       );

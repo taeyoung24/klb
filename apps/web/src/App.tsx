@@ -126,7 +126,7 @@ function App() {
         <Intro />
       ) : currentHash === '#league-shortcut' ? (
         <LeagueShortcut />
-      ) : currentHash === '#match-detail' ? (
+      ) : currentHash.startsWith('#match-detail') ? (
         <MatchDetail />
       ) : currentHash === '#archive' ? (
         <Archive />

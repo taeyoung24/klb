@@ -501,13 +501,15 @@ export default function AppSeasonStandingSection({
     const data = getKnockoutResults();
 
     const getSeriesScores = (c1: number | null, c2: number | null, isBo3Advantage = false) => {
-      if (!c1 || !c2) return { upperScores: [], lowerScores: [] };
+      if (!c1 || !c2) return { upperScores: [], lowerScores: [], matchIds: [] };
       const upperScores: number[] = [];
       const lowerScores: number[] = [];
+      const matchIds: (number | null)[] = [];
 
       if (isBo3Advantage) {
         upperScores.push(1);
         lowerScores.push(0);
+        matchIds.push(null);
       }
 
       const matches = knockoutMatches
@@ -520,9 +522,10 @@ export default function AppSeasonStandingSection({
         const c2Score = isC1Home ? (m.away_score ?? 0) : (m.home_score ?? 0);
         upperScores.push(c1Score);
         lowerScores.push(c2Score);
+        matchIds.push(m.id);
       });
 
-      return { upperScores, lowerScores };
+      return { upperScores, lowerScores, matchIds };
     };
 
     const renderNode = (title: string, homeId: number | null, awayId: number | null, isBo3Advantage = false, seriesLimit?: number) => {
@@ -538,7 +541,7 @@ export default function AppSeasonStandingSection({
       const homeCode = homeClub?.team_code;
       const awayCode = awayClub?.team_code;
 
-      const { upperScores, lowerScores } = getSeriesScores(homeId, awayId, isBo3Advantage);
+      const { upperScores, lowerScores, matchIds } = getSeriesScores(homeId, awayId, isBo3Advantage);
 
       return (
         <MatchSeries
@@ -552,6 +555,7 @@ export default function AppSeasonStandingSection({
           lowerTeamName={awayName}
           lowerTeamCode={awayCode}
           lowerScoreSeries={lowerScores}
+          matchIds={matchIds}
         />
       );
     };

@@ -1,9 +1,11 @@
+import json
 from typing import Optional
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session, select, asc
 from sqlalchemy.orm import defer
-from src.models import Match, Club
+from src.models import Match, Club, IngameInstructionLog, IngameScoreboard
 from src.services.common import get_session
+from src.services.ingame.main import get_scoreboard
 
 router = APIRouter(prefix="/matches", tags=["Matches"])
 
@@ -34,3 +36,46 @@ def get_matches(
         
     query = query.order_by(asc(Match.sim_day), asc(Match.home_club_id))
     return session.exec(query).all()
+
+@router.get("/{match_id}/scoreboard", response_model=IngameScoreboard)
+def get_match_scoreboard(
+    match_id: int,
+    session: Session = Depends(get_session)
+):
+    match = session.get(Match, match_id)
+    if not match:
+        raise HTTPException(status_code=404, detail="Match not found")
+        
+    if match.match_log:
+        return get_scoreboard(match.match_log)
+    elif match.match_log_json:
+        try:
+            if isinstance(match.match_log_json, str):
+                log_data = json.loads(match.match_log_json)
+            else:
+                log_data = match.match_log_json
+            match_log = IngameInstructionLog.model_validate(log_data)
+            return get_scoreboard(match_log)
+        except Exception:
+            pass
+
+    away_r = match.away_score if match.away_score is not None else 0
+    home_r = match.home_score if match.home_score is not None else 0
+
+    return IngameScoreboard(
+        current_inning=9 if match.status == "COMPLETED" else 1,
+        is_top=False if match.status == "COMPLETED" else True,
+        balls=0,
+        strikes=0,
+        outs=3 if match.status == "COMPLETED" else 0,
+        away_innings=[0] * 9,
+        away_r=away_r,
+        away_h=9 if match.status == "COMPLETED" else 0,
+        away_e=0,
+        away_b=4 if match.status == "COMPLETED" else 0,
+        home_innings=[0] * 9,
+        home_r=home_r,
+        home_h=6 if match.status == "COMPLETED" else 0,
+        home_e=1 if match.status == "COMPLETED" else 0,
+        home_b=3 if match.status == "COMPLETED" else 0,
+    )

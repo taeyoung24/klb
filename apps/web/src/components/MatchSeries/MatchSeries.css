@@ -171,3 +171,15 @@
   filter: grayscale(80%);
   transition: opacity 0.3s ease, filter 0.3s ease;
 }
+
+.match-series__score-item--clickable {
+  cursor: pointer;
+  transition: background-color 0.2s ease, border-color 0.2s ease, filter 0.2s ease;
+}
+
+.match-series__score-item--hovered {
+  background-color: rgba(255, 255, 255, 0.25) !important;
+  border-color: rgba(255, 255, 255, 0.5) !important;
+  filter: brightness(1.25);
+  opacity: 1 !important;
+}

@@ -21,7 +21,30 @@ export interface GetMatchesParams {
   status?: string;
 }
 
+export interface IngameScoreboard {
+  current_inning: number;
+  is_top: boolean;
+  balls: number;
+  strikes: number;
+  outs: number;
+  away_innings: number[];
+  away_r: number;
+  away_h: number;
+  away_e: number;
+  away_b: number;
+  home_innings: number[];
+  home_r: number;
+  home_h: number;
+  home_e: number;
+  home_b: number;
+}
+
 export const getMatches = async (params: GetMatchesParams = {}): Promise<Match[]> => {
   const response = await client.get<Match[]>('/matches', { params });
+  return response.data;
+};
+
+export const getMatchScoreboard = async (matchId: number): Promise<IngameScoreboard> => {
+  const response = await client.get<IngameScoreboard>(`/matches/${matchId}/scoreboard`);
   return response.data;
 };

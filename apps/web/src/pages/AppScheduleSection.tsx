@@ -192,7 +192,7 @@ export default function AppScheduleSection({
                       const homeName = homeClub ? homeClub.team_code : 'HOME';
 
                       return (
-                        <a key={match.id} href="#match-detail" className="match-card">
+                        <a key={match.id} href={`#match-detail?id=${match.id}`} className="match-card">
                           <div className="match-card__status-col">
                             <span className={`match-card__status-badge match-card__status-badge--${match.status === 'COMPLETED' ? 'ended' : match.status === 'IN_PROGRESS' ? 'live' : 'upcoming'}`}>
                               {getStatusLabel(match.status)}

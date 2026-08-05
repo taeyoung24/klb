@@ -1,5 +1,8 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { FaChevronLeft, FaChevronRight } from 'react-icons/fa';
+import { getClubs, type Club } from '../../api/clubs';
+import { getMatches, getMatchScoreboard, type Match, type IngameScoreboard } from '../../api/matches';
+import { getSystemInfo } from '../../api/system';
 import TeamLogo from '../../components/TeamLogo/TeamLogo';
 import './index.css';
 
@@ -11,6 +14,48 @@ import NewsTab from './NewsTab';
 
 const DAY_NAMES = ['일', '월', '화', '수', '목', '금', '토'];
 
+const LEAGUE_INFO: Record<number, { name: string; code: string }> = {
+  1: { name: '아젤리아', code: 'AL' },
+  2: { name: '카멜리아', code: 'CL' },
+  3: { name: '젠티아나', code: 'GL' },
+  4: { name: '매그놀리아', code: 'ML' },
+};
+
+const getMatchTitle = (match: Match | null, homeClub: Club | null, seasonYear: number): string => {
+  if (!match) return `${seasonYear} KLB 정규리그`;
+
+  const simDay = match.sim_day;
+  const isPostSeason = simDay >= 229;
+
+  // 1. 포스트시즌 경기 (sim_day >= 229)
+  if (isPostSeason) {
+    const isKnockout = match.limit_extra_innings === false;
+    if (isKnockout) {
+      if (simDay >= 261) {
+        return `${seasonYear} 포스트시즌 결승전`;
+      } else if (simDay >= 245) {
+        return `${seasonYear} 포스트시즌 준결승전`;
+      } else {
+        return `${seasonYear} 포스트시즌 8강전`;
+      }
+    } else {
+      return `${seasonYear} 포스트시즌 정예리그`;
+    }
+  }
+
+  // 2. 정규시즌 경기 (sim_day <= 228)
+  const leagueId = homeClub?.league_id || 1;
+  const league = LEAGUE_INFO[leagueId] || { name: '아젤리아', code: 'AL' };
+  return `${league.name} 정규리그 | ${league.code}`;
+};
+
+const getSimDayFromDate = (year: number, date: Date): number => {
+  const baseDate = new Date(year, 0, 1);
+  const targetDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const diffTime = targetDate.getTime() - baseDate.getTime();
+  return Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
+};
+
 const formatNavDate = (date: Date) => {
   const month = date.getMonth() + 1;
   const day = date.getDate();
@@ -18,24 +63,92 @@ const formatNavDate = (date: Date) => {
   return `${month}.${day} ${dayName}`;
 };
 
-const getDateKey = (date: Date) => {
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, '0');
-  const d = String(date.getDate()).padStart(2, '0');
-  return `${y}-${m}-${d}`;
+const formatFullDateStr = (date: Date) => {
+  const year = date.getFullYear();
+  const month = date.getMonth() + 1;
+  const day = date.getDate();
+  const dayName = DAY_NAMES[date.getDay()];
+  const dayOfWeek = date.getDay();
+  const timeStr = dayOfWeek === 0 ? '14:00' : dayOfWeek === 6 ? '17:00' : '18:30';
+  return `${year}년 ${month}월 ${day}일 (${dayName}) ${timeStr}`;
 };
 
-interface OtherMatchItem {
-  id: number;
-  awayTeam: { code: string; name: string; score?: number };
-  homeTeam: { code: string; name: string; score?: number };
-  status: string;
-  isCurrent?: boolean;
-}
+const getMatchIdFromHash = (): number | null => {
+  const hash = window.location.hash;
+  if (!hash.includes('?')) return null;
+  const queryString = hash.split('?')[1];
+  const params = new URLSearchParams(queryString);
+  const idStr = params.get('id') || params.get('matchId') || params.get('match_id');
+  return idStr ? Number(idStr) : null;
+};
 
 export default function MatchDetail() {
   const [activeTab, setActiveTab] = useState<'analysis' | 'lineup' | 'boxscore' | 'cheer' | 'news'>('analysis');
   const [navDate, setNavDate] = useState<Date>(new Date(2026, 6, 17));
+  const [seasonYear, setSeasonYear] = useState<number>(2026);
+
+  const [clubsMap, setClubsMap] = useState<Record<number, Club>>({});
+  const [allMatches, setAllMatches] = useState<Match[]>([]);
+  const [selectedMatchId, setSelectedMatchId] = useState<number | null>(null);
+  const [scoreboard, setScoreboard] = useState<IngameScoreboard | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+
+  useEffect(() => {
+    setIsLoading(true);
+    Promise.all([getClubs(), getMatches(), getSystemInfo()])
+      .then(([clubsList, matchesList, sysInfo]) => {
+        const cMap: Record<number, Club> = {};
+        clubsList.forEach((c) => {
+          cMap[c.id] = c;
+        });
+        setClubsMap(cMap);
+        setAllMatches(matchesList);
+
+        const sysYear = sysInfo?.season_year || 2026;
+        setSeasonYear(sysYear);
+
+        // URL 해시 파싱으로 전달받은 Match ID 확인
+        const targetMatchId = getMatchIdFromHash();
+        let matchedMatch: Match | undefined;
+
+        if (targetMatchId) {
+          matchedMatch = matchesList.find((m) => m.id === targetMatchId);
+        }
+
+        if (matchedMatch) {
+          setSelectedMatchId(matchedMatch.id);
+          const matchDate = new Date(sysYear, 0, matchedMatch.sim_day);
+          setNavDate(matchDate);
+        } else if (sysInfo) {
+          const currentSimDay = sysInfo.current_sim_day || 1;
+          const currentDate = new Date(sysYear, 0, currentSimDay);
+          setNavDate(currentDate);
+
+          const todayMatches = matchesList.filter((m) => m.sim_day === currentSimDay);
+          if (todayMatches.length > 0) {
+            setSelectedMatchId(todayMatches[0].id);
+          } else if (matchesList.length > 0) {
+            setSelectedMatchId(matchesList[0].id);
+          }
+        }
+        setIsLoading(false);
+      })
+      .catch((e) => {
+        console.error('Failed to load match detail API data', e);
+        setIsLoading(false);
+      });
+  }, []);
+
+  useEffect(() => {
+    if (selectedMatchId) {
+      getMatchScoreboard(selectedMatchId)
+        .then((sb) => setScoreboard(sb))
+        .catch((e) => {
+          console.error('Failed to load scoreboard', e);
+          setScoreboard(null);
+        });
+    }
+  }, [selectedMatchId]);
 
   const handlePrevDay = () => {
     setNavDate((prev) => new Date(prev.getFullYear(), prev.getMonth(), prev.getDate() - 1));
@@ -45,63 +158,57 @@ export default function MatchDetail() {
     setNavDate((prev) => new Date(prev.getFullYear(), prev.getMonth(), prev.getDate() + 1));
   };
 
-  // 날짜별 경기 목데이터
-  const otherMatchesData: Record<string, OtherMatchItem[]> = {
-    '2026-07-17': [
-      { id: 101, awayTeam: { code: 'COM', name: '코멧스', score: 15 }, homeTeam: { code: 'ZEN', name: '제니스', score: 3 }, status: '종료', isCurrent: true },
-      { id: 102, awayTeam: { code: 'DRG', name: '드래곤스', score: 2 }, homeTeam: { code: 'BER', name: '베어스', score: 4 }, status: '종료' },
-      { id: 103, awayTeam: { code: 'EAG', name: '이글스', score: 6 }, homeTeam: { code: 'GIA', name: '자이언츠', score: 5 }, status: '종료' },
-      { id: 104, awayTeam: { code: 'LUN', name: '루나스', score: 1 }, homeTeam: { code: 'UNI', name: '유니콘스', score: 8 }, status: '종료' },
-    ],
-    '2026-07-18': [
-      { id: 105, awayTeam: { code: 'COM', name: '코멧스' }, homeTeam: { code: 'ZEN', name: '제니스' }, status: '18:30' },
-      { id: 106, awayTeam: { code: 'DRG', name: '드래곤스' }, homeTeam: { code: 'BER', name: '베어스' }, status: '18:30' },
-      { id: 107, awayTeam: { code: 'EAG', name: '이글스' }, homeTeam: { code: 'GIA', name: '자이언츠' }, status: '18:30' },
-    ],
+  // 현재 선택된 경기 구하기
+  const currentMatch = allMatches.find((m) => m.id === selectedMatchId) || allMatches[0];
+
+  // 현재 탐색 날짜(navDate)의 sim_day에 해당하는 경기 목록
+  const currentSimDay = getSimDayFromDate(seasonYear, navDate);
+  const currentDayMatches = allMatches.filter((m) => m.sim_day === currentSimDay);
+
+  // 팀 정보 매핑
+  const awayClub = currentMatch ? clubsMap[currentMatch.away_club_id] : null;
+  const homeClub = currentMatch ? clubsMap[currentMatch.home_club_id] : null;
+
+  // 경기 상태 변환
+  const parseMatchStatus = (statusStr?: string) => {
+    if (statusStr === 'COMPLETED' || statusStr === '종료' || statusStr === '경기 종료') return '종료';
+    if (statusStr === 'IN_PROGRESS' || statusStr === 'LIVE' || statusStr === '진행중' || statusStr === '경기 진행중') return '진행중';
+    if (statusStr === 'CANCELED' || statusStr === '취소' || statusStr === '경기 취소') return '취소';
+    return '예정';
   };
 
-  const currentDayMatches = otherMatchesData[getDateKey(navDate)];
+  const currentStatusText = parseMatchStatus(currentMatch?.status);
 
-  // 가상 하드코딩 목데이터
-  const matchInfo = {
-    league: '아젤리아 리그 (AL)',
-    date: '2026년 7월 17일 (금) 18:30',
-    stadium: '서울 잠실야구장',
-    status: '경기 종료',
-    awayTeam: {
-      code: 'COM',
-      name: '코멧스',
-      fullName: '서울 코멧스',
-      abbrName: 'S. Comets',
-      color: '#888888',
-      score: 15,
-      r: 5,
-      h: 9,
-      e: 0,
-      b: 4,
-      innings: [0, 1, 0, 2, 0, 0, 1, 1, 0],
-    },
-    homeTeam: {
-      code: 'ZEN',
-      name: '제니스',
-      fullName: '부산 제니스',
-      abbrName: 'B. Zenith',
-      color: '#cccccc',
-      score: 3,
-      r: 3,
-      h: 6,
-      e: 1,
-      b: 3,
-      innings: [1, 0, 0, 0, 0, 1, 0, 1, 0],
-    },
+  const getStatusBadgeInfo = (status: string) => {
+    if (status === '진행중' || status === 'LIVE') {
+      return { label: 'LIVE', modifier: 'live' };
+    }
+    if (status === '종료') {
+      return { label: '종료', modifier: 'ended' };
+    }
+    if (status === '취소') {
+      return { label: '취소', modifier: 'ended' };
+    }
+    return { label: '예정', modifier: 'upcoming' };
   };
 
+  const statusInfo = getStatusBadgeInfo(currentStatusText);
+
+  // 매치 타이틀 (정규시즌 / 포스트시즌 / 녹아웃 조건부 포맷)
+  const matchTitle = getMatchTitle(currentMatch, homeClub, seasonYear);
+
+  // 경기 일자 및 구장
+  const matchDateObj = currentMatch ? new Date(seasonYear, 0, currentMatch.sim_day) : navDate;
+  const matchDateText = formatFullDateStr(matchDateObj);
+  const matchStadiumText = currentMatch?.stadium?.name || (homeClub ? homeClub.stadium_name_ko || `${homeClub.hometown_ko} 야구장` : '서울 잠실야구장');
+
+  // 경기 점수 & 이닝 데이터
+  const awayScore = currentMatch?.away_score ?? 0;
+  const homeScore = currentMatch?.home_score ?? 0;
+
+  // 탭 목데이터
   const analysisData = {
-    headToHead: '코멧스 4승 2패 우세',
-    recent5Matches: {
-      away: ['W', 'W', 'L', 'W', 'W'],
-      home: ['L', 'W', 'W', 'L', 'L'],
-    },
+    headToHead: `${awayClub?.name_ko || '원정팀'} VS ${homeClub?.name_ko || '홈팀'} 시즌 첫 맞대결`,
     metrics: [
       { label: '팀 타율', away: '.278', home: '.262', awayWin: true },
       { label: '팀 평균자책점', away: '3.42', home: '3.98', awayWin: true },
@@ -143,28 +250,33 @@ export default function MatchDetail() {
   };
 
   const cheers = [
-    { user: '코멧스수호신', team: 'COM', text: '오늘 이동현 선수 4회 초 투런홈런 진짜 소름 돋았습니다! 승리 가자!' },
-    { user: '부산제니스팬', team: 'ZEN', text: '아쉽게 졌지만 6회 추격 타점 멋졌습니다. 다음 경기 꼭 잡읍시다!' },
-    { user: 'KLB마니아', team: 'COM', text: '정우진 마무리가 9회 깔끔하게 닫아줘서 안심하고 봤네요. 7승 달성 축하!' },
+    { user: '야구팬1', team: awayClub?.team_code || 'AWAY', text: `${awayClub?.name_ko || '어웨이'}팀 오늘 경기 힘내서 승리 가져옵시다!` },
+    { user: '홈팀수호신', team: homeClub?.team_code || 'HOME', text: `${homeClub?.name_ko || '홈'}팀 홈경기 꼭 승리로 닫아주세요!` },
   ];
 
   const newsList = [
-    { title: '[Match Review] 코멧스, 이동현의 결승 2점포로 제니스 꺾고 2연승 달려', time: '1시간 전', category: '리뷰' },
-    { title: '[Interview] 7승째 달성 김서진 "야수들의 득점 지원과 호수비 덕분"', time: '2시간 전', category: '인터뷰' },
-    { title: '[Highlight] 4회 초 경기 흐름을 바꾼 이동현의 비거리 125m 대형 홈런', time: '3시간 전', category: '하이라이트' },
+    { title: `[Match Review] ${awayClub?.name_ko || '어웨이'} vs ${homeClub?.name_ko || '홈'} 치열한 명승부 전개`, time: '1시간 전', category: '리뷰' },
+    { title: '[Interview] 감독 청사진 "선수단의 집중력이 빛난 경기였다"', time: '2시간 전', category: '인터뷰' },
+    { title: '[Highlight] 경기 분위기를 바꾼 결정적인 호수비 명장면', time: '3시간 전', category: '하이라이트' },
   ];
 
-  const getStatusBadgeInfo = (status: string) => {
-    if (status === '경기 진행중' || status === 'IN_PROGRESS' || status === 'LIVE') {
-      return { label: 'LIVE', modifier: 'live' };
-    }
-    if (status === '경기 종료' || status === 'COMPLETED') {
-      return { label: '경기 종료', modifier: 'ended' };
-    }
-    return { label: status, modifier: 'upcoming' };
-  };
+  if (isLoading) {
+    return (
+      <div className="match-detail">
+        <div className="match-detail__container" style={{ textAlign: 'center', padding: '60px 0', color: '#6b7280' }}>
+          경기 데이터를 로딩 중입니다...
+        </div>
+      </div>
+    );
+  }
 
-  const statusInfo = getStatusBadgeInfo(matchInfo.status);
+  // 동적 이닝 수 계산 (최소 9이닝 기본, 연장전 발생 시 10, 11, 12... 이닝으로 유연 확장)
+  const totalInningsCount = Math.max(
+    9,
+    scoreboard?.away_innings?.length || 0,
+    scoreboard?.home_innings?.length || 0
+  );
+  const inningsHeaderList = Array.from({ length: totalInningsCount }, (_, i) => i + 1);
 
   return (
     <div className="match-detail">
@@ -176,54 +288,53 @@ export default function MatchDetail() {
             <div className="match-detail__header-main">
               {/* 상단 리그 & 경기 정보 바 */}
               <div className="match-detail__top-meta">
-                <span className="match-detail__top-league">{matchInfo.league}</span>
-                <span className="match-detail__top-info">{matchInfo.date} | {matchInfo.stadium}</span>
+                <span className="match-detail__top-league">{matchTitle}</span>
+                <span className="match-detail__top-info">{matchDateText} | {matchStadiumText}</span>
               </div>
 
               <div className="match-detail__hero">
+                {/* 원정팀 (flex: 1) */}
                 <div className="match-detail__team match-detail__team--away">
-                  <TeamLogo teamCode={matchInfo.awayTeam.code} teamName={matchInfo.awayTeam.fullName} size={44} />
+                  <TeamLogo teamCode={awayClub?.team_code} teamName={awayClub?.name_ko || '원정팀'} size={44} />
                   <div className="match-detail__team-info match-detail__team-info--away">
-                    <span className="match-detail__team-name">{matchInfo.awayTeam.fullName}</span>
-                    <span className="match-detail__team-code">{matchInfo.awayTeam.abbrName}</span>
+                    <span className="match-detail__team-name">
+                      {awayClub ? `${awayClub.hometown_ko} ${awayClub.name_ko}` : '원정팀'}
+                    </span>
+                    <span className="match-detail__team-code">{awayClub?.abbr_name || awayClub?.team_code || 'AWAY'}</span>
                   </div>
+                  <span className="match-detail__score match-detail__score--away">{awayScore}</span>
                 </div>
 
-                <div className="match-detail__center-score">
-                  <span className="match-detail__score">{matchInfo.awayTeam.score}</span>
+                {/* 중앙 경기 상태 배지 */}
+                <div className="match-detail__center-status">
                   <span className={`match-detail__status-badge match-detail__status-badge--${statusInfo.modifier}`}>
                     {statusInfo.label}
                   </span>
-                  <span className="match-detail__score">{matchInfo.homeTeam.score}</span>
                 </div>
 
+                {/* 홈팀 (flex: 1) */}
                 <div className="match-detail__team match-detail__team--home">
+                  <span className="match-detail__score match-detail__score--home">{homeScore}</span>
                   <div className="match-detail__team-info match-detail__team-info--home">
                     <span className="match-detail__team-name">
-                      {matchInfo.homeTeam.fullName}
+                      {homeClub ? `${homeClub.hometown_ko} ${homeClub.name_ko}` : '홈팀'}
                       <span className="match-detail__home-label">홈</span>
                     </span>
-                    <span className="match-detail__team-code">{matchInfo.homeTeam.abbrName}</span>
+                    <span className="match-detail__team-code">{homeClub?.abbr_name || homeClub?.team_code || 'HOME'}</span>
                   </div>
-                  <TeamLogo teamCode={matchInfo.homeTeam.code} teamName={matchInfo.homeTeam.fullName} size={44} />
+                  <TeamLogo teamCode={homeClub?.team_code} teamName={homeClub?.name_ko || '홈팀'} size={44} />
                 </div>
               </div>
 
-              {/* 가로형 이닝별 스코어보드 */}
+              {/* 가로형 이닝별 스코어보드 (동적 연장전 이닝 지원) */}
               <div className="match-detail__table-wrapper">
                 <table className="match-detail__scoreboard-table">
                   <thead>
                     <tr>
                       <th className="match-detail__th-team">구단</th>
-                      <th>1</th>
-                      <th>2</th>
-                      <th>3</th>
-                      <th>4</th>
-                      <th>5</th>
-                      <th>6</th>
-                      <th>7</th>
-                      <th>8</th>
-                      <th>9</th>
+                      {inningsHeaderList.map((i) => (
+                        <th key={i}>{i}</th>
+                      ))}
                       <th className="match-detail__th-stat">R</th>
                       <th className="match-detail__th-stat">H</th>
                       <th className="match-detail__th-stat">E</th>
@@ -233,36 +344,40 @@ export default function MatchDetail() {
                   <tbody>
                     <tr>
                       <td className="match-detail__td-team">
-                        <span className="match-detail__team-indicator" style={{ backgroundColor: matchInfo.awayTeam.color }}></span>
-                        {matchInfo.awayTeam.name}
+                        <span className="match-detail__team-indicator" style={{ backgroundColor: '#888888' }}></span>
+                        {awayClub?.name_ko || '원정팀'}
                       </td>
-                      {matchInfo.awayTeam.innings.map((val, idx) => (
-                        <td key={idx}>{val}</td>
+                      {inningsHeaderList.map((_, idx) => (
+                        <td key={idx}>{scoreboard?.away_innings?.[idx] ?? '-'}</td>
                       ))}
-                      <td className="match-detail__td-stat match-detail__td-stat--highlight">{matchInfo.awayTeam.r}</td>
-                      <td className="match-detail__td-stat">{matchInfo.awayTeam.h}</td>
-                      <td className="match-detail__td-stat">{matchInfo.awayTeam.e}</td>
-                      <td className="match-detail__td-stat">{matchInfo.awayTeam.b}</td>
+                      <td className="match-detail__td-stat match-detail__td-stat--highlight">
+                        {scoreboard ? scoreboard.away_r : awayScore}
+                      </td>
+                      <td className="match-detail__td-stat">{scoreboard ? scoreboard.away_h : 0}</td>
+                      <td className="match-detail__td-stat">{scoreboard ? scoreboard.away_e : 0}</td>
+                      <td className="match-detail__td-stat">{scoreboard ? scoreboard.away_b : 0}</td>
                     </tr>
                     <tr>
                       <td className="match-detail__td-team">
-                        <span className="match-detail__team-indicator" style={{ backgroundColor: matchInfo.homeTeam.color }}></span>
-                        {matchInfo.homeTeam.name}
+                        <span className="match-detail__team-indicator" style={{ backgroundColor: '#cccccc' }}></span>
+                        {homeClub?.name_ko || '홈팀'}
                       </td>
-                      {matchInfo.homeTeam.innings.map((val, idx) => (
-                        <td key={idx}>{val}</td>
+                      {inningsHeaderList.map((_, idx) => (
+                        <td key={idx}>{scoreboard?.home_innings?.[idx] ?? '-'}</td>
                       ))}
-                      <td className="match-detail__td-stat match-detail__td-stat--highlight">{matchInfo.homeTeam.r}</td>
-                      <td className="match-detail__td-stat">{matchInfo.homeTeam.h}</td>
-                      <td className="match-detail__td-stat">{matchInfo.homeTeam.e}</td>
-                      <td className="match-detail__td-stat">{matchInfo.homeTeam.b}</td>
+                      <td className="match-detail__td-stat match-detail__td-stat--highlight">
+                        {scoreboard ? scoreboard.home_r : homeScore}
+                      </td>
+                      <td className="match-detail__td-stat">{scoreboard ? scoreboard.home_h : 0}</td>
+                      <td className="match-detail__td-stat">{scoreboard ? scoreboard.home_e : 0}</td>
+                      <td className="match-detail__td-stat">{scoreboard ? scoreboard.home_b : 0}</td>
                     </tr>
                   </tbody>
                 </table>
               </div>
             </div>
 
-            {/* 우측: 다른 경기 탐색 패널 */}
+            {/* 우측: 다른 경기 탐색 패널 (실제 API 데이터 기반) */}
             <div className="match-detail__other-matches-panel">
               <div className="match-detail__nav-header">
                 <button className="match-detail__nav-arrow-btn" onClick={handlePrevDay} aria-label="이전 날짜">
@@ -277,30 +392,39 @@ export default function MatchDetail() {
               <div className="match-detail__nav-content">
                 {currentDayMatches && currentDayMatches.length > 0 ? (
                   <div className="match-detail__other-matches-list">
-                    {currentDayMatches.map((m) => (
-                      <div
-                        key={m.id}
-                        className={`match-detail__other-match-card ${m.isCurrent ? 'match-detail__other-match-card--current' : ''}`}
-                      >
-                        <div className="match-detail__other-match-team">
-                          <TeamLogo teamCode={m.awayTeam.code} teamName={m.awayTeam.name} size={16} />
-                          <span className="match-detail__other-match-team-name">{m.awayTeam.name}</span>
-                          {m.awayTeam.score !== undefined && (
-                            <span className="match-detail__other-match-score">{m.awayTeam.score}</span>
-                          )}
+                    {currentDayMatches.map((m) => {
+                      const awayC = clubsMap[m.away_club_id];
+                      const homeC = clubsMap[m.home_club_id];
+                      const isCurr = currentMatch ? m.id === currentMatch.id : false;
+                      const statusText = parseMatchStatus(m.status);
+
+                      return (
+                        <div
+                          key={m.id}
+                          className={`match-detail__other-match-card ${isCurr ? 'match-detail__other-match-card--current' : ''}`}
+                          style={{ cursor: 'pointer' }}
+                          onClick={() => setSelectedMatchId(m.id)}
+                        >
+                          <div className="match-detail__other-match-team">
+                            <TeamLogo teamCode={awayC?.team_code} teamName={awayC?.name_ko || '어웨이'} size={20} />
+                            <span className="match-detail__other-match-team-name">{awayC?.team_code || awayC?.name_ko || 'AWAY'}</span>
+                            {m.away_score !== undefined && m.away_score !== null && (
+                              <span className="match-detail__other-match-score">{m.away_score}</span>
+                            )}
+                          </div>
+                          <div className="match-detail__other-match-vs">
+                            <span className="match-detail__other-match-status">{statusText}</span>
+                          </div>
+                          <div className="match-detail__other-match-team match-detail__other-match-team--home">
+                            {m.home_score !== undefined && m.home_score !== null && (
+                              <span className="match-detail__other-match-score">{m.home_score}</span>
+                            )}
+                            <span className="match-detail__other-match-team-name">{homeC?.team_code || homeC?.name_ko || 'HOME'}</span>
+                            <TeamLogo teamCode={homeC?.team_code} teamName={homeC?.name_ko || '홈'} size={20} />
+                          </div>
                         </div>
-                        <div className="match-detail__other-match-vs">
-                          <span className="match-detail__other-match-status">{m.status}</span>
-                        </div>
-                        <div className="match-detail__other-match-team match-detail__other-match-team--home">
-                          {m.homeTeam.score !== undefined && (
-                            <span className="match-detail__other-match-score">{m.homeTeam.score}</span>
-                          )}
-                          <span className="match-detail__other-match-team-name">{m.homeTeam.name}</span>
-                          <TeamLogo teamCode={m.homeTeam.code} teamName={m.homeTeam.name} size={16} />
-                        </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 ) : (
                   <div className="match-detail__no-matches">경기가 없습니다</div>
@@ -310,80 +434,77 @@ export default function MatchDetail() {
           </div>
         </header>
 
-        {/* 탭 네비게이션 */}
-        <nav className="match-detail__nav">
-          <button
-            className={`match-detail__tab-btn ${activeTab === 'analysis' ? 'match-detail__tab-btn--active' : ''}`}
-            onClick={() => setActiveTab('analysis')}
-          >
-            전력 분석
-          </button>
-          <button
-            className={`match-detail__tab-btn ${activeTab === 'lineup' ? 'match-detail__tab-btn--active' : ''}`}
-            onClick={() => setActiveTab('lineup')}
-          >
-            선발 라인업
-          </button>
-          <button
-            className={`match-detail__tab-btn ${activeTab === 'boxscore' ? 'match-detail__tab-btn--active' : ''}`}
-            onClick={() => setActiveTab('boxscore')}
-          >
-            주요 기록
-          </button>
-          <button
-            className={`match-detail__tab-btn ${activeTab === 'cheer' ? 'match-detail__tab-btn--active' : ''}`}
-            onClick={() => setActiveTab('cheer')}
-          >
-            승부예측 & 응원
-          </button>
-          <button
-            className={`match-detail__tab-btn ${activeTab === 'news' ? 'match-detail__tab-btn--active' : ''}`}
-            onClick={() => setActiveTab('news')}
-          >
-            관련 뉴스
-          </button>
-        </nav>
+        {/* 메인 콘텐츠 바디 (탭 내비게이션 + 탭 상세 콘텐츠) */}
+        <section className="match-detail__body">
+          {/* 탭 네비게이션 */}
+          <nav className="match-detail__nav">
+            <button
+              className={`match-detail__tab-btn ${activeTab === 'analysis' ? 'match-detail__tab-btn--active' : ''}`}
+              onClick={() => setActiveTab('analysis')}
+            >
+              전력 분석
+            </button>
+            <button
+              className={`match-detail__tab-btn ${activeTab === 'lineup' ? 'match-detail__tab-btn--active' : ''}`}
+              onClick={() => setActiveTab('lineup')}
+            >
+              선발 라인업
+            </button>
+            <button
+              className={`match-detail__tab-btn ${activeTab === 'boxscore' ? 'match-detail__tab-btn--active' : ''}`}
+              onClick={() => setActiveTab('boxscore')}
+            >
+              주요 기록
+            </button>
+            <button
+              className={`match-detail__tab-btn ${activeTab === 'cheer' ? 'match-detail__tab-btn--active' : ''}`}
+              onClick={() => setActiveTab('cheer')}
+            >
+              승부예측 & 응원
+            </button>
+            <button
+              className={`match-detail__tab-btn ${activeTab === 'news' ? 'match-detail__tab-btn--active' : ''}`}
+              onClick={() => setActiveTab('news')}
+            >
+              관련 뉴스
+            </button>
+          </nav>
 
-        {/* 싱글 컬럼 탭 컨텐츠 (분할된 컴포넌트 호출) */}
-        <main className="match-detail__content">
-          {activeTab === 'analysis' && (
-            <AnalysisTab
-              headToHead={analysisData.headToHead}
-              metrics={analysisData.metrics}
-              awayColor={matchInfo.awayTeam.color}
-              homeColor={matchInfo.homeTeam.color}
-            />
-          )}
+          {/* 싱글 컬럼 탭 컨텐츠 */}
+          <main className="match-detail__content">
+            {activeTab === 'analysis' && (
+              <AnalysisTab
+                headToHead={analysisData.headToHead}
+                metrics={analysisData.metrics}
+              />
+            )}
 
-          {activeTab === 'lineup' && (
-            <LineupTab
-              awayTeamName={matchInfo.awayTeam.fullName}
-              homeTeamName={matchInfo.homeTeam.fullName}
-              awayLineup={lineups.away}
-              homeLineup={lineups.home}
-              awayColor={matchInfo.awayTeam.color}
-              homeColor={matchInfo.homeTeam.color}
-            />
-          )}
+            {activeTab === 'lineup' && (
+              <LineupTab
+                awayTeamName={awayClub?.name_ko || '원정팀'}
+                homeTeamName={homeClub?.name_ko || '홈팀'}
+                awayLineup={lineups.away}
+                homeLineup={lineups.home}
+              />
+            )}
 
-          {activeTab === 'boxscore' && (
-            <BoxscoreTab pitchRecords={pitchRecords} />
-          )}
+            {activeTab === 'boxscore' && (
+              <BoxscoreTab pitchRecords={pitchRecords} />
+            )}
 
-          {activeTab === 'cheer' && (
-            <CheerTab
-              cheers={cheers}
-              awayTeamCode={matchInfo.awayTeam.code}
-              homeTeamCode={matchInfo.homeTeam.code}
-              awayColor={matchInfo.awayTeam.color}
-              homeColor={matchInfo.homeTeam.color}
-            />
-          )}
+            {activeTab === 'cheer' && (
+              <CheerTab
+                cheers={cheers}
+                awayTeamCode={awayClub?.team_code}
+                homeTeamCode={homeClub?.team_code}
+              />
+            )}
 
-          {activeTab === 'news' && (
-            <NewsTab newsList={newsList} />
-          )}
-        </main>
+            {activeTab === 'news' && (
+              <NewsTab newsList={newsList} />
+            )}
+          </main>
+        </section>
       </div>
     </div>
   );
