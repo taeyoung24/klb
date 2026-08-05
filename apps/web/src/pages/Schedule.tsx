@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
-import { FaChevronLeft, FaChevronRight, FaCalendarAlt, FaMapMarkerAlt, FaClock } from 'react-icons/fa';
+import { FaCalendarAlt, FaChevronLeft, FaChevronRight, FaClock, FaMapMarkerAlt } from 'react-icons/fa';
 import { getClubs, type Club } from '../api/clubs';
 import { getMatches, type Match } from '../api/matches';
 import { getSystemInfo } from '../api/system';
+import TeamLogo from '../components/TeamLogo/TeamLogo';
 import './Schedule.css';
 
 const LEAGUES: Record<number, string> = {
@@ -12,61 +13,14 @@ const LEAGUES: Record<number, string> = {
   4: '매그놀리아 리그',
 };
 
-const TEAM_META: Record<string, { color: string; symbol: string }> = {
-  // AL
-  COM: { color: "#1f77b4", symbol: "C" },
-  END: { color: "#8c564b", symbol: "E" },
-  PHN: { color: "#7f7f7f", symbol: "P" },
-  PUM: { color: "#17becf", symbol: "K" },
-  GUA: { color: "#bcbd22", symbol: "G" },
-  SAT: { color: "#ff7f0e", symbol: "T" },
-  SEN: { color: "#9467bd", symbol: "S" },
-  VAL: { color: "#e377c2", symbol: "V" },
-  WHL: { color: "#2ca02c", symbol: "W" },
-  ZEN: { color: "#e01e3c", symbol: "Z" },
-  // CL
-  ARC: { color: "#4682b4", symbol: "A" },
-  CAT: { color: "#2f4f4f", symbol: "C" },
-  DIN: { color: "#556b2f", symbol: "D" },
-  EFL: { color: "#ff4500", symbol: "F" },
-  FST: { color: "#daa520", symbol: "I" },
-  HRO: { color: "#8b008b", symbol: "H" },
-  RED: { color: "#ff0000", symbol: "R" },
-  SOL: { color: "#ffd700", symbol: "O" },
-  TAL: { color: "#d2691e", symbol: "L" },
-  UND: { color: "#4b0082", symbol: "U" },
-  // GL
-  WIS: { color: "#00ffff", symbol: "C" },
-  FAL: { color: "#708090", symbol: "F" },
-  NUF: { color: "#afeeee", symbol: "Z" },
-  GLI: { color: "#ee82ee", symbol: "G" },
-  TKN: { color: "#b0c4de", symbol: "K" },
-  VPE: { color: "#db7093", symbol: "P" },
-  GSW: { color: "#40e0d0", symbol: "S" },
-  IVO: { color: "#ffc0cb", symbol: "V" },
-  WYV: { color: "#ba55d3", symbol: "W" },
-  HOB: { color: "#cd853f", symbol: "B" },
-  // ML
-  BLU: { color: "#1e90ff", symbol: "B" },
-  DRG: { color: "#32cd32", symbol: "D" },
-  EAG: { color: "#ff8c00", symbol: "E" },
-  ETR: { color: "#9932cc", symbol: "T" },
-  GIA: { color: "#8b0000", symbol: "G" },
-  LUN: { color: "#e9967a", symbol: "L" },
-  PST: { color: "#00ced1", symbol: "P" },
-  RPN: { color: "#9370db", symbol: "N" },
-  UNI: { color: "#ff69b4", symbol: "U" },
-  VBC: { color: "#000000", symbol: "C" },
-};
-
 interface MatchItem {
   id: number;
   league: string;
   time: string;
   stadium: string;
   status: '종료' | '예정' | '진행중' | '취소';
-  awayTeam: { name: string; symbol: string; color: string; score?: number };
-  homeTeam: { name: string; symbol: string; color: string; score?: number };
+  awayTeam: { name: string; code?: string; score?: number };
+  homeTeam: { name: string; code?: string; score?: number };
 }
 
 const getSimDayFromYearMonthDay = (year: number, month: number, day: number): number => {
@@ -74,10 +28,6 @@ const getSimDayFromYearMonthDay = (year: number, month: number, day: number): nu
   const targetDate = new Date(year, month - 1, day);
   const diffTime = targetDate.getTime() - baseDate.getTime();
   return Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
-};
-
-const getTeamMeta = (teamCode: string, nameKo: string) => {
-  return TEAM_META[teamCode] || { color: '#cccccc', symbol: nameKo[0] || 'T' };
 };
 
 const getMatchTimeByDayOfWeek = (dayOfWeek: number) => {
@@ -166,9 +116,6 @@ export default function Schedule() {
       const awayName = awayClub ? `${awayClub.hometown_ko} ${awayClub.name_ko}` : `팀 #${m.away_club_id}`;
       const homeName = homeClub ? `${homeClub.hometown_ko} ${homeClub.name_ko}` : `팀 #${m.home_club_id}`;
 
-      const awayMeta = awayClub ? getTeamMeta(awayClub.team_code, awayClub.name_ko) : { color: '#888888', symbol: 'A' };
-      const homeMeta = homeClub ? getTeamMeta(homeClub.team_code, homeClub.name_ko) : { color: '#ffffff', symbol: 'H' };
-
       let statusStr: '종료' | '예정' | '진행중' | '취소' = '예정';
       if (m.status === 'COMPLETED') statusStr = '종료';
       else if (m.status === 'IN_PROGRESS') statusStr = '진행중';
@@ -195,14 +142,12 @@ export default function Schedule() {
         status: statusStr,
         awayTeam: {
           name: awayName,
-          symbol: awayMeta.symbol,
-          color: awayMeta.color,
+          code: awayClub?.team_code,
           score: m.status === 'COMPLETED' ? (m.away_score ?? 0) : undefined,
         },
         homeTeam: {
           name: homeName,
-          symbol: homeMeta.symbol,
-          color: homeMeta.color,
+          code: homeClub?.team_code,
           score: m.status === 'COMPLETED' ? (m.home_score ?? 0) : undefined,
         },
       };
@@ -254,15 +199,13 @@ export default function Schedule() {
                 return (
                   <div
                     key={day}
-                    className={`schedule__day-cell ${isSelected ? 'schedule__day-cell--selected' : ''} ${
-                      hasMatches ? 'schedule__day-cell--has-matches' : ''
-                    }`}
+                    className={`schedule__day-cell ${isSelected ? 'schedule__day-cell--selected' : ''} ${hasMatches ? 'schedule__day-cell--has-matches' : ''
+                      }`}
                     onClick={() => setSelectedDay(day)}
                   >
                     <span
-                      className={`schedule__day-num ${
-                        dayOfWeek === 0 ? 'schedule__day-num--sun' : dayOfWeek === 6 ? 'schedule__day-num--sat' : ''
-                      }`}
+                      className={`schedule__day-num ${dayOfWeek === 0 ? 'schedule__day-num--sun' : dayOfWeek === 6 ? 'schedule__day-num--sat' : ''
+                        }`}
                     >
                       {day}
                     </span>
@@ -297,6 +240,7 @@ export default function Schedule() {
 
                     <div className="schedule__match-teams">
                       <div className="schedule__team-info">
+                        <TeamLogo teamCode={match.awayTeam.code} teamName={match.awayTeam.name} size={24} />
                         <span className="schedule__team-name">{match.awayTeam.name}</span>
                         {match.awayTeam.score !== undefined && (
                           <span className="schedule__team-score">{match.awayTeam.score}</span>
@@ -310,6 +254,7 @@ export default function Schedule() {
                           <span className="schedule__team-score">{match.homeTeam.score}</span>
                         )}
                         <span className="schedule__team-name">{match.homeTeam.name}</span>
+                        <TeamLogo teamCode={match.homeTeam.code} teamName={match.homeTeam.name} size={24} />
                       </div>
                     </div>
 

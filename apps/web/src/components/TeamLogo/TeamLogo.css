@@ -1,0 +1,46 @@
+.team-logo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  object-fit: contain;
+  flex-shrink: 0;
+  box-sizing: border-box;
+  user-select: none;
+}
+
+/* 크기 규격 */
+.team-logo--xs {
+  width: 18px;
+  height: 18px;
+  font-size: 10px;
+}
+
+.team-logo--sm {
+  width: 24px;
+  height: 24px;
+  font-size: 12px;
+}
+
+.team-logo--md {
+  width: 32px;
+  height: 32px;
+  font-size: 14px;
+}
+
+.team-logo--lg {
+  width: 44px;
+  height: 44px;
+  font-size: 18px;
+}
+
+/* 플레이스홀더 기본 스타일 (KLB Primary: 은색/밝은 회색 통일) */
+.team-logo--placeholder {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #cbd5e1; /* KLB 밝은 회색/은색 */
+  font-weight: 700;
+  line-height: 1;
+  text-transform: uppercase;
+  backdrop-filter: blur(4px);
+}

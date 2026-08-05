@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { AWAY_TEAM_COLOR, LEAGUE_COLORS } from '../constants/leagues';
+import TeamLogo from '../components/TeamLogo/TeamLogo';
 import './MatchDetail.css';
 
 export default function MatchDetail() {
@@ -16,8 +16,7 @@ export default function MatchDetail() {
       name: '코멧스',
       fullName: '서울 코멧스',
       abbrName: 'S. Comets',
-      color: AWAY_TEAM_COLOR.primary,
-      symbol: 'C',
+      color: '#888888',
       score: 15,
       r: 5,
       h: 9,
@@ -30,8 +29,7 @@ export default function MatchDetail() {
       name: '제니스',
       fullName: '부산 제니스',
       abbrName: 'B. Zenith',
-      color: LEAGUE_COLORS.AL.primary,
-      symbol: 'Z',
+      color: '#cccccc',
       score: 3,
       r: 3,
       h: 6,
@@ -56,9 +54,9 @@ export default function MatchDetail() {
   };
 
   const pitchRecords = {
-    winPitcher: '김서진 (6이닝 2실점 5K, 7승 2패)',
-    losePitcher: '박현우 (5.1이닝 4실점 3K, 5승 4패)',
-    savePitcher: '정우진 (1이닝 무실점 1K, 18세이브)',
+    winPitcher: '김서진',
+    losePitcher: '박현우',
+    savePitcher: '정우진',
     keyHomeRun: '이동현 (4회 초 2점 홈런, 시즌 14호)',
   };
 
@@ -104,90 +102,111 @@ export default function MatchDetail() {
       <div className="match-detail__container">
         {/* 상단 경기 정보 서머리 & 이닝별 스코어보드 */}
         <header className="match-detail__header">
+          {/* 경기 메타 정보: 리그/제목, 상태, 날짜, 구장명 */}
           <div className="match-detail__meta">
             <span className="match-detail__league-badge">{matchInfo.league}</span>
             <span className="match-detail__status-badge">{matchInfo.status}</span>
             <span className="match-detail__info-text">{matchInfo.date} | {matchInfo.stadium}</span>
           </div>
 
-          <div className="match-detail__hero">
-            <div className="match-detail__team match-detail__team--away">
-              <div className="match-detail__logo-placeholder" style={{ color: matchInfo.awayTeam.color }}>
-                {matchInfo.awayTeam.symbol}
+          <div className="match-detail__header-layout">
+            {/* 좌측: 컴팩트 스코어 & 이닝 스코어보드 */}
+            <div className="match-detail__header-main">
+              <div className="match-detail__hero">
+                <div className="match-detail__team match-detail__team--away">
+                  <TeamLogo teamCode={matchInfo.awayTeam.code} teamName={matchInfo.awayTeam.fullName} size={44} />
+                  <div className="match-detail__team-info match-detail__team-info--away">
+                    <span className="match-detail__team-name">{matchInfo.awayTeam.fullName}</span>
+                    <span className="match-detail__team-code">{matchInfo.awayTeam.abbrName}</span>
+                  </div>
+                </div>
+
+                <div className="match-detail__center-score">
+                  <span className="match-detail__score">{matchInfo.awayTeam.score}</span>
+                  <span className="match-detail__versus-divider">:</span>
+                  <span className="match-detail__score">{matchInfo.homeTeam.score}</span>
+                </div>
+
+                <div className="match-detail__team match-detail__team--home">
+                  <div className="match-detail__team-info match-detail__team-info--home">
+                    <span className="match-detail__team-name">{matchInfo.homeTeam.fullName}</span>
+                    <span className="match-detail__team-code">{matchInfo.homeTeam.abbrName}</span>
+                  </div>
+                  <TeamLogo teamCode={matchInfo.homeTeam.code} teamName={matchInfo.homeTeam.fullName} size={44} />
+                </div>
               </div>
-              <div className="match-detail__team-info match-detail__team-info--away">
-                <span className="match-detail__team-name">{matchInfo.awayTeam.fullName}</span>
-                <span className="match-detail__team-code">{matchInfo.awayTeam.abbrName}</span>
+
+              {/* 가로형 이닝별 스코어보드 */}
+              <div className="match-detail__table-wrapper">
+                <table className="match-detail__scoreboard-table">
+                  <thead>
+                    <tr>
+                      <th className="match-detail__th-team">구단</th>
+                      <th>1</th>
+                      <th>2</th>
+                      <th>3</th>
+                      <th>4</th>
+                      <th>5</th>
+                      <th>6</th>
+                      <th>7</th>
+                      <th>8</th>
+                      <th>9</th>
+                      <th className="match-detail__th-stat">R</th>
+                      <th className="match-detail__th-stat">H</th>
+                      <th className="match-detail__th-stat">E</th>
+                      <th className="match-detail__th-stat">B</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td className="match-detail__td-team">
+                        <span className="match-detail__team-indicator" style={{ backgroundColor: matchInfo.awayTeam.color }}></span>
+                        {matchInfo.awayTeam.name}
+                      </td>
+                      {matchInfo.awayTeam.innings.map((val, idx) => (
+                        <td key={idx}>{val}</td>
+                      ))}
+                      <td className="match-detail__td-stat match-detail__td-stat--highlight">{matchInfo.awayTeam.r}</td>
+                      <td className="match-detail__td-stat">{matchInfo.awayTeam.h}</td>
+                      <td className="match-detail__td-stat">{matchInfo.awayTeam.e}</td>
+                      <td className="match-detail__td-stat">{matchInfo.awayTeam.b}</td>
+                    </tr>
+                    <tr>
+                      <td className="match-detail__td-team">
+                        <span className="match-detail__team-indicator" style={{ backgroundColor: matchInfo.homeTeam.color }}></span>
+                        {matchInfo.homeTeam.name}
+                      </td>
+                      {matchInfo.homeTeam.innings.map((val, idx) => (
+                        <td key={idx}>{val}</td>
+                      ))}
+                      <td className="match-detail__td-stat match-detail__td-stat--highlight">{matchInfo.homeTeam.r}</td>
+                      <td className="match-detail__td-stat">{matchInfo.homeTeam.h}</td>
+                      <td className="match-detail__td-stat">{matchInfo.homeTeam.e}</td>
+                      <td className="match-detail__td-stat">{matchInfo.homeTeam.b}</td>
+                    </tr>
+                  </tbody>
+                </table>
               </div>
             </div>
 
-            <div className="match-detail__center-score">
-              <span className="match-detail__score">{matchInfo.awayTeam.score}</span>
-              <span className="match-detail__versus-divider">:</span>
-              <span className="match-detail__score">{matchInfo.homeTeam.score}</span>
-            </div>
-
-            <div className="match-detail__team match-detail__team--home">
-              <div className="match-detail__team-info match-detail__team-info--home">
-                <span className="match-detail__team-name">{matchInfo.homeTeam.fullName}</span>
-                <span className="match-detail__team-code">{matchInfo.homeTeam.abbrName}</span>
+            {/* 우측: 승리, 패전, 세이브 투수 정보만 시멘틱하게 표시 */}
+            <div className="match-detail__meta-panel">
+              <div className="match-detail__record-item">
+                <span className="match-detail__record-label">승리투수</span>
+                <span className="match-detail__record-colon">:</span>
+                <span className="match-detail__record-value">{pitchRecords.winPitcher}</span>
               </div>
-              <div className="match-detail__logo-placeholder" style={{ color: matchInfo.homeTeam.color }}>
-                {matchInfo.homeTeam.symbol}
+              <div className="match-detail__record-item">
+                <span className="match-detail__record-label">패전투수</span>
+                <span className="match-detail__record-colon">:</span>
+                <span className="match-detail__record-value">{pitchRecords.losePitcher}</span>
+              </div>
+              <div className="match-detail__record-item">
+                <span className="match-detail__record-label">세이브</span>
+                <span className="match-detail__record-colon">:</span>
+                <span className="match-detail__record-value">{pitchRecords.savePitcher}</span>
               </div>
             </div>
-          </div>
-
-          {/* 가로형 이닝별 스코어보드 */}
-          <div className="match-detail__table-wrapper">
-            <table className="match-detail__scoreboard-table">
-              <thead>
-                <tr>
-                  <th className="match-detail__th-team">구단</th>
-                  <th>1</th>
-                  <th>2</th>
-                  <th>3</th>
-                  <th>4</th>
-                  <th>5</th>
-                  <th>6</th>
-                  <th>7</th>
-                  <th>8</th>
-                  <th>9</th>
-                  <th className="match-detail__th-stat">R</th>
-                  <th className="match-detail__th-stat">H</th>
-                  <th className="match-detail__th-stat">E</th>
-                  <th className="match-detail__th-stat">B</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td className="match-detail__td-team">
-                    <span className="match-detail__team-indicator" style={{ backgroundColor: matchInfo.awayTeam.color }}></span>
-                    {matchInfo.awayTeam.name}
-                  </td>
-                  {matchInfo.awayTeam.innings.map((val, idx) => (
-                    <td key={idx}>{val}</td>
-                  ))}
-                  <td className="match-detail__td-stat match-detail__td-stat--highlight">{matchInfo.awayTeam.r}</td>
-                  <td className="match-detail__td-stat">{matchInfo.awayTeam.h}</td>
-                  <td className="match-detail__td-stat">{matchInfo.awayTeam.e}</td>
-                  <td className="match-detail__td-stat">{matchInfo.awayTeam.b}</td>
-                </tr>
-                <tr>
-                  <td className="match-detail__td-team">
-                    <span className="match-detail__team-indicator" style={{ backgroundColor: matchInfo.homeTeam.color }}></span>
-                    {matchInfo.homeTeam.name}
-                  </td>
-                  {matchInfo.homeTeam.innings.map((val, idx) => (
-                    <td key={idx}>{val}</td>
-                  ))}
-                  <td className="match-detail__td-stat match-detail__td-stat--highlight">{matchInfo.homeTeam.r}</td>
-                  <td className="match-detail__td-stat">{matchInfo.homeTeam.h}</td>
-                  <td className="match-detail__td-stat">{matchInfo.homeTeam.e}</td>
-                  <td className="match-detail__td-stat">{matchInfo.homeTeam.b}</td>
-                </tr>
-              </tbody>
-            </table>
           </div>
         </header>
 

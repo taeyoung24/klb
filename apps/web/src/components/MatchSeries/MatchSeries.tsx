@@ -1,4 +1,5 @@
 import React from 'react';
+import TeamLogo from '../TeamLogo/TeamLogo';
 import './MatchSeries.css';
 
 interface MatchSeriesProps {
@@ -6,15 +7,13 @@ interface MatchSeriesProps {
   seriesLimit?: number;
   upperSeedTitle?: string;
   upperTeamName?: string;
+  upperTeamCode?: string;
   upperTeamImage?: string;
-  upperTeamSymbol?: string;
-  upperTeamColor?: string;
   upperScoreSeries?: number[];
   lowerSeedTitle?: string;
   lowerTeamName?: string;
+  lowerTeamCode?: string;
   lowerTeamImage?: string;
-  lowerTeamSymbol?: string;
-  lowerTeamColor?: string;
   lowerScoreSeries?: number[];
 }
 
@@ -23,15 +22,13 @@ const MatchSeries: React.FC<MatchSeriesProps> = ({
   seriesLimit,
   upperSeedTitle,
   upperTeamName = 'TBD',
+  upperTeamCode,
   upperTeamImage,
-  upperTeamSymbol,
-  upperTeamColor,
   upperScoreSeries = [],
   lowerSeedTitle,
   lowerTeamName = 'TBD',
+  lowerTeamCode,
   lowerTeamImage,
-  lowerTeamSymbol,
-  lowerTeamColor,
   lowerScoreSeries = [],
 }) => {
   // Determine the number of score columns
@@ -88,26 +85,6 @@ const MatchSeries: React.FC<MatchSeriesProps> = ({
     }`;
   };
 
-  const renderLogo = (imgSrc?: string, symbol?: string, color?: string) => {
-    if (imgSrc) {
-      return <img src={imgSrc} alt="" className="match-series__team-logo" />;
-    }
-    if (symbol) {
-      return (
-        <div 
-          className="match-series__logo-placeholder" 
-          style={{ 
-            color: color || '#ffffff', 
-            border: `1px solid ${color || 'rgba(255, 255, 255, 0.2)'}`,
-          }}
-        >
-          {symbol}
-        </div>
-      );
-    }
-    return <div className="match-series__logo-placeholder" />;
-  };
-
   return (
     <div className="match-series">
       <div className="match-series__stage-title">{stageTitle}</div>
@@ -116,7 +93,12 @@ const MatchSeries: React.FC<MatchSeriesProps> = ({
         <div className={getTeamClasses(true)}>
           <div className="match-series__team-info">
             <div className="match-series__logo-wrapper">
-              {renderLogo(upperTeamImage, upperTeamSymbol, upperTeamColor)}
+              <TeamLogo
+                teamCode={upperTeamCode}
+                teamName={upperTeamName}
+                logoUrl={upperTeamImage}
+                size={22}
+              />
             </div>
             <div className="match-series__team-text">
               {upperSeedTitle && <div className="match-series__seed-title">{upperSeedTitle}</div>}
@@ -132,7 +114,12 @@ const MatchSeries: React.FC<MatchSeriesProps> = ({
         <div className={getTeamClasses(false)}>
           <div className="match-series__team-info">
             <div className="match-series__logo-wrapper">
-              {renderLogo(lowerTeamImage, lowerTeamSymbol, lowerTeamColor)}
+              <TeamLogo
+                teamCode={lowerTeamCode}
+                teamName={lowerTeamName}
+                logoUrl={lowerTeamImage}
+                size={22}
+              />
             </div>
             <div className="match-series__team-text">
               {lowerSeedTitle && <div className="match-series__seed-title">{lowerSeedTitle}</div>}

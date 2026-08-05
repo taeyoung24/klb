@@ -5,6 +5,7 @@ import { getMatches, type Match } from '../api/matches'
 import { getStandings, type DailyClubStanding } from '../api/standings'
 import { getSystemInfo } from '../api/system'
 import MatchSeries from '../components/MatchSeries/MatchSeries'
+import TeamLogo from '../components/TeamLogo/TeamLogo'
 import './AppSeasonStandingSection.css'
 
 const LEAGUES = [
@@ -13,53 +14,6 @@ const LEAGUES = [
   { code: 'GL' as const, id: 3, name: '젠티아나' },
   { code: 'ML' as const, id: 4, name: '매그놀리아' },
 ];
-
-const TEAM_META: Record<string, { color: string; symbol: string }> = {
-  // AL
-  COM: { color: "#1f77b4", symbol: "C" },
-  END: { color: "#8c564b", symbol: "E" },
-  PHN: { color: "#7f7f7f", symbol: "P" },
-  PUM: { color: "#17becf", symbol: "K" },
-  GUA: { color: "#bcbd22", symbol: "G" },
-  SAT: { color: "#ff7f0e", symbol: "T" },
-  SEN: { color: "#9467bd", symbol: "S" },
-  VAL: { color: "#e377c2", symbol: "V" },
-  WHL: { color: "#2ca02c", symbol: "W" },
-  ZEN: { color: "#e01e3c", symbol: "Z" },
-  // CL
-  ARC: { color: "#4682b4", symbol: "A" },
-  CAT: { color: "#2f4f4f", symbol: "C" },
-  DIN: { color: "#556b2f", symbol: "D" },
-  EFL: { color: "#ff4500", symbol: "F" },
-  FST: { color: "#daa520", symbol: "I" },
-  HRO: { color: "#8b008b", symbol: "H" },
-  RED: { color: "#ff0000", symbol: "R" },
-  SOL: { color: "#ffd700", symbol: "O" },
-  TAL: { color: "#d2691e", symbol: "L" },
-  UND: { color: "#4b0082", symbol: "U" },
-  // GL
-  WIS: { color: "#00ffff", symbol: "C" },
-  FAL: { color: "#708090", symbol: "F" },
-  NUF: { color: "#afeeee", symbol: "Z" },
-  GLI: { color: "#ee82ee", symbol: "G" },
-  TKN: { color: "#b0c4de", symbol: "K" },
-  VPE: { color: "#db7093", symbol: "P" },
-  GSW: { color: "#40e0d0", symbol: "S" },
-  IVO: { color: "#ffc0cb", symbol: "V" },
-  WYV: { color: "#ba55d3", symbol: "W" },
-  HOB: { color: "#cd853f", symbol: "B" },
-  // ML
-  BLU: { color: "#1e90ff", symbol: "B" },
-  DRG: { color: "#32cd32", symbol: "D" },
-  EAG: { color: "#ff8c00", symbol: "E" },
-  ETR: { color: "#9932cc", symbol: "T" },
-  GIA: { color: "#8b0000", symbol: "G" },
-  LUN: { color: "#e9967a", symbol: "L" },
-  PST: { color: "#00ced1", symbol: "P" },
-  RPN: { color: "#9370db", symbol: "N" },
-  UNI: { color: "#ff69b4", symbol: "U" },
-  VBC: { color: "#000000", symbol: "C" },
-};
 
 const getSimDayFromDate = (date: Date, year: number): number => {
   const target = new Date(date.getFullYear(), date.getMonth(), date.getDate());
@@ -86,10 +40,6 @@ const formatStreak = (streak: number) => {
   if (streak === 0) return "-";
   if (streak > 0) return `${streak}승`;
   return `${Math.abs(streak)}패`;
-};
-
-const getTeamMeta = (teamCode: string, nameKo: string) => {
-  return TEAM_META[teamCode] || { color: "#cccccc", symbol: nameKo[0] || "T" };
 };
 
 interface AppSeasonStandingSectionProps {
@@ -579,14 +529,14 @@ export default function AppSeasonStandingSection({
       const homeClub = homeId ? clubsMap[homeId] : null;
       const awayClub = awayId ? clubsMap[awayId] : null;
 
-      const homeName = homeClub ? homeClub.name_ko : 'TBD';
-      const awayName = awayClub ? awayClub.name_ko : 'TBD';
+      const homeName = homeClub ? (homeClub.abbr_name || homeClub.name_ko) : 'TBD';
+      const awayName = awayClub ? (awayClub.abbr_name || awayClub.name_ko) : 'TBD';
 
       const homeSeed = homeId ? (seedMap[homeId] ? seedMap[homeId] : '') : '';
       const awaySeed = awayId ? (seedMap[awayId] ? seedMap[awayId] : '') : '';
 
-      const homeMeta = homeClub ? getTeamMeta(homeClub.team_code, homeClub.name_ko) : null;
-      const awayMeta = awayClub ? getTeamMeta(awayClub.team_code, awayClub.name_ko) : null;
+      const homeCode = homeClub?.team_code;
+      const awayCode = awayClub?.team_code;
 
       const { upperScores, lowerScores } = getSeriesScores(homeId, awayId, isBo3Advantage);
 
@@ -596,13 +546,11 @@ export default function AppSeasonStandingSection({
           seriesLimit={seriesLimit}
           upperSeedTitle={homeSeed}
           upperTeamName={homeName}
-          upperTeamSymbol={homeMeta?.symbol || undefined}
-          upperTeamColor={homeMeta?.color || undefined}
+          upperTeamCode={homeCode}
           upperScoreSeries={upperScores}
           lowerSeedTitle={awaySeed}
           lowerTeamName={awayName}
-          lowerTeamSymbol={awayMeta?.symbol || undefined}
-          lowerTeamColor={awayMeta?.color || undefined}
+          lowerTeamCode={awayCode}
           lowerScoreSeries={lowerScores}
         />
       );
@@ -727,7 +675,7 @@ export default function AppSeasonStandingSection({
                         <td className={`standings__rank ${idx < 8 ? 'standings__rank--playoff' : ''}`}>{idx + 1}</td>
                         <td className="standings__team-name">
                           <div className="standings__team-cell">
-                            <div className="standings__team-logo-placeholder" style={{ color: "rgba(255,255,255,0.2)" }}>?</div>
+                            <TeamLogo teamName="?" size={20} />
                             <span className="standings__team-text" style={{ color: "rgba(255,255,255,0.4)" }}>TBD</span>
                           </div>
                         </td>
@@ -743,9 +691,8 @@ export default function AppSeasonStandingSection({
                   ) : (
                     (eliteStandings.length > 0 ? eliteStandings : getEliteStandings()).map((row, idx) => {
                       const club = clubsMap[row.club_id];
-                      const clubFullName = club ? (club.hometown_ko ? `${club.hometown_ko} ${club.name_ko}` : club.name_ko) : '로딩중...';
+                      const clubDisplayName = club ? (club.abbr_name || (club.hometown_ko ? `${club.hometown_ko} ${club.name_ko}` : club.name_ko)) : '로딩중...';
                       const teamCode = club ? club.team_code : '';
-                      const meta = getTeamMeta(teamCode, clubFullName);
                       const seedText = seedMap[row.club_id] ? ` (${seedMap[row.club_id]})` : '';
 
                       return (
@@ -753,14 +700,9 @@ export default function AppSeasonStandingSection({
                           <td className={`standings__rank ${row.rank <= 8 ? 'standings__rank--playoff' : ''}`}>{row.rank}</td>
                           <td className="standings__team-name">
                             <div className="standings__team-cell">
-                              <div
-                                className="standings__team-logo-placeholder"
-                                style={{ color: meta.color }}
-                              >
-                                {meta.symbol}
-                              </div>
+                              <TeamLogo teamCode={teamCode} teamName={clubDisplayName} size={20} />
                               <span className="standings__team-text">
-                                {clubFullName}
+                                {clubDisplayName}
                                 <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', marginLeft: '6px' }}>{seedText}</span>
                               </span>
                             </div>
@@ -830,7 +772,7 @@ export default function AppSeasonStandingSection({
                         <td className="standings__rank">{idx + 1}</td>
                         <td className="standings__team-name">
                           <div className="standings__team-cell">
-                            <div className="standings__team-logo-placeholder" style={{ color: "rgba(255,255,255,0.2)" }}>?</div>
+                            <TeamLogo teamName="?" size={20} />
                             <span className="standings__team-text" style={{ color: "rgba(255,255,255,0.4)" }}>TBD</span>
                           </div>
                         </td>
@@ -849,9 +791,8 @@ export default function AppSeasonStandingSection({
 
                     return standingsList.map((row, idx) => {
                       const club = clubsMap[row.club_id];
-                      const clubFullName = club ? (club.hometown_ko ? `${club.hometown_ko} ${club.name_ko}` : club.name_ko) : '로딩중...';
+                      const clubDisplayName = club ? (club.abbr_name || (club.hometown_ko ? `${club.hometown_ko} ${club.name_ko}` : club.name_ko)) : '로딩중...';
                       const teamCode = club ? club.team_code : '';
-                      const meta = getTeamMeta(teamCode, clubFullName);
 
                       const isTied = standingsList.filter(item => item.rank === row.rank).length > 1;
                       const displayRank = isZeroGames ? "-" : (isTied ? `T${row.rank}` : row.rank);
@@ -861,13 +802,8 @@ export default function AppSeasonStandingSection({
                           <td className={`standings__rank ${!isZeroGames && row.rank <= 4 ? 'standings__rank--playoff' : ''}`}>{displayRank}</td>
                           <td className="standings__team-name">
                             <div className="standings__team-cell">
-                              <div
-                                className="standings__team-logo-placeholder"
-                                style={{ color: meta.color }}
-                              >
-                                {meta.symbol}
-                              </div>
-                              <span className="standings__team-text">{clubFullName}</span>
+                              <TeamLogo teamCode={teamCode} teamName={clubDisplayName} size={20} />
+                              <span className="standings__team-text">{clubDisplayName}</span>
                             </div>
                           </td>
                           <td>{isZeroGames ? "-" : row.games_played}</td>

@@ -2,58 +2,8 @@ import { useEffect, useState } from 'react'
 import { FiChevronLeft, FiChevronRight } from 'react-icons/fi'
 import { getClubs, type Club } from '../api/clubs'
 import { getMatches, type Match } from '../api/matches'
+import TeamLogo from '../components/TeamLogo/TeamLogo'
 import './AppScheduleSection.css'
-
-const TEAM_META: Record<string, { color: string; symbol: string }> = {
-  // AL
-  COM: { color: "#1f77b4", symbol: "C" },
-  END: { color: "#8c564b", symbol: "E" },
-  PHN: { color: "#7f7f7f", symbol: "P" },
-  PUM: { color: "#17becf", symbol: "K" },
-  GUA: { color: "#bcbd22", symbol: "G" },
-  SAT: { color: "#ff7f0e", symbol: "T" },
-  SEN: { color: "#9467bd", symbol: "S" },
-  VAL: { color: "#e377c2", symbol: "V" },
-  WHL: { color: "#2ca02c", symbol: "W" },
-  ZEN: { color: "#e01e3c", symbol: "Z" },
-  // CL
-  ARC: { color: "#4682b4", symbol: "A" },
-  CAT: { color: "#2f4f4f", symbol: "C" },
-  DIN: { color: "#556b2f", symbol: "D" },
-  EFL: { color: "#ff4500", symbol: "F" },
-  FST: { color: "#daa520", symbol: "I" },
-  HRO: { color: "#8b008b", symbol: "H" },
-  RED: { color: "#ff0000", symbol: "R" },
-  SOL: { color: "#ffd700", symbol: "O" },
-  TAL: { color: "#d2691e", symbol: "L" },
-  UND: { color: "#4b0082", symbol: "U" },
-  // GL
-  WIS: { color: "#00ffff", symbol: "C" },
-  FAL: { color: "#708090", symbol: "F" },
-  NUF: { color: "#afeeee", symbol: "Z" },
-  GLI: { color: "#ee82ee", symbol: "G" },
-  TKN: { color: "#b0c4de", symbol: "K" },
-  VPE: { color: "#db7093", symbol: "P" },
-  GSW: { color: "#40e0d0", symbol: "S" },
-  IVO: { color: "#ffc0cb", symbol: "V" },
-  WYV: { color: "#ba55d3", symbol: "W" },
-  HOB: { color: "#cd853f", symbol: "B" },
-  // ML
-  BLU: { color: "#1e90ff", symbol: "B" },
-  DRG: { color: "#32cd32", symbol: "D" },
-  EAG: { color: "#ff8c00", symbol: "E" },
-  ETR: { color: "#9932cc", symbol: "T" },
-  GIA: { color: "#8b0000", symbol: "G" },
-  LUN: { color: "#e9967a", symbol: "L" },
-  PST: { color: "#00ced1", symbol: "P" },
-  RPN: { color: "#9370db", symbol: "N" },
-  UNI: { color: "#ff69b4", symbol: "U" },
-  VBC: { color: "#000000", symbol: "C" },
-};
-
-const getTeamMeta = (teamCode: string, nameKo: string) => {
-  return TEAM_META[teamCode] || { color: "#cccccc", symbol: nameKo[0] || "T" };
-};
 
 const getSimDayFromDate = (date: Date, year: number): number => {
   const target = new Date(date.getFullYear(), date.getMonth(), date.getDate());
@@ -241,9 +191,6 @@ export default function AppScheduleSection({
                       const awayName = awayClub ? awayClub.team_code : 'AWAY';
                       const homeName = homeClub ? homeClub.team_code : 'HOME';
 
-                      const awayMeta = getTeamMeta(awayClub?.team_code || '', awayName);
-                      const homeMeta = getTeamMeta(homeClub?.team_code || '', homeName);
-
                       return (
                         <a key={match.id} href="#match-detail" className="match-card">
                           <div className="match-card__status-col">
@@ -256,9 +203,7 @@ export default function AppScheduleSection({
                           <div className="match-card__versus-col">
                             <div className="match-card__team match-card__team--away">
                               <span className="match-card__team-name">{awayName}</span>
-                              <div className="match-card__logo-placeholder" style={{ color: awayMeta.color }}>
-                                {awayMeta.symbol}
-                              </div>
+                              <TeamLogo teamCode={awayClub?.team_code} teamName={awayClub?.name_ko} size={28} />
                             </div>
 
                             <div className="match-card__score-board">
@@ -274,9 +219,7 @@ export default function AppScheduleSection({
                             </div>
 
                             <div className="match-card__team match-card__team--home">
-                              <div className="match-card__logo-placeholder" style={{ color: homeMeta.color }}>
-                                {homeMeta.symbol}
-                              </div>
+                              <TeamLogo teamCode={homeClub?.team_code} teamName={homeClub?.name_ko} size={28} />
                               <span className="match-card__team-name">{homeName}</span>
                             </div>
                           </div>
