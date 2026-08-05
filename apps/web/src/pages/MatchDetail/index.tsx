@@ -1,9 +1,66 @@
 import { useState } from 'react';
-import TeamLogo from '../components/TeamLogo/TeamLogo';
-import './MatchDetail.css';
+import { FaChevronLeft, FaChevronRight } from 'react-icons/fa';
+import TeamLogo from '../../components/TeamLogo/TeamLogo';
+import './index.css';
+
+import AnalysisTab from './AnalysisTab';
+import LineupTab from './LineupTab';
+import BoxscoreTab from './BoxscoreTab';
+import CheerTab from './CheerTab';
+import NewsTab from './NewsTab';
+
+const DAY_NAMES = ['일', '월', '화', '수', '목', '금', '토'];
+
+const formatNavDate = (date: Date) => {
+  const month = date.getMonth() + 1;
+  const day = date.getDate();
+  const dayName = DAY_NAMES[date.getDay()];
+  return `${month}.${day} ${dayName}`;
+};
+
+const getDateKey = (date: Date) => {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+};
+
+interface OtherMatchItem {
+  id: number;
+  awayTeam: { code: string; name: string; score?: number };
+  homeTeam: { code: string; name: string; score?: number };
+  status: string;
+  isCurrent?: boolean;
+}
 
 export default function MatchDetail() {
   const [activeTab, setActiveTab] = useState<'analysis' | 'lineup' | 'boxscore' | 'cheer' | 'news'>('analysis');
+  const [navDate, setNavDate] = useState<Date>(new Date(2026, 6, 17));
+
+  const handlePrevDay = () => {
+    setNavDate((prev) => new Date(prev.getFullYear(), prev.getMonth(), prev.getDate() - 1));
+  };
+
+  const handleNextDay = () => {
+    setNavDate((prev) => new Date(prev.getFullYear(), prev.getMonth(), prev.getDate() + 1));
+  };
+
+  // 날짜별 경기 목데이터
+  const otherMatchesData: Record<string, OtherMatchItem[]> = {
+    '2026-07-17': [
+      { id: 101, awayTeam: { code: 'COM', name: '코멧스', score: 15 }, homeTeam: { code: 'ZEN', name: '제니스', score: 3 }, status: '종료', isCurrent: true },
+      { id: 102, awayTeam: { code: 'DRG', name: '드래곤스', score: 2 }, homeTeam: { code: 'BER', name: '베어스', score: 4 }, status: '종료' },
+      { id: 103, awayTeam: { code: 'EAG', name: '이글스', score: 6 }, homeTeam: { code: 'GIA', name: '자이언츠', score: 5 }, status: '종료' },
+      { id: 104, awayTeam: { code: 'LUN', name: '루나스', score: 1 }, homeTeam: { code: 'UNI', name: '유니콘스', score: 8 }, status: '종료' },
+    ],
+    '2026-07-18': [
+      { id: 105, awayTeam: { code: 'COM', name: '코멧스' }, homeTeam: { code: 'ZEN', name: '제니스' }, status: '18:30' },
+      { id: 106, awayTeam: { code: 'DRG', name: '드래곤스' }, homeTeam: { code: 'BER', name: '베어스' }, status: '18:30' },
+      { id: 107, awayTeam: { code: 'EAG', name: '이글스' }, homeTeam: { code: 'GIA', name: '자이언츠' }, status: '18:30' },
+    ],
+  };
+
+  const currentDayMatches = otherMatchesData[getDateKey(navDate)];
 
   // 가상 하드코딩 목데이터
   const matchInfo = {
@@ -97,21 +154,32 @@ export default function MatchDetail() {
     { title: '[Highlight] 4회 초 경기 흐름을 바꾼 이동현의 비거리 125m 대형 홈런', time: '3시간 전', category: '하이라이트' },
   ];
 
+  const getStatusBadgeInfo = (status: string) => {
+    if (status === '경기 진행중' || status === 'IN_PROGRESS' || status === 'LIVE') {
+      return { label: 'LIVE', modifier: 'live' };
+    }
+    if (status === '경기 종료' || status === 'COMPLETED') {
+      return { label: '경기 종료', modifier: 'ended' };
+    }
+    return { label: status, modifier: 'upcoming' };
+  };
+
+  const statusInfo = getStatusBadgeInfo(matchInfo.status);
+
   return (
     <div className="match-detail">
       <div className="match-detail__container">
         {/* 상단 경기 정보 서머리 & 이닝별 스코어보드 */}
         <header className="match-detail__header">
-          {/* 경기 메타 정보: 리그/제목, 상태, 날짜, 구장명 */}
-          <div className="match-detail__meta">
-            <span className="match-detail__league-badge">{matchInfo.league}</span>
-            <span className="match-detail__status-badge">{matchInfo.status}</span>
-            <span className="match-detail__info-text">{matchInfo.date} | {matchInfo.stadium}</span>
-          </div>
-
           <div className="match-detail__header-layout">
             {/* 좌측: 컴팩트 스코어 & 이닝 스코어보드 */}
             <div className="match-detail__header-main">
+              {/* 상단 리그 & 경기 정보 바 */}
+              <div className="match-detail__top-meta">
+                <span className="match-detail__top-league">{matchInfo.league}</span>
+                <span className="match-detail__top-info">{matchInfo.date} | {matchInfo.stadium}</span>
+              </div>
+
               <div className="match-detail__hero">
                 <div className="match-detail__team match-detail__team--away">
                   <TeamLogo teamCode={matchInfo.awayTeam.code} teamName={matchInfo.awayTeam.fullName} size={44} />
@@ -123,13 +191,18 @@ export default function MatchDetail() {
 
                 <div className="match-detail__center-score">
                   <span className="match-detail__score">{matchInfo.awayTeam.score}</span>
-                  <span className="match-detail__versus-divider">:</span>
+                  <span className={`match-detail__status-badge match-detail__status-badge--${statusInfo.modifier}`}>
+                    {statusInfo.label}
+                  </span>
                   <span className="match-detail__score">{matchInfo.homeTeam.score}</span>
                 </div>
 
                 <div className="match-detail__team match-detail__team--home">
                   <div className="match-detail__team-info match-detail__team-info--home">
-                    <span className="match-detail__team-name">{matchInfo.homeTeam.fullName}</span>
+                    <span className="match-detail__team-name">
+                      {matchInfo.homeTeam.fullName}
+                      <span className="match-detail__home-label">홈</span>
+                    </span>
                     <span className="match-detail__team-code">{matchInfo.homeTeam.abbrName}</span>
                   </div>
                   <TeamLogo teamCode={matchInfo.homeTeam.code} teamName={matchInfo.homeTeam.fullName} size={44} />
@@ -189,22 +262,49 @@ export default function MatchDetail() {
               </div>
             </div>
 
-            {/* 우측: 승리, 패전, 세이브 투수 정보만 시멘틱하게 표시 */}
-            <div className="match-detail__meta-panel">
-              <div className="match-detail__record-item">
-                <span className="match-detail__record-label">승리투수</span>
-                <span className="match-detail__record-colon">:</span>
-                <span className="match-detail__record-value">{pitchRecords.winPitcher}</span>
+            {/* 우측: 다른 경기 탐색 패널 */}
+            <div className="match-detail__other-matches-panel">
+              <div className="match-detail__nav-header">
+                <button className="match-detail__nav-arrow-btn" onClick={handlePrevDay} aria-label="이전 날짜">
+                  <FaChevronLeft />
+                </button>
+                <span className="match-detail__nav-date-text">{formatNavDate(navDate)}</span>
+                <button className="match-detail__nav-arrow-btn" onClick={handleNextDay} aria-label="다음 날짜">
+                  <FaChevronRight />
+                </button>
               </div>
-              <div className="match-detail__record-item">
-                <span className="match-detail__record-label">패전투수</span>
-                <span className="match-detail__record-colon">:</span>
-                <span className="match-detail__record-value">{pitchRecords.losePitcher}</span>
-              </div>
-              <div className="match-detail__record-item">
-                <span className="match-detail__record-label">세이브</span>
-                <span className="match-detail__record-colon">:</span>
-                <span className="match-detail__record-value">{pitchRecords.savePitcher}</span>
+
+              <div className="match-detail__nav-content">
+                {currentDayMatches && currentDayMatches.length > 0 ? (
+                  <div className="match-detail__other-matches-list">
+                    {currentDayMatches.map((m) => (
+                      <div
+                        key={m.id}
+                        className={`match-detail__other-match-card ${m.isCurrent ? 'match-detail__other-match-card--current' : ''}`}
+                      >
+                        <div className="match-detail__other-match-team">
+                          <TeamLogo teamCode={m.awayTeam.code} teamName={m.awayTeam.name} size={16} />
+                          <span className="match-detail__other-match-team-name">{m.awayTeam.name}</span>
+                          {m.awayTeam.score !== undefined && (
+                            <span className="match-detail__other-match-score">{m.awayTeam.score}</span>
+                          )}
+                        </div>
+                        <div className="match-detail__other-match-vs">
+                          <span className="match-detail__other-match-status">{m.status}</span>
+                        </div>
+                        <div className="match-detail__other-match-team match-detail__other-match-team--home">
+                          {m.homeTeam.score !== undefined && (
+                            <span className="match-detail__other-match-score">{m.homeTeam.score}</span>
+                          )}
+                          <span className="match-detail__other-match-team-name">{m.homeTeam.name}</span>
+                          <TeamLogo teamCode={m.homeTeam.code} teamName={m.homeTeam.name} size={16} />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="match-detail__no-matches">경기가 없습니다</div>
+                )}
               </div>
             </div>
           </div>
@@ -244,149 +344,44 @@ export default function MatchDetail() {
           </button>
         </nav>
 
-        {/* 싱글 컬럼 탭 컨텐츠 */}
+        {/* 싱글 컬럼 탭 컨텐츠 (분할된 컴포넌트 호출) */}
         <main className="match-detail__content">
-          {/* 1. 전력 분석 탭 */}
           {activeTab === 'analysis' && (
-            <div className="match-detail__panel">
-              <h3 className="match-detail__panel-title">팀 상대 전적 및 지표 비교</h3>
-              <div className="match-detail__analysis-summary">
-                <span className="match-detail__analysis-h2h">상대 전적: {analysisData.headToHead}</span>
-              </div>
-              <div className="match-detail__metrics-list">
-                {analysisData.metrics.map((item, idx) => (
-                  <div key={idx} className="match-detail__metric-item">
-                    <div className="match-detail__metric-label-bar">
-                      <span className={`match-detail__metric-val ${item.awayWin ? 'match-detail__metric-val--win' : ''}`}>{item.away}</span>
-                      <span className="match-detail__metric-title">{item.label}</span>
-                      <span className={`match-detail__metric-val ${!item.awayWin ? 'match-detail__metric-val--win' : ''}`}>{item.home}</span>
-                    </div>
-                    <div className="match-detail__metric-track">
-                      <div
-                        className="match-detail__metric-fill match-detail__metric-fill--away"
-                        style={{ width: item.awayWin ? '55%' : '45%', backgroundColor: matchInfo.awayTeam.color }}
-                      ></div>
-                      <div
-                        className="match-detail__metric-fill match-detail__metric-fill--home"
-                        style={{ width: !item.awayWin ? '55%' : '45%', backgroundColor: matchInfo.homeTeam.color }}
-                      ></div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
+            <AnalysisTab
+              headToHead={analysisData.headToHead}
+              metrics={analysisData.metrics}
+              awayColor={matchInfo.awayTeam.color}
+              homeColor={matchInfo.homeTeam.color}
+            />
           )}
 
-          {/* 2. 선발 라인업 탭 */}
           {activeTab === 'lineup' && (
-            <div className="match-detail__panel">
-              <h3 className="match-detail__panel-title">양 팀 선발 타순 및 출전 선수</h3>
-              <div className="match-detail__lineup-columns">
-                <div className="match-detail__lineup-side">
-                  <h4 className="match-detail__lineup-sub-title" style={{ color: matchInfo.awayTeam.color }}>
-                    {matchInfo.awayTeam.fullName} (어웨이)
-                  </h4>
-                  <ul className="match-detail__lineup-list">
-                    {lineups.away.map((p, i) => (
-                      <li key={i} className="match-detail__lineup-item">
-                        <span className="match-detail__lineup-pos">{p.pos}</span>
-                        <span className="match-detail__lineup-name">{p.name}</span>
-                        <span className="match-detail__lineup-stat">{p.stat}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-
-                <div className="match-detail__lineup-side">
-                  <h4 className="match-detail__lineup-sub-title" style={{ color: matchInfo.homeTeam.color }}>
-                    {matchInfo.homeTeam.fullName} (홈)
-                  </h4>
-                  <ul className="match-detail__lineup-list">
-                    {lineups.home.map((p, i) => (
-                      <li key={i} className="match-detail__lineup-item">
-                        <span className="match-detail__lineup-pos">{p.pos}</span>
-                        <span className="match-detail__lineup-name">{p.name}</span>
-                        <span className="match-detail__lineup-stat">{p.stat}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </div>
-            </div>
+            <LineupTab
+              awayTeamName={matchInfo.awayTeam.fullName}
+              homeTeamName={matchInfo.homeTeam.fullName}
+              awayLineup={lineups.away}
+              homeLineup={lineups.home}
+              awayColor={matchInfo.awayTeam.color}
+              homeColor={matchInfo.homeTeam.color}
+            />
           )}
 
-          {/* 3. 주요 기록 탭 */}
           {activeTab === 'boxscore' && (
-            <div className="match-detail__panel">
-              <h3 className="match-detail__panel-title">투타 주요 경기 기록</h3>
-              <div className="match-detail__records-grid">
-                <div className="match-detail__record-box">
-                  <span className="match-detail__record-label">승리투수</span>
-                  <span className="match-detail__record-val">{pitchRecords.winPitcher}</span>
-                </div>
-                <div className="match-detail__record-box">
-                  <span className="match-detail__record-label">패전투수</span>
-                  <span className="match-detail__record-val">{pitchRecords.losePitcher}</span>
-                </div>
-                <div className="match-detail__record-box">
-                  <span className="match-detail__record-label">세이브</span>
-                  <span className="match-detail__record-val">{pitchRecords.savePitcher}</span>
-                </div>
-                <div className="match-detail__record-box">
-                  <span className="match-detail__record-label">주요 홈런</span>
-                  <span className="match-detail__record-val">{pitchRecords.keyHomeRun}</span>
-                </div>
-              </div>
-            </div>
+            <BoxscoreTab pitchRecords={pitchRecords} />
           )}
 
-          {/* 4. 승부예측 & 응원 탭 */}
           {activeTab === 'cheer' && (
-            <div className="match-detail__panel">
-              <h3 className="match-detail__panel-title">팬 승부 예측 및 실시간 응원</h3>
-              <div className="match-detail__prediction-box">
-                <div className="match-detail__prediction-header">
-                  <span>승리 예측 비율</span>
-                  <span className="match-detail__prediction-ratio">42% vs 58%</span>
-                </div>
-                <div className="match-detail__prediction-bar">
-                  <div className="match-detail__prediction-fill match-detail__prediction-fill--away" style={{ width: '42%', backgroundColor: matchInfo.awayTeam.color }}>
-                    COM 42%
-                  </div>
-                  <div className="match-detail__prediction-fill match-detail__prediction-fill--home" style={{ width: '58%', backgroundColor: matchInfo.homeTeam.color }}>
-                    ZEN 58%
-                  </div>
-                </div>
-              </div>
-
-              <div className="match-detail__cheer-list">
-                {cheers.map((c, i) => (
-                  <div key={i} className="match-detail__cheer-item">
-                    <div className="match-detail__cheer-header">
-                      <span className="match-detail__cheer-user">{c.user}</span>
-                      <span className={`match-detail__cheer-tag match-detail__cheer-tag--${c.team.toLowerCase()}`}>{c.team}</span>
-                    </div>
-                    <p className="match-detail__cheer-text">{c.text}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
+            <CheerTab
+              cheers={cheers}
+              awayTeamCode={matchInfo.awayTeam.code}
+              homeTeamCode={matchInfo.homeTeam.code}
+              awayColor={matchInfo.awayTeam.color}
+              homeColor={matchInfo.homeTeam.color}
+            />
           )}
 
-          {/* 5. 관련 뉴스 탭 */}
           {activeTab === 'news' && (
-            <div className="match-detail__panel">
-              <h3 className="match-detail__panel-title">매치 관련 뉴스 및 하이라이트</h3>
-              <div className="match-detail__news-list">
-                {newsList.map((n, i) => (
-                  <div key={i} className="match-detail__news-item">
-                    <span className="match-detail__news-category">{n.category}</span>
-                    <h5 className="match-detail__news-headline">{n.title}</h5>
-                    <span className="match-detail__news-time">{n.time}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
+            <NewsTab newsList={newsList} />
           )}
         </main>
       </div>

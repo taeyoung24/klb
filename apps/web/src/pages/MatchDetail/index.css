@@ -46,40 +46,37 @@
   justify-content: space-between;
 }
 
-.match-detail__meta {
-  display: flex;
+/* 상태 배지 (중앙 스코어 사이 배치) */
+.match-detail__status-badge {
+  display: inline-flex;
   align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
-  margin-bottom: 12px;
-  padding-bottom: 8px;
-  border-bottom: 1px solid #f3f4f6;
-}
-
-.match-detail__league-badge {
-  background-color: #f3f4f6;
-  color: #1f2937;
-  border: 1px solid #d1d5db;
-  font-size: var(--fs-xs);
-  font-weight: var(--fw-bold);
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
   padding: 3px 8px;
   border-radius: 4px;
+  line-height: 1;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin: 0 4px;
 }
 
-.match-detail__status-badge {
+.match-detail__status-badge--live {
   background-color: #dc2626;
   color: #ffffff;
-  font-size: var(--fs-xs);
-  font-weight: var(--fw-bold);
-  padding: 3px 8px;
-  border-radius: 4px;
+  box-shadow: 0 0 8px rgba(220, 38, 38, 0.3);
 }
 
-.match-detail__info-text {
-  font-size: 13px;
-  color: #4b5563;
-  font-weight: 500;
-  margin-left: auto;
+.match-detail__status-badge--ended {
+  background-color: #f1f5f9;
+  color: #64748b;
+  border: 1px solid #e2e8f0;
+}
+
+.match-detail__status-badge--upcoming {
+  background-color: #f8fafc;
+  color: #94a3b8;
+  border: 1px solid #e2e8f0;
 }
 
 .match-detail__hero {
@@ -88,9 +85,6 @@
   justify-content: center;
   gap: 16px;
   padding: 12px 16px;
-  background-color: #fafafa;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
 }
 
 .match-detail__team {
@@ -144,6 +138,23 @@
   font-size: var(--fs-md);
   font-weight: var(--fw-bold);
   color: #111827;
+  display: inline-flex;
+  align-items: center;
+}
+
+.match-detail__home-label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 6px;
+  padding: 3px 5px;
+  font-size: 10px;
+  font-weight: 600;
+  background-color: #f1f5f9;
+  color: #64748b;
+  border: 1px solid #cbd5e1;
+  border-radius: 3px;
+  line-height: 1;
 }
 
 .match-detail__team-code {
@@ -166,50 +177,154 @@
   padding: 0 2px;
 }
 
-.match-detail__versus-divider {
-  font-family: var(--heading);
-  font-size: 18px;
-  font-weight: 800;
-  color: #9ca3af;
-  padding: 0 2px;
+/* 상단 리그 & 경기 정보 바 */
+.match-detail__top-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 2px 4px 2px;
+  font-size: var(--fs-xs);
+}
+
+.match-detail__top-league {
+  font-weight: var(--fw-bold);
+  color: #374151;
+}
+
+.match-detail__top-info {
+  color: #6b7280;
+  font-weight: 500;
 }
 
 /* --------------------------------------------------------------------------
    Sidebar Meta Panel
    -------------------------------------------------------------------------- */
-.match-detail__meta-panel {
-  width: 200px;
+/* --------------------------------------------------------------------------
+   Other Matches Navigation Panel (우측 경기 탐색 패널)
+   -------------------------------------------------------------------------- */
+.match-detail__other-matches-panel {
+  width: 230px;
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
-  justify-content: center;
-  gap: 8px;
-  padding: 4px 0;
+  background-color: #fafafa;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 10px 12px;
 }
 
-.match-detail__record-item {
+.match-detail__nav-header {
   display: flex;
   align-items: center;
-  font-size: var(--fs-xs);
-  line-height: 1.4;
+  justify-content: space-between;
+  padding-bottom: 6px;
+  border-bottom: 1px solid #e5e7eb;
+  margin-bottom: 6px;
 }
 
-.match-detail__record-label {
+.match-detail__nav-arrow-btn {
+  background: transparent;
+  border: none;
+  color: #6b7280;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  font-size: 12px;
+}
+
+.match-detail__nav-date-text {
+  font-family: var(--sans);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-bold);
+  color: #111827;
+}
+
+.match-detail__nav-content {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.match-detail__no-matches {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: #9ca3af;
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-medium);
+}
+
+.match-detail__other-matches-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.match-detail__other-match-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 6px;
+  background-color: #ffffff;
+  border: 1px solid #f3f4f6;
+  border-radius: 4px;
+  font-size: 11px;
+}
+
+.match-detail__other-match-card--current {
+  border-color: #cbd5e1;
+  background-color: #f1f5f9;
+}
+
+.match-detail__other-match-team {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
+}
+
+.match-detail__other-match-team .match-detail__other-match-score {
+  margin-left: auto;
+}
+
+.match-detail__other-match-team--home {
+  justify-content: flex-start;
+}
+
+.match-detail__other-match-team--home .match-detail__other-match-score {
+  margin-left: 0;
+}
+
+.match-detail__other-match-team--home .match-detail__other-match-team-name {
+  margin-left: auto;
+}
+
+.match-detail__other-match-team-name {
   color: #374151;
-  font-weight: 600;
-  width: 56px;
-  display: inline-block;
+  font-weight: 500;
   white-space: nowrap;
 }
 
-.match-detail__record-colon {
-  color: #9ca3af;
-  margin: 0 8px 0 2px;
+.match-detail__other-match-score {
+  font-family: var(--heading);
+  font-weight: 700;
+  color: #111827;
+  padding: 0 2px;
 }
 
-.match-detail__record-value {
-  color: #111827;
-  font-weight: 600;
+.match-detail__other-match-vs {
+  padding: 0 4px;
+  flex-shrink: 0;
+}
+
+.match-detail__other-match-status {
+  font-size: 10px;
+  color: #6b7280;
+  font-weight: 500;
 }
 
 @media (max-width: 868px) {
@@ -217,7 +332,7 @@
     flex-direction: column;
   }
 
-  .match-detail__meta-panel {
+  .match-detail__other-matches-panel {
     width: 100%;
   }
 }
