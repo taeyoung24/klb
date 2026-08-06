@@ -17,7 +17,7 @@
   margin: 0 auto;
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 60px;
 }
 
 /* --------------------------------------------------------------------------
@@ -453,65 +453,10 @@
 .match-detail__panel-title {
   font-size: var(--fs-md);
   font-weight: var(--fw-bold);
-  color: #ffffff;
+  color: #111827;
   margin: 0;
   padding-bottom: 12px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-/* --------------------------------------------------------------------------
-   Analysis Section
-   -------------------------------------------------------------------------- */
-.match-detail__analysis-summary {
-  font-size: var(--fs-sm);
-  color: rgba(255, 255, 255, 0.7);
-  background-color: rgba(255, 255, 255, 0.03);
-  padding: 12px 16px;
-  border-radius: 6px;
-}
-
-.match-detail__metrics-list {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.match-detail__metric-item {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.match-detail__metric-label-bar {
-  display: flex;
-  justify-content: space-between;
-  font-size: var(--fs-xs);
-}
-
-.match-detail__metric-title {
-  color: rgba(255, 255, 255, 0.5);
-}
-
-.match-detail__metric-val {
-  color: rgba(255, 255, 255, 0.6);
-  font-weight: var(--fw-medium);
-}
-
-.match-detail__metric-val--win {
-  color: #ffffff;
-  font-weight: var(--fw-bold);
-}
-
-.match-detail__metric-track {
-  height: 8px;
-  background-color: rgba(255, 255, 255, 0.08);
-  border-radius: 4px;
-  display: flex;
-  overflow: hidden;
-}
-
-.match-detail__metric-fill {
-  height: 100%;
+  border-bottom: 1px solid #e5e7eb;
 }
 
 /* --------------------------------------------------------------------------

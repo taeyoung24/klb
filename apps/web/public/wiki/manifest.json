@@ -1,0 +1,100 @@
+{
+  "tree": [
+    {
+      "type": "directory",
+      "name": "clubs",
+      "path": "clubs",
+      "children": [
+        {
+          "type": "directory",
+          "name": "azalea",
+          "path": "clubs/azalea",
+          "children": [
+            {
+              "type": "file",
+              "name": "도르미르 코메츠.md",
+              "path": "clubs/azalea/도르미르 코메츠.md",
+              "ext": ".md"
+            }
+          ]
+        },
+        {
+          "type": "file",
+          "name": "구단 목록.md",
+          "path": "clubs/구단 목록.md",
+          "ext": ".md"
+        },
+        {
+          "type": "file",
+          "name": "로시 글리터즈.md",
+          "path": "clubs/로시 글리터즈.md",
+          "ext": ".md"
+        },
+        {
+          "type": "file",
+          "name": "메디할스 태일즈.md",
+          "path": "clubs/메디할스 태일즈.md",
+          "ext": ".md"
+        }
+      ]
+    },
+    {
+      "type": "directory",
+      "name": "leagues",
+      "path": "leagues",
+      "children": [
+        {
+          "type": "file",
+          "name": "리그 체계 개요.md",
+          "path": "leagues/리그 체계 개요.md",
+          "ext": ".md"
+        }
+      ]
+    },
+    {
+      "type": "directory",
+      "name": "rules",
+      "path": "rules",
+      "children": [
+        {
+          "type": "file",
+          "name": "경기 및 시즌 규정.md",
+          "path": "rules/경기 및 시즌 규정.md",
+          "ext": ".md"
+        }
+      ]
+    },
+    {
+      "type": "directory",
+      "name": "worldview",
+      "path": "worldview",
+      "children": [
+        {
+          "type": "file",
+          "name": "세계관 개요.md",
+          "path": "worldview/세계관 개요.md",
+          "ext": ".md"
+        },
+        {
+          "type": "file",
+          "name": "역사 및 연혁.md",
+          "path": "worldview/역사 및 연혁.md",
+          "ext": ".md"
+        },
+        {
+          "type": "file",
+          "name": "지리 및 도시.md",
+          "path": "worldview/지리 및 도시.md",
+          "ext": ".md"
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "대문.md",
+      "path": "대문.md",
+      "ext": ".md"
+    }
+  ],
+  "syncedAt": "2026-08-06T08:09:25.353Z"
+}

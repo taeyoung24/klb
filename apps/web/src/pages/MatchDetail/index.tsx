@@ -211,7 +211,7 @@ export default function MatchDetail() {
     headToHead: `${awayClub?.name_ko || '원정팀'} VS ${homeClub?.name_ko || '홈팀'} 시즌 첫 맞대결`,
     metrics: [
       { label: '팀 타율', away: '.278', home: '.262', awayWin: true },
-      { label: '팀 평균자책점', away: '3.42', home: '3.98', awayWin: true },
+      { label: '팀 ERA', away: '3.42', home: '3.98', awayWin: true },
       { label: '팀 홈런', away: '84개', home: '92개', awayWin: false },
       { label: '득점권 타율', away: '.295', home: '.251', awayWin: true },
     ],

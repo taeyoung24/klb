@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react'
-import { FaCircle } from 'react-icons/fa'
 import { getClubs, type Club } from '../api/clubs'
 import { getMatches, type Match } from '../api/matches'
 import { getStandings, type DailyClubStanding } from '../api/standings'
@@ -599,42 +598,27 @@ export default function AppSeasonStandingSection({
           <div className="progress-status__steps">
             <div className={`progress-status__step progress-status__step--${selectedStep === 1 ? 'active' : 'inactive'} ${currentStep === 1 ? 'progress-status__step--current' : ''}`} onClick={() => setSelectedStep(1)}>
               <span className="progress-status__step-num">1</span>
-              <span className="progress-status__step-text">
-                정규리그 전반
-                {currentStep === 1 && <FaCircle className="progress-status__current-dot" />}
-              </span>
+              <span className="progress-status__step-text">정규리그 전반</span>
             </div>
             <div className="progress-status__connector"></div>
             <div className={`progress-status__step progress-status__step--${selectedStep === 2 ? 'active' : 'inactive'} ${currentStep === 2 ? 'progress-status__step--current' : ''}`} onClick={() => setSelectedStep(2)}>
               <span className="progress-status__step-num">2</span>
-              <span className="progress-status__step-text">
-                인터리그
-                {currentStep === 2 && <FaCircle className="progress-status__current-dot" />}
-              </span>
+              <span className="progress-status__step-text">인터리그</span>
             </div>
             <div className="progress-status__connector"></div>
             <div className={`progress-status__step progress-status__step--${selectedStep === 3 ? 'active' : 'inactive'} ${currentStep === 3 ? 'progress-status__step--current' : ''}`} onClick={() => setSelectedStep(3)}>
               <span className="progress-status__step-num">3</span>
-              <span className="progress-status__step-text">
-                정규리그 후반
-                {currentStep === 3 && <FaCircle className="progress-status__current-dot" />}
-              </span>
+              <span className="progress-status__step-text">정규리그 후반</span>
             </div>
             <div className="progress-status__connector"></div>
             <div className={`progress-status__step progress-status__step--${selectedStep === 4 ? 'active' : 'inactive'} ${currentStep === 4 ? 'progress-status__step--current' : ''}`} onClick={() => setSelectedStep(4)}>
               <span className="progress-status__step-num">4</span>
-              <span className="progress-status__step-text">
-                포스트 리그
-                {currentStep === 4 && <FaCircle className="progress-status__current-dot" />}
-              </span>
+              <span className="progress-status__step-text">포스트 리그</span>
             </div>
             <div className="progress-status__connector"></div>
             <div className={`progress-status__step progress-status__step--${selectedStep === 5 ? 'active' : 'inactive'} ${currentStep === 5 ? 'progress-status__step--current' : ''}`} onClick={() => setSelectedStep(5)}>
               <span className="progress-status__step-num">5</span>
-              <span className="progress-status__step-text">
-                포스트 파이널
-                {currentStep === 5 && <FaCircle className="progress-status__current-dot" />}
-              </span>
+              <span className="progress-status__step-text">포스트 파이널</span>
             </div>
           </div>
         </div>

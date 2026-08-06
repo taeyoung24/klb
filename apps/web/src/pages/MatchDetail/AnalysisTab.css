@@ -1,0 +1,55 @@
+/* --------------------------------------------------------------------------
+   Analysis Section (AnalysisTab)
+   -------------------------------------------------------------------------- */
+.match-detail__analysis-summary {
+  font-size: var(--fs-sm);
+  color: #374151;
+  background-color: #f9fafb;
+  border: 1px solid #e5e7eb;
+  padding: 12px 16px;
+  border-radius: 6px;
+}
+
+.match-detail__metrics-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.match-detail__metric-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.match-detail__metric-label-bar {
+  display: flex;
+  justify-content: space-between;
+  font-size: var(--fs-xs);
+}
+
+.match-detail__metric-title {
+  color: #6b7280;
+}
+
+.match-detail__metric-val {
+  color: #6b7280;
+  font-weight: var(--fw-medium);
+}
+
+.match-detail__metric-val--win {
+  color: #111827;
+  font-weight: var(--fw-bold);
+}
+
+.match-detail__metric-track {
+  height: 8px;
+  background-color: #e5e7eb;
+  border-radius: 4px;
+  display: flex;
+  overflow: hidden;
+}
+
+.match-detail__metric-fill {
+  height: 100%;
+}

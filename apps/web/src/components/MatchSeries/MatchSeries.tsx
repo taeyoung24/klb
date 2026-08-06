@@ -70,11 +70,11 @@ const MatchSeries: React.FC<MatchSeriesProps> = ({
     for (let i = 0; i < count; i++) {
       const score = scores[i];
       const opponentScore = opponentScores[i];
-      
+
       const isLoser = score !== undefined && opponentScore !== undefined && score < opponentScore;
       const hasMatch = score !== undefined || (matchIds[i] !== undefined && matchIds[i] !== null);
       const isHovered = hoveredGameIndex === i && hasMatch;
-      
+
       let scoreClasses = 'match-series__score-item';
       if (score === undefined) {
         scoreClasses += ' match-series__score-item--empty';
@@ -107,11 +107,10 @@ const MatchSeries: React.FC<MatchSeriesProps> = ({
 
   const getTeamClasses = (isUpper: boolean) => {
     if (!isSeriesFinished) return 'match-series__team-box match-series__team-box--default';
-    
+
     const isWinner = isUpper ? upperIsWinner : lowerIsWinner;
-    return `match-series__team-box match-series__team-box--default ${
-      isWinner ? 'match-series__team-box--winner' : 'match-series__team-box--loser'
-    }`;
+    return `match-series__team-box match-series__team-box--default ${isWinner ? 'match-series__team-box--winner' : 'match-series__team-box--loser'
+      }`;
   };
 
   return (

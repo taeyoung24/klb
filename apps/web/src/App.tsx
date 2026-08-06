@@ -4,13 +4,12 @@ import { getSystemInfo } from './api/system'
 import AppNewsSection from './pages/AppNewsSection'
 import AppScheduleSection from './pages/AppScheduleSection'
 import AppSeasonStandingSection from './pages/AppSeasonStandingSection'
-import Archive from './pages/Archive'
-import Records from './pages/Records'
-import Schedule from './pages/Schedule'
-import Live from './pages/Live'
 import Intro from './pages/Intro'
 import LeagueShortcut from './pages/LeagueShortcut'
+import Live from './pages/Live'
 import MatchDetail from './pages/MatchDetail'
+import Schedule from './pages/Schedule'
+import Wiki from './pages/Wiki'
 import AzaleaLeagueApp from './pages/league-al/App'
 import CamelliaLeagueApp from './pages/league-cl/App'
 import GentianaLeagueApp from './pages/league-gl/App'
@@ -110,10 +109,7 @@ function App() {
               <a className={`header__nav-link ${currentHash === '#league-shortcut' ? 'header__nav-link--active' : ''}`} href="#league-shortcut">리그 바로가기</a>
             </li>
             <li className="header__nav-item">
-              <a className={`header__nav-link ${currentHash === '#records' ? 'header__nav-link--active' : ''}`} href="#records">기록실</a>
-            </li>
-            <li className="header__nav-item">
-              <a className={`header__nav-link ${currentHash === '#archive' ? 'header__nav-link--active' : ''}`} href="#archive">자료실</a>
+              <a className={`header__nav-link ${currentHash.startsWith('#wiki') ? 'header__nav-link--active' : ''}`} href="#wiki">위키</a>
             </li>
             <li className="header__nav-item">
               <a className={`header__nav-link header__nav-link--live ${currentHash === '#live' ? 'header__nav-link--active' : ''}`} href="#live">LIVE</a>
@@ -128,10 +124,8 @@ function App() {
         <LeagueShortcut />
       ) : currentHash.startsWith('#match-detail') ? (
         <MatchDetail />
-      ) : currentHash === '#archive' ? (
-        <Archive />
-      ) : currentHash === '#records' ? (
-        <Records />
+      ) : currentHash.startsWith('#wiki') ? (
+        <Wiki />
       ) : currentHash === '#schedule' ? (
         <Schedule />
       ) : currentHash === '#live' ? (
@@ -171,8 +165,7 @@ function App() {
             </div>
             <div className="footer__link-group">
               <h4 className="footer__link-title">Support</h4>
-              <a href="#records" className="footer__link">기록실</a>
-              <a href="#archive" className="footer__link">자료실</a>
+              <a href="#wiki" className="footer__link">위키</a>
               <a href="#live" className="footer__link">LIVE</a>
               <a href="#terms" className="footer__link">이용약관</a>
             </div>

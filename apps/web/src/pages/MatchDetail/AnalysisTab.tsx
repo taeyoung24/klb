@@ -1,4 +1,5 @@
 import React from 'react';
+import './AnalysisTab.css';
 
 export interface MetricItem {
   label: string;
