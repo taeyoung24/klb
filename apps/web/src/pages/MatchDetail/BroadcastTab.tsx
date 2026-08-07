@@ -146,8 +146,14 @@ export const BroadcastTab: React.FC<BroadcastTabProps> = ({ matchLog, awayClub, 
           const isTop = ev.is_top !== undefined ? ev.is_top : true;
           const innId = `${innNum}_${isTop ? 'top' : 'bot'}`;
 
-          if (ev.home_score !== undefined) homeScore = ev.home_score;
-          if (ev.away_score !== undefined) awayScore = ev.away_score;
+          if (ev.home_score !== undefined && ev.home_score > homeScore) homeScore = ev.home_score;
+          if (ev.away_score !== undefined && ev.away_score > awayScore) awayScore = ev.away_score;
+
+          // 이전 이닝(직전 반이닝)의 종료 시점 최종 점수를 동기화
+          if (currentInning) {
+            currentInning.awayScore = awayScore;
+            currentInning.homeScore = homeScore;
+          }
 
           balls = 0;
           strikes = 0;
@@ -166,9 +172,9 @@ export const BroadcastTab: React.FC<BroadcastTabProps> = ({ matchLog, awayClub, 
           };
           innings.push(currentInning);
           currentPA = null;
-        } else if (stateType === 'SCORE_CHANGE') {
-          if (ev.home_score !== undefined) homeScore = ev.home_score;
-          if (ev.away_score !== undefined) awayScore = ev.away_score;
+        } else if (stateType === 'SCORE_CHANGE' || stateType === 'MATCH_END') {
+          if (ev.home_score !== undefined && ev.home_score > homeScore) homeScore = ev.home_score;
+          if (ev.away_score !== undefined && ev.away_score > awayScore) awayScore = ev.away_score;
           if (currentInning) {
             currentInning.homeScore = homeScore;
             currentInning.awayScore = awayScore;
@@ -258,13 +264,24 @@ export const BroadcastTab: React.FC<BroadcastTabProps> = ({ matchLog, awayClub, 
           let resText = `${baseName}에서 ${BASE_RUN_RESULT_MAP[res] || res}`;
 
           if (res === 'SCORE') {
-            resText = `주자 ${baseName} 대성공! 득점!`;
+            resText = `주자 ${baseName} 홈인! 득점!`;
+            if (currentInning) {
+              if (currentInning.isTop) {
+                awayScore += 1;
+                currentInning.awayScore = awayScore;
+              } else {
+                homeScore += 1;
+                currentInning.homeScore = homeScore;
+              }
+            }
             currentPA.textLogs.push({
               id: `score_${Math.random()}`,
               resultText: resText,
               type: 'score',
             });
-            currentPA.resultType = 'HOMERUN';
+            if (currentPA.resultType === 'ETC') {
+              currentPA.resultType = 'HIT';
+            }
           } else if (res === 'SAFE') {
             if (ev.target_base === 1) {
               currentPA.summary = '1루타 출루';
@@ -320,6 +337,17 @@ export const BroadcastTab: React.FC<BroadcastTabProps> = ({ matchLog, awayClub, 
           }
         }
       }
+    }
+
+    // 각 이닝의 누적 점수 보정 (뒤쪽 이닝 점수가 앞선 점수를 이어받도록 보장)
+    let runningAway = 0;
+    let runningHome = 0;
+    for (const inn of innings) {
+      if (inn.awayScore < runningAway) inn.awayScore = runningAway;
+      else runningAway = inn.awayScore;
+
+      if (inn.homeScore < runningHome) inn.homeScore = runningHome;
+      else runningHome = inn.homeScore;
     }
 
     return innings;

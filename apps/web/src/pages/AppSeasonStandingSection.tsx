@@ -167,10 +167,9 @@ export default function AppSeasonStandingSection({
 
     getMatches()
       .then(matches => {
-        // status 상관없이 전체 포스트시즌(녹아웃) 경기 가져오기
-        const postMatches = matches.filter(m => m.sim_day >= 229);
-        const ko = postMatches.filter(m => m.limit_extra_innings === false);
-        const elite = postMatches.filter(m => m.limit_extra_innings !== false);
+        // limit_extra_innings가 false인 전체 포스트시즌(녹아웃) 경기 가져오기
+        const ko = matches.filter(m => m.limit_extra_innings === false);
+        const elite = matches.filter(m => m.sim_day >= 170 && m.limit_extra_innings !== false);
 
         setEliteMatches(elite);
         setKnockoutMatches(ko);

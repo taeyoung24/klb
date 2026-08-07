@@ -11,6 +11,9 @@ export interface Match {
   limit_extra_innings?: boolean;
   home_score?: number | null;
   away_score?: number | null;
+  winning_pitcher_id?: number | null;
+  losing_pitcher_id?: number | null;
+  save_pitcher_id?: number | null;
   stadium?: Stadium | null;
 }
 
@@ -76,8 +79,28 @@ export const getMatch = async (matchId: number): Promise<MatchDetailData> => {
   return response.data;
 };
 
+export interface MatchLineupItem {
+  id?: number;
+  match_id: number;
+  club_id: number;
+  player_id: number;
+  position: string;
+  batting_order?: number | null;
+  is_starter: boolean;
+}
+
+export interface MatchLineupResponse {
+  away_lineup: MatchLineupItem[];
+  home_lineup: MatchLineupItem[];
+}
+
 export const getMatchScoreboard = async (matchId: number): Promise<IngameScoreboard> => {
   const response = await client.get<IngameScoreboard>(`/matches/${matchId}/scoreboard`);
+  return response.data;
+};
+
+export const getMatchLineup = async (matchId: number): Promise<MatchLineupResponse> => {
+  const response = await client.get<MatchLineupResponse>(`/matches/${matchId}/lineup`);
   return response.data;
 };
 

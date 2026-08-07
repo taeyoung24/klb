@@ -7,16 +7,16 @@ from src.models import (
     Player,
 )
 
-def generate_mock_players(club_id: int) -> tuple[Player, list[Player]]:
-    """지정된 클럽 ID를 갖는 목 투수 1명과 목 타자 9명을 생성합니다."""
-    # 투수 생성
-    pitcher = Player(
+def generate_mock_players(club_id: int) -> tuple[Player, list[Player], list[Player]]:
+    """지정된 클럽 ID를 갖는 목 선발 투수 1명, 불펜 투수들, 그리고 목 타자 9명을 생성합니다."""
+    # 선발 투수 생성
+    starting_pitcher = Player(
         id=club_id * 1000 + 1,
-        name=f"Pitcher_{club_id}",
+        name=f"선발_{club_id}",
         club_id=club_id,
         uniform_number="01",
-        speed=600,
-        control=620,
+        speed=620,
+        control=630,
         power=500,
         flexibility=580,
         focus=600,
@@ -28,6 +28,28 @@ def generate_mock_players(club_id: int) -> tuple[Player, list[Player]]:
         weight=82.0
     )
     
+    # 불펜 투수 3명 생성
+    bullpen_pitchers = []
+    for idx in range(1, 4):
+        rp = Player(
+            id=club_id * 1000 + 1 + idx,
+            name=f"구원_{club_id}_{idx}",
+            club_id=club_id,
+            uniform_number=f"4{idx}",
+            speed=580 + idx * 10,
+            control=590 + idx * 5,
+            power=500,
+            flexibility=570,
+            focus=580,
+            roster_status=RosterStatus.ACTIVE,
+            position=IngameRole.PITCHER,
+            personality=[500, 500, 500, 500],
+            birthday=datetime(2001, 2, idx),
+            height=182.0,
+            weight=80.0
+        )
+        bullpen_pitchers.append(rp)
+
     # 타자 9명 생성
     batters = []
     positions = [
@@ -56,4 +78,4 @@ def generate_mock_players(club_id: int) -> tuple[Player, list[Player]]:
         )
         batters.append(batter)
         
-    return pitcher, batters
+    return starting_pitcher, bullpen_pitchers, batters

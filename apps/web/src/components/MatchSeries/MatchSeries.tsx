@@ -72,7 +72,7 @@ const MatchSeries: React.FC<MatchSeriesProps> = ({
       const opponentScore = opponentScores[i];
 
       const isLoser = score !== undefined && opponentScore !== undefined && score < opponentScore;
-      const hasMatch = score !== undefined || (matchIds[i] !== undefined && matchIds[i] !== null);
+      const hasMatch = matchIds[i] !== undefined && matchIds[i] !== null;
       const isHovered = hoveredGameIndex === i && hasMatch;
 
       let scoreClasses = 'match-series__score-item';
@@ -98,7 +98,7 @@ const MatchSeries: React.FC<MatchSeriesProps> = ({
           onMouseLeave={() => hasMatch && setHoveredGameIndex(null)}
           onClick={() => hasMatch && handleScoreClick(i)}
         >
-          {score !== undefined ? score : '-'}
+          {score !== undefined && matchIds[i] !== null ? score : '-'}
         </span>
       );
     }

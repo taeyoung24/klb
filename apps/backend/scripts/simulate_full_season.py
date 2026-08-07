@@ -1,6 +1,11 @@
-# uv run -m scripts.simulate_full_season
-import datetime
 import sys
+
+# Windows 콘솔 인코딩 호환성을 위해 stdout 인코딩 재설정
+reconfigure_stdout = getattr(sys.stdout, "reconfigure", None)
+if callable(reconfigure_stdout):
+    reconfigure_stdout(encoding="utf-8")
+
+import datetime
 import random
 import yaml
 from sqlmodel import Session, SQLModel, create_engine, select, asc
@@ -61,7 +66,7 @@ def run_regular_season() -> int:
             # 2. 경기 시뮬레이션 진행
             if matches:
                 for match in matches:
-                    run_match(match)
+                    run_match(match, session=session)
                     session.add(match)
 
             # 3. 경기 종료 후 순위표 갱신
@@ -92,7 +97,7 @@ def run_regular_season() -> int:
                 logger.info(f"[{league.name_ko}] 2팀 승자승 동률 발생으로 타이브레이크 순위결정전({len(tb_matches)}경기) 진행")
                 for home_id, away_id in tb_matches:
                     tb_match = generate_tiebreaker_schedule(home_id, away_id, tb_day)
-                    run_match(tb_match)
+                    run_match(tb_match, session=session)
                     session.add(tb_match)
                     h_club = session.get(Club, home_id)
                     a_club = session.get(Club, away_id)
@@ -195,7 +200,7 @@ def run_krown_elite_league(playoff_clubs, max_regular_day: int) -> tuple[list[Cl
             ).all()
 
             for match in day_matches:
-                run_match(match)
+                run_match(match, session=session)
                 session.add(match)
 
             update_elite_daily_standings(
@@ -324,7 +329,7 @@ def run_knockout_stage(top_8_clubs, elite_end_day: int):
                 status=MatchStatus.SCHEDULED,
                 limit_extra_innings=False
             )
-            run_match(m1)
+            run_match(m1, session=session)
             session.add(m1)
             session.flush()
 
@@ -365,7 +370,7 @@ def run_knockout_stage(top_8_clubs, elite_end_day: int):
                 status=MatchStatus.SCHEDULED,
                 limit_extra_innings=False
             )
-            run_match(m2)
+            run_match(m2, session=session)
             session.add(m2)
             session.commit()
 
@@ -455,7 +460,7 @@ def run_knockout_stage(top_8_clubs, elite_end_day: int):
                     status=MatchStatus.SCHEDULED,
                     limit_extra_innings=False,
                 )
-                run_match(m)
+                run_match(m, session=session)
                 session.add(m)
                 session.flush()
 
@@ -527,7 +532,7 @@ def run_knockout_stage(top_8_clubs, elite_end_day: int):
                 status=MatchStatus.SCHEDULED,
                 limit_extra_innings=False
             )
-            run_match(m)
+            run_match(m, session=session)
             session.add(m)
             session.commit()
             

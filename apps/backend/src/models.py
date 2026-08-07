@@ -165,7 +165,29 @@ class Match(SQLModel, table=True):
         sa_column=Column(IngameInstructionLogType)
     )
 
+    # 선발 투수 예고/기록 ID
+    away_starting_pitcher_id: Optional[int] = Field(default=None, foreign_key="player.id")
+    home_starting_pitcher_id: Optional[int] = Field(default=None, foreign_key="player.id")
+
+    # 승/패/세 투수 ID 기록
+    winning_pitcher_id: Optional[int] = Field(default=None, foreign_key="player.id")
+    losing_pitcher_id: Optional[int] = Field(default=None, foreign_key="player.id")
+    save_pitcher_id: Optional[int] = Field(default=None, foreign_key="player.id")
+
     stadium: Optional[Stadium] = Relationship()
+
+class MatchLineup(SQLModel, table=True):
+    """
+    경기별 팀 선발/출전 라인업 장부 테이블
+    """
+    id: Optional[int] = Field(default=None, primary_key=True)
+    match_id: int = Field(foreign_key="match.id", index=True)
+    club_id: int = Field(foreign_key="club.id", index=True)
+    player_id: int = Field(foreign_key="player.id")
+    
+    position: IngameRole
+    batting_order: Optional[int] = Field(default=None)
+    is_starter: bool = Field(default=True)
 
 class MatchPlaceholder(SQLModel, table=True):
     """

@@ -1,9 +1,9 @@
 import json
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException
-from sqlmodel import Session, select, asc
+from sqlmodel import Session, select, asc, SQLModel
 from sqlalchemy.orm import defer
-from src.models import Match, Club, IngameInstructionLog, IngameScoreboard, MatchPlaceholder
+from src.models import Match, Club, IngameInstructionLog, IngameScoreboard, MatchPlaceholder, MatchLineup
 from src.services.common import get_session
 from src.services.ingame.main import get_scoreboard
 
@@ -106,4 +106,60 @@ def get_match_scoreboard(
         home_h=6 if match.status == "COMPLETED" else 0,
         home_e=1 if match.status == "COMPLETED" else 0,
         home_b=3 if match.status == "COMPLETED" else 0,
+    )
+
+
+class MatchLineupResponse(SQLModel):
+    away_lineup: list[MatchLineup]
+    home_lineup: list[MatchLineup]
+
+
+@router.get("/{match_id}/lineup", response_model=MatchLineupResponse)
+def get_match_lineup(
+    match_id: int,
+    session: Session = Depends(get_session)
+):
+    match = session.get(Match, match_id)
+    if not match:
+        raise HTTPException(status_code=404, detail="Match not found")
+
+    lineups = session.exec(
+        select(MatchLineup).where(MatchLineup.match_id == match_id)
+    ).all()
+
+    away_lineup = [l for l in lineups if l.club_id == match.away_club_id]
+    home_lineup = [l for l in lineups if l.club_id == match.home_club_id]
+
+    # DB에 MatchLineup이 없는 경우 fallback (동적 추출/생성)
+    if not away_lineup or not home_lineup:
+        from src.services.ingame.lineup import select_team_roster_for_match
+        away_sp, _, away_batters = select_team_roster_for_match(match.away_club_id, session=session)
+        home_sp, _, home_batters = select_team_roster_for_match(match.home_club_id, session=session)
+
+        if not away_lineup:
+            away_lineup = [
+                MatchLineup(match_id=match_id, club_id=match.away_club_id, player_id=away_sp.id, position=away_sp.position, batting_order=None, is_starter=True)
+            ] + [
+                MatchLineup(match_id=match_id, club_id=match.away_club_id, player_id=b.id, position=b.position, batting_order=idx, is_starter=True)
+                for idx, b in enumerate(away_batters, 1)
+            ]
+
+        if not home_lineup:
+            home_lineup = [
+                MatchLineup(match_id=match_id, club_id=match.home_club_id, player_id=home_sp.id, position=home_sp.position, batting_order=None, is_starter=True)
+            ] + [
+                MatchLineup(match_id=match_id, club_id=match.home_club_id, player_id=b.id, position=b.position, batting_order=idx, is_starter=True)
+                for idx, b in enumerate(home_batters, 1)
+            ]
+
+    # 타순 정렬 (투수 -> 타자 1~9번)
+    def sort_key(l: MatchLineup):
+        return l.batting_order if l.batting_order is not None else 0
+
+    away_lineup.sort(key=sort_key)
+    home_lineup.sort(key=sort_key)
+
+    return MatchLineupResponse(
+        away_lineup=away_lineup,
+        home_lineup=home_lineup
     )

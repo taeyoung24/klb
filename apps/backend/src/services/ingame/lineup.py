@@ -62,19 +62,13 @@ def _build_batting_order(batters: list[Player]) -> list[Player]:
     return selected_batters[:9]
 
 
-def select_starting_lineup(
+def select_team_roster_for_match(
     club_id: int,
     session: Optional[Session] = None,
     manager_strategy: Optional[Any] = None,
-) -> tuple[Player, list[Player]]:
+) -> tuple[Player, list[Player], list[Player]]:
     """
-    구단의 ACTIVE 로스터 선수 목록에서 선발 투수(1명) 및 선발 타순(9명) 라인업을 결정/추출합니다.
-    향후 감독(Manager) 판단 및 전략 알고리즘이 개입할 수 있도록 캡슐화되어 있습니다.
-
-    :param club_id: 구단 ID
-    :param session: DB 세션 (없으면 기본 engine 세션 사용 시도)
-    :param manager_strategy: 감독의 전략/개입 옵션 (향후 확장용)
-    :return: (선발 투수, 9명의 선발 타자 리스트) 튜플
+    구단의 ACTIVE 로스터 선수 목록에서 선발 투수(1명), 불펜 투수진, 그리고 선발 타순(9명)을 결정/추출합니다.
     """
     db_players: list[Player] = []
 
@@ -105,16 +99,21 @@ def select_starting_lineup(
     pitchers = [p for p in db_players if p.position == IngameRole.PITCHER]
     batters = [p for p in db_players if p.position != IngameRole.PITCHER]
 
-    # 3. 선수 수 검증 (투수 1명 이상, 타자 9명 이상 확보 가능 여부)
+    # 3. 선수 수 검증
     if len(pitchers) >= 1 and len(batters) >= 9:
-        # 감독 전략 훅 (manager_strategy가 있을 경우 전략에 맞게 변가 가능)
-        if manager_strategy:
-            # 향후 감독 판단 전략 적용
-            pass
-        
         starting_pitcher = _pick_best_pitcher(pitchers)
+        bullpen = [p for p in pitchers if p.id != starting_pitcher.id]
         starting_batters = _build_batting_order(batters)
-        return starting_pitcher, starting_batters
+        return starting_pitcher, bullpen, starting_batters
 
-    # 4. DB 선수 데이터가 부족할 경우 fallback (목데이터/가상선수 라인업 생성)
+    # 4. DB 선수 데이터가 부족할 경우 fallback
     return generate_mock_players(club_id)
+
+
+def select_starting_lineup(
+    club_id: int,
+    session: Optional[Session] = None,
+    manager_strategy: Optional[Any] = None,
+) -> tuple[Player, list[Player]]:
+    sp, _, batters = select_team_roster_for_match(club_id, session, manager_strategy)
+    return sp, batters

@@ -1,58 +1,63 @@
 import React from 'react';
+import TeamLogo from '../../components/TeamLogo/TeamLogo';
 
 export interface PlayerLineup {
-  pos: string;
+  orderLabel: string;
+  posCode: string;
   name: string;
-  avg: string;
-  stat: string;
 }
 
 export interface LineupTabProps {
   awayTeamName: string;
   homeTeamName: string;
+  awayTeamCode?: string;
+  homeTeamCode?: string;
   awayLineup: PlayerLineup[];
   homeLineup: PlayerLineup[];
-  awayColor?: string;
-  homeColor?: string;
 }
 
 export const LineupTab: React.FC<LineupTabProps> = ({
   awayTeamName,
   homeTeamName,
+  awayTeamCode,
+  homeTeamCode,
   awayLineup,
   homeLineup,
-  awayColor = '#888888',
-  homeColor = '#cccccc',
 }) => {
   return (
-    <div className="match-detail__panel">
-      <h3 className="match-detail__panel-title">양 팀 선발 타순 및 출전 선수</h3>
+    <div className="match-detail__panel match-detail__panel--flat">
       <div className="match-detail__lineup-columns">
         <div className="match-detail__lineup-side">
-          <h4 className="match-detail__lineup-sub-title" style={{ color: awayColor }}>
-            {awayTeamName} (어웨이)
+          <h4 className="match-detail__lineup-sub-title">
+            <TeamLogo teamCode={awayTeamCode} teamName={awayTeamName} size={22} />
+            <span>{awayTeamName}</span>
           </h4>
           <ul className="match-detail__lineup-list">
             {awayLineup.map((p, i) => (
               <li key={i} className="match-detail__lineup-item">
-                <span className="match-detail__lineup-pos">{p.pos}</span>
-                <span className="match-detail__lineup-name">{p.name}</span>
-                <span className="match-detail__lineup-stat">{p.stat}</span>
+                <span className="match-detail__lineup-order">{p.orderLabel}</span>
+                <span className="match-detail__lineup-player-info">
+                  <span className="match-detail__lineup-pos-code">{p.posCode}</span>
+                  <span className="match-detail__lineup-name">{p.name}</span>
+                </span>
               </li>
             ))}
           </ul>
         </div>
 
         <div className="match-detail__lineup-side">
-          <h4 className="match-detail__lineup-sub-title" style={{ color: homeColor }}>
-            {homeTeamName} (홈)
+          <h4 className="match-detail__lineup-sub-title">
+            <TeamLogo teamCode={homeTeamCode} teamName={homeTeamName} size={22} />
+            <span>{homeTeamName}</span>
           </h4>
           <ul className="match-detail__lineup-list">
             {homeLineup.map((p, i) => (
               <li key={i} className="match-detail__lineup-item">
-                <span className="match-detail__lineup-pos">{p.pos}</span>
-                <span className="match-detail__lineup-name">{p.name}</span>
-                <span className="match-detail__lineup-stat">{p.stat}</span>
+                <span className="match-detail__lineup-order">{p.orderLabel}</span>
+                <span className="match-detail__lineup-player-info">
+                  <span className="match-detail__lineup-pos-code">{p.posCode}</span>
+                  <span className="match-detail__lineup-name">{p.name}</span>
+                </span>
               </li>
             ))}
           </ul>

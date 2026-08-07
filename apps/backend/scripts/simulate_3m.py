@@ -1,7 +1,11 @@
-# uv run -m scripts.simulate_3m
-from sqlmodel import Session, create_engine, select
 import sys
 
+# Windows 콘솔 인코딩 호환성을 위해 stdout 인코딩 재설정
+reconfigure_stdout = getattr(sys.stdout, "reconfigure", None)
+if callable(reconfigure_stdout):
+    reconfigure_stdout(encoding="utf-8")
+
+from sqlmodel import Session, create_engine, select
 from settings import DATABASE_URL
 from src.models import WorldState, Match
 from src.enums import MatchStatus
@@ -40,7 +44,7 @@ def main():
                 logger.info(f"  ➔ [Sim Day {day}] 예정된 경기가 없습니다.")
             else:
                 for match in matches:
-                    run_match(match)
+                    run_match(match, session=session)
                     session.add(match)
                     logger.info(
                         f"  ➔ Match ID {match.id}: "

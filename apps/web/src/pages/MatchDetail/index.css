@@ -468,6 +468,41 @@
   gap: 16px;
 }
 
+.match-detail__pitcher-records {
+  display: flex;
+  align-items: center;
+  background-color: #fafafa;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 12px 0;
+}
+
+.match-detail__pitcher-item {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 0 16px;
+}
+
+.match-detail__pitcher-item:not(:last-child) {
+  border-right: 1px solid #e5e7eb;
+}
+
+.match-detail__pitcher-tag {
+  font-size: 13px;
+  font-weight: 700;
+  color: #374151;
+  line-height: 1;
+}
+
+.match-detail__pitcher-name {
+  font-size: 13px;
+  color: #111827;
+  font-weight: 500;
+}
+
 .match-detail__record-box {
   background-color: #fafafa;
   border: 1px solid #e5e7eb;
@@ -576,7 +611,12 @@
 .match-detail__lineup-columns {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 20px;
+  gap: 32px;
+}
+
+.match-detail__lineup-side:first-child {
+  border-right: 1px solid #e5e7eb;
+  padding-right: 32px;
 }
 
 .match-detail__lineup-sub-title {
@@ -584,6 +624,11 @@
   font-weight: var(--fw-bold);
   color: #111827;
   margin: 0 0 12px 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  text-align: center;
 }
 
 .match-detail__lineup-list {
@@ -592,33 +637,44 @@
   margin: 0;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 2px;
 }
 
 .match-detail__lineup-item {
   display: flex;
-  flex-direction: column;
-  background-color: #fafafa;
-  border: 1px solid #e5e7eb;
-  padding: 10px 12px;
-  border-radius: 6px;
+  align-items: center;
+  gap: 14px;
+  padding: 8px 12px;
+  background-color: transparent;
+  border: none;
+  border-bottom: 1px solid #f3f4f6;
 }
 
-.match-detail__lineup-pos {
-  font-size: 10px;
+.match-detail__lineup-order {
+  font-size: 13px;
+  font-weight: 700;
   color: #6b7280;
+  min-width: 32px;
+  text-align: center;
+}
+
+.match-detail__lineup-player-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.match-detail__lineup-pos-code {
+  font-size: 13px;
+  font-weight: 700;
+  color: #374151;
+  min-width: 24px;
 }
 
 .match-detail__lineup-name {
-  font-size: var(--fs-xs);
-  font-weight: var(--fw-bold);
+  font-size: 14px;
+  font-weight: 500;
   color: #111827;
-}
-
-.match-detail__lineup-stat {
-  font-size: 10px;
-  color: #4b5563;
-  margin-top: 2px;
 }
 
 /* --------------------------------------------------------------------------

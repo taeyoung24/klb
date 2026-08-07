@@ -314,6 +314,9 @@ def main():
     logger.info(
         f"[경기 결과] 원정(Club {match.away_club_id}) {match.away_score} : {match.home_score} 홈(Club {match.home_club_id})"
     )
+    logger.info(
+        f"[투수 결과] 승리투수: {match.winning_pitcher_id}, 패전투수: {match.losing_pitcher_id}, 세이브투수: {match.save_pitcher_id}"
+    )
 
     if not match.match_log:
         logger.error("Match log가 생성되지 않았다.")

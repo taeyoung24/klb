@@ -1,7 +1,19 @@
 import { useEffect, useState } from 'react';
 import { FaChevronLeft, FaChevronRight } from 'react-icons/fa';
 import { getClubs, type Club } from '../../api/clubs';
-import { getMatches, getMatchScoreboard, getMatch, getMatchPlaceholders, type Match, type MatchDetailData, type IngameScoreboard, type MatchPlaceholder } from '../../api/matches';
+import {
+  getMatches,
+  getMatchScoreboard,
+  getMatch,
+  getMatchPlaceholders,
+  getMatchLineup,
+  type Match,
+  type MatchDetailData,
+  type IngameScoreboard,
+  type MatchPlaceholder,
+  type MatchLineupResponse,
+  type MatchLineupItem,
+} from '../../api/matches';
 import { getPlayers, type Player } from '../../api/players';
 import { getSystemInfo } from '../../api/system';
 import TeamLogo from '../../components/TeamLogo/TeamLogo';
@@ -12,6 +24,19 @@ import LineupTab from './LineupTab';
 import BoxscoreTab from './BoxscoreTab';
 import BroadcastTab from './BroadcastTab';
 import NewsTab from './NewsTab';
+
+const POSITION_CODE_MAP: Record<string, string> = {
+  PITCHER: 'P',
+  CATCHER: 'C',
+  FIRST_BASE: '1B',
+  SECOND_BASE: '2B',
+  THIRD_BASE: '3B',
+  SHORT_STOP: 'SS',
+  LEFT_FIELD: 'LF',
+  CENTER_FIELD: 'CF',
+  RIGHT_FIELD: 'RF',
+  DESIGNATED_HITTER: 'DH',
+};
 
 const DAY_NAMES = ['일', '월', '화', '수', '목', '금', '토'];
 
@@ -110,6 +135,7 @@ export default function MatchDetail() {
   const [selectedMatchId, setSelectedMatchId] = useState<number | null>(null);
   const [scoreboard, setScoreboard] = useState<IngameScoreboard | null>(null);
   const [matchDetailData, setMatchDetailData] = useState<MatchDetailData | null>(null);
+  const [lineupData, setLineupData] = useState<MatchLineupResponse | null>(null);
   const [playersMap, setPlayersMap] = useState<Record<number, Player>>({});
   const [placeholders, setPlaceholders] = useState<MatchPlaceholder[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -177,9 +203,14 @@ export default function MatchDetail() {
           console.error('Failed to load match detail log', e);
           return null;
         }),
-      ]).then(([sb, detail]) => {
+        getMatchLineup(selectedMatchId).catch((e) => {
+          console.error('Failed to load match lineup', e);
+          return null;
+        }),
+      ]).then(([sb, detail, lineup]) => {
         setScoreboard(sb);
         setMatchDetailData(detail);
+        setLineupData(lineup);
       });
     }
   }, [selectedMatchId]);
@@ -267,36 +298,39 @@ export default function MatchDetail() {
     ],
   };
 
+  const targetMatch = matchDetailData || currentMatch;
+
+  const getPitcherName = (pitcherId?: number | null) => {
+    if (!pitcherId) return '-';
+    const player = playersMap[pitcherId];
+    if (!player) return `선수 #${pitcherId}`;
+    return player.name;
+  };
+
   const pitchRecords = {
-    winPitcher: '김서진',
-    losePitcher: '박현우',
-    savePitcher: '정우진',
-    keyHomeRun: '이동현 (4회 초 2점 홈런, 시즌 14호)',
+    winPitcher: getPitcherName(targetMatch?.winning_pitcher_id),
+    losePitcher: getPitcherName(targetMatch?.losing_pitcher_id),
+    savePitcher: getPitcherName(targetMatch?.save_pitcher_id),
+  };
+
+  const formatLineupList = (lineupItems: MatchLineupItem[]) => {
+    return lineupItems.map((item) => {
+      const player = playersMap[item.player_id];
+      const posCode = POSITION_CODE_MAP[item.position] || item.position || 'P';
+      const orderLabel = item.batting_order ? String(item.batting_order) : '선발';
+      const playerName = player ? player.name : `선수 #${item.player_id}`;
+
+      return {
+        orderLabel,
+        posCode,
+        name: playerName,
+      };
+    });
   };
 
   const lineups = {
-    away: [
-      { pos: '1B / 1번', name: '이동현', avg: '.312', stat: '4타수 2안타 1홈런 2타점' },
-      { pos: 'CF / 2번', name: '김민준', avg: '.295', stat: '4타수 1안타 1볼넷' },
-      { pos: 'LF / 3번', name: '강태양', avg: '.335', stat: '3타수 2안타 1타점' },
-      { pos: 'DH / 4번', name: '최현석', avg: '.288', stat: '4타수 1안타' },
-      { pos: '3B / 5번', name: '윤성민', avg: '.274', stat: '3타수 1안타 1볼넷' },
-      { pos: 'SS / 6번', name: '한지훈', avg: '.260', stat: '4타수 1안타 1득점' },
-      { pos: 'RF / 7번', name: '임도현', avg: '.245', stat: '3타수 0안타 1볼넷' },
-      { pos: 'C / 8번', name: '송재호', avg: '.232', stat: '3타수 1안타' },
-      { pos: '2B / 9번', name: '오세훈', avg: '.251', stat: '3타수 0안타' },
-    ],
-    home: [
-      { pos: 'SS / 1번', name: '박지환', avg: '.305', stat: '4타수 2안타 1득점' },
-      { pos: '2B / 2번', name: '서동주', avg: '.281', stat: '4타수 1안타' },
-      { pos: 'RF / 3번', name: '조유진', avg: '.320', stat: '3타수 1안타 1홈런' },
-      { pos: '1B / 4번', name: '장민호', avg: '.294', stat: '4타수 1안타 1타점' },
-      { pos: 'DH / 5번', name: '권우진', avg: '.268', stat: '3타수 0안타 1볼넷' },
-      { pos: '3B / 6번', name: '배성우', avg: '.255', stat: '4타수 1안타' },
-      { pos: 'LF / 7번', name: '신동현', avg: '.240', stat: '3타수 0안타' },
-      { pos: 'C / 8번', name: '황보건', avg: '.218', stat: '3타수 0안타' },
-      { pos: 'CF / 9번', name: '유승범', avg: '.238', stat: '3타수 0안타' },
-    ],
+    away: lineupData?.away_lineup ? formatLineupList(lineupData.away_lineup) : [],
+    home: lineupData?.home_lineup ? formatLineupList(lineupData.home_lineup) : [],
   };
 
   const newsList = [
@@ -528,6 +562,8 @@ export default function MatchDetail() {
               <LineupTab
                 awayTeamName={awayClub?.name_ko || '원정팀'}
                 homeTeamName={homeClub?.name_ko || '홈팀'}
+                awayTeamCode={awayClub?.team_code}
+                homeTeamCode={homeClub?.team_code}
                 awayLineup={lineups.away}
                 homeLineup={lineups.home}
               />
