@@ -66,17 +66,7 @@ def generate_name() -> str:
                 second_candidates = SECOND_SYLLABLES
             second = random.choice(second_candidates)
 
-            name_syllables = [first, second]
-
-            # 3글자 이름 소량 허용 (약 5%)
-            if random.random() < 0.05:
-                third_candidates = [c for c in SECOND_SYLLABLES if c != second]
-                if not third_candidates:
-                    third_candidates = SECOND_SYLLABLES
-                third = random.choice(third_candidates)
-                name_syllables.append(third)
-
-            given = ''.join(name_syllables)
+            given = first + second
 
         full = last + given
 

@@ -39,8 +39,23 @@ export interface IngameScoreboard {
   home_b: number;
 }
 
+export interface IngameInstructionLog {
+  simulation_version?: string;
+  logged_events: Record<string, any>[];
+}
+
+export interface MatchDetailData extends Match {
+  match_log?: IngameInstructionLog | null;
+  match_log_json?: IngameInstructionLog | string | null;
+}
+
 export const getMatches = async (params: GetMatchesParams = {}): Promise<Match[]> => {
   const response = await client.get<Match[]>('/matches', { params });
+  return response.data;
+};
+
+export const getMatch = async (matchId: number): Promise<MatchDetailData> => {
+  const response = await client.get<MatchDetailData>(`/matches/${matchId}`);
   return response.data;
 };
 
@@ -48,3 +63,4 @@ export const getMatchScoreboard = async (matchId: number): Promise<IngameScorebo
   const response = await client.get<IngameScoreboard>(`/matches/${matchId}/scoreboard`);
   return response.data;
 };
+

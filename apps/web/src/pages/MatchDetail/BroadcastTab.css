@@ -1,0 +1,306 @@
+/* BroadcastTab.css - 라이트 테마 기반 2열 중계 탭 디자인 */
+
+.match-broadcast {
+  display: flex;
+  gap: 28px;
+  width: 100%;
+  padding: 16px 4px;
+  align-items: flex-start;
+  box-sizing: border-box;
+}
+
+/* ==========================================================================
+   좌측 이닝 컨트롤러 (Sticky 적용, 위치 이동 속성 없음)
+   ========================================================================== */
+.match-broadcast__sidebar {
+  flex: 0 0 140px;
+  position: sticky;
+  top: 100px;
+  align-self: flex-start;
+  max-height: calc(100vh - 120px);
+  overflow-y: auto;
+  background: transparent;
+  border: none;
+  padding: 16px 16px;
+  box-shadow: none;
+}
+
+.match-broadcast__inning-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.match-broadcast__inning-btn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 6px 4px;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  color: #94a3b8;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+
+.match-broadcast__inning-btn:hover {
+  background: transparent;
+  color: #475569;
+}
+
+.match-broadcast__inning-btn--active {
+  background: transparent;
+  border: none;
+  color: #111827;
+  font-weight: 700;
+  box-shadow: none;
+}
+
+.match-broadcast__inning-btn--active:hover {
+  background: transparent;
+  color: #111827;
+}
+
+.match-broadcast__inning-label {
+  font-weight: inherit;
+  font-size: 0.9rem;
+}
+
+.match-broadcast__inning-score {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #cbd5e1;
+  background: transparent;
+  padding: 0;
+  border-radius: 0;
+  transition: color 0.15s ease;
+}
+
+/* 점수가 변동(달라진)된 이닝은 점수 텍스트만 본 검정 텍스트 색상(#111827)으로 강조 */
+.match-broadcast__inning-score--changed {
+  color: #111827;
+  font-weight: 700;
+}
+
+/* 활성화 상태 버튼 내부의 점수 스타일 */
+.match-broadcast__inning-btn--active .match-broadcast__inning-score {
+  color: #475569;
+}
+
+.match-broadcast__inning-btn--active .match-broadcast__inning-score--changed {
+  color: #111827;
+}
+
+/* ==========================================================================
+   우측 타석별 중계 로그 영역 (라이트 모드)
+   ========================================================================== */
+.match-broadcast__main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.match-broadcast__header-card {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.match-broadcast__header-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.match-broadcast__header-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.match-broadcast__header-score {
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: #475569;
+  background: #ffffff;
+  padding: 4px 12px;
+  border-radius: 6px;
+  border: 1px solid #cbd5e1;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+}
+
+/* 타석 카드 */
+.match-broadcast__pa-card {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+  transition: border-color 0.15s ease;
+}
+
+.match-broadcast__pa-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 18px;
+  background: #f9fafb;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.match-broadcast__pa-title-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.match-broadcast__pa-num {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #475569;
+  background: #e2e8f0;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.match-broadcast__pa-player {
+  font-size: 0.98rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.match-broadcast__pa-vs {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #64748b;
+  margin-left: 4px;
+}
+
+.match-broadcast__pa-badge {
+  font-size: 0.8rem;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 6px;
+  letter-spacing: 0.01em;
+}
+
+.match-broadcast__pa-badge--hit {
+  background: #dcfce7;
+  color: #15803d;
+  border: 1px solid #bbf7d0;
+}
+
+.match-broadcast__pa-badge--homerun {
+  background: #fef9c3;
+  color: #a16207;
+  border: 1px solid #fef08a;
+  box-shadow: 0 1px 4px rgba(234, 179, 8, 0.15);
+}
+
+.match-broadcast__pa-badge--out {
+  background: #fee2e2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+}
+
+.match-broadcast__pa-badge--walk {
+  background: #e0f2fe;
+  color: #0369a1;
+  border: 1px solid #bae6fd;
+}
+
+.match-broadcast__pa-badge--etc {
+  background: #f1f5f9;
+  color: #475569;
+  border: 1px solid #e2e8f0;
+}
+
+.match-broadcast__pa-body {
+  padding: 14px 18px;
+}
+
+.match-broadcast__timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  position: relative;
+  padding-left: 20px;
+}
+
+.match-broadcast__timeline::before {
+  content: '';
+  position: absolute;
+  left: 6px;
+  top: 6px;
+  bottom: 6px;
+  width: 2px;
+  background: #e2e8f0;
+}
+
+.match-broadcast__timeline-item {
+  position: relative;
+  font-size: 0.9rem;
+  line-height: 1.45;
+  color: #334155;
+}
+
+.match-broadcast__timeline-item::before {
+  content: '';
+  position: absolute;
+  left: -16px;
+  top: 7px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #94a3b8;
+}
+
+.match-broadcast__timeline-item--highlight {
+  color: #0284c7;
+  font-weight: 600;
+}
+
+.match-broadcast__timeline-item--highlight::before {
+  background: #0284c7;
+}
+
+.match-broadcast__timeline-item--score {
+  color: #d97706;
+  font-weight: 700;
+}
+
+.match-broadcast__timeline-item--score::before {
+  background: #f59e0b;
+}
+
+/* Empty State / Fallback Card */
+.match-broadcast__empty-card {
+  background: #f9fafb;
+  border: 1px dashed #d1d5db;
+  border-radius: 12px;
+  padding: 48px 24px;
+  text-align: center;
+  color: #6b7280;
+}
+
+.match-broadcast__empty-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #374151;
+  margin-bottom: 8px;
+}
+
+.match-broadcast__empty-desc {
+  font-size: 0.9rem;
+  color: #6b7280;
+}

@@ -27,83 +27,16 @@ from src.utils.logger import logger
 
 engine = create_engine(DATABASE_URL)
 
-def init_database():
-    """데이터베이스 초기화 및 기본 메이저리그 4대 리그 정규시즌 일정 시딩"""
-    logger.info("데이터베이스 초기화(Drop & Create) 및 초기 데이터 시딩을 시작합니다...")
-    SQLModel.metadata.drop_all(engine)
-    SQLModel.metadata.create_all(engine)
-    logger.success("모든 테이블 초기화 완료")
-
-    with open("./data/initial_leagues.yml", "r", encoding="utf-8") as f:
-        initial_leagues_rawdata = yaml.safe_load(f)
-
+def check_database_seeded():
+    """데이터베이스 시딩 상태 확인"""
     with Session(engine) as session:
-        # 1. WorldState 초기화
-        world_state = WorldState(id=1, current_sim_day=1)
-        session.add(world_state)
-        session.commit()
-
-        for league_rawdata in initial_leagues_rawdata:
-            league = League(
-                name=league_rawdata["name"],
-                name_ko=league_rawdata["name_ko"],
-                mascot_ko=league_rawdata["mascot_ko"],
-                league_code=league_rawdata["league_code"],
-            )
-            session.add(league)
-            session.commit()
-            session.refresh(league)
-
-            league_clubs = []
-            for club_rawdata in league_rawdata["clubs"]:
-                club = Club(
-                    name=club_rawdata["name"],
-                    name_ko=club_rawdata["name_ko"],
-                    hometown=club_rawdata["hometown"],
-                    hometown_ko=club_rawdata["hometown_ko"],
-                    team_code=club_rawdata["team_code"],
-                    abbr_name=club_rawdata["abbr_name"],
-                    stadium_name=club_rawdata["stadium_name"],
-                    stadium_name_ko=club_rawdata["stadium_name_ko"],
-                    league_id=league.id
-                )
-                session.add(club)
-                league_clubs.append(club)
-
-            session.commit()
-            for c in league_clubs:
-                session.refresh(c)
-
-            # 정규리그 스케줄 및 초기 순위표 생성
-            if len(league_clubs) == 10:
-                matches = generate_regular_schedule(league_clubs, CONFIG.base_datetime.year, 1)
-                for m in matches:
-                    session.add(m)
-
-                start_sim_day = min(m.sim_day for m in matches)
-                standing_sim_day = start_sim_day - 1
-
-                for club in league_clubs:
-                    standing = DailyClubStanding(
-                        sim_day=standing_sim_day,
-                        league_id=league.id,
-                        club_id=club.id,
-                        rank=1,
-                        win_rate=0.0,
-                        games_back=0,
-                        wins=0,
-                        draws=0,
-                        losses=0,
-                        games_played=0,
-                        streak=0,
-                        batting_average=0.0,
-                        era=0.0
-                    )
-                    session.add(standing)
-                session.commit()
-                logger.info(f"리그 '{league.name_ko}' 스케줄 및 초기화 완료")
-        
-        logger.success("데이터베이스 시딩 완료")
+        world_state = session.exec(select(WorldState).where(WorldState.id == 1)).first()
+        clubs = session.exec(select(Club)).all()
+        matches = session.exec(select(Match)).all()
+        if not world_state or not clubs or not matches:
+            logger.error("데이터베이스가 초기화되지 않았거나 시드 데이터가 없습니다.")
+            logger.error("'uv run -m scripts.seed_db' 명령어를 먼저 실행하여 DB를 시딩해주세요.")
+            sys.exit(1)
 
 def run_regular_season() -> int:
     """정규시즌 일정에 맞춰 하루씩 시뮬레이션 완주"""
@@ -635,7 +568,7 @@ def run_knockout_stage(top_8_clubs, elite_end_day: int):
         logger.info("=========================================")
 
 def main():
-    init_database()
+    check_database_seeded()
     max_reg_day = run_regular_season()
     playoff_clubs = select_playoff_teams(max_reg_day)
     top_8_clubs, elite_end_day = run_krown_elite_league(playoff_clubs, max_reg_day)

@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { FaChevronLeft, FaChevronRight } from 'react-icons/fa';
 import { getClubs, type Club } from '../../api/clubs';
-import { getMatches, getMatchScoreboard, type Match, type IngameScoreboard } from '../../api/matches';
+import { getMatches, getMatchScoreboard, getMatch, type Match, type MatchDetailData, type IngameScoreboard } from '../../api/matches';
+import { getPlayers, type Player } from '../../api/players';
 import { getSystemInfo } from '../../api/system';
 import TeamLogo from '../../components/TeamLogo/TeamLogo';
 import './index.css';
@@ -9,7 +10,7 @@ import './index.css';
 import AnalysisTab from './AnalysisTab';
 import LineupTab from './LineupTab';
 import BoxscoreTab from './BoxscoreTab';
-import CheerTab from './CheerTab';
+import BroadcastTab from './BroadcastTab';
 import NewsTab from './NewsTab';
 
 const DAY_NAMES = ['일', '월', '화', '수', '목', '금', '토'];
@@ -83,7 +84,7 @@ const getMatchIdFromHash = (): number | null => {
 };
 
 export default function MatchDetail() {
-  const [activeTab, setActiveTab] = useState<'analysis' | 'lineup' | 'boxscore' | 'cheer' | 'news'>('analysis');
+  const [activeTab, setActiveTab] = useState<'analysis' | 'lineup' | 'boxscore' | 'broadcast' | 'news'>('analysis');
   const [navDate, setNavDate] = useState<Date>(new Date(2026, 6, 17));
   const [seasonYear, setSeasonYear] = useState<number>(2026);
 
@@ -91,6 +92,8 @@ export default function MatchDetail() {
   const [allMatches, setAllMatches] = useState<Match[]>([]);
   const [selectedMatchId, setSelectedMatchId] = useState<number | null>(null);
   const [scoreboard, setScoreboard] = useState<IngameScoreboard | null>(null);
+  const [matchDetailData, setMatchDetailData] = useState<MatchDetailData | null>(null);
+  const [playersMap, setPlayersMap] = useState<Record<number, Player>>({});
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
   useEffect(() => {
@@ -141,14 +144,44 @@ export default function MatchDetail() {
 
   useEffect(() => {
     if (selectedMatchId) {
-      getMatchScoreboard(selectedMatchId)
-        .then((sb) => setScoreboard(sb))
-        .catch((e) => {
+      Promise.all([
+        getMatchScoreboard(selectedMatchId).catch((e) => {
           console.error('Failed to load scoreboard', e);
-          setScoreboard(null);
-        });
+          return null;
+        }),
+        getMatch(selectedMatchId).catch((e) => {
+          console.error('Failed to load match detail log', e);
+          return null;
+        }),
+      ]).then(([sb, detail]) => {
+        setScoreboard(sb);
+        setMatchDetailData(detail);
+      });
     }
   }, [selectedMatchId]);
+
+  // 현재 선택된 경기 구하기
+  const currentMatch = allMatches.find((m) => m.id === selectedMatchId) || allMatches[0];
+
+  // 팀 정보 매핑
+  const awayClub = currentMatch ? clubsMap[currentMatch.away_club_id] : null;
+  const homeClub = currentMatch ? clubsMap[currentMatch.home_club_id] : null;
+
+  useEffect(() => {
+    if (awayClub?.id || homeClub?.id) {
+      const promises: Promise<Player[]>[] = [];
+      if (awayClub?.id) promises.push(getPlayers({ club_id: awayClub.id }).catch(() => []));
+      if (homeClub?.id) promises.push(getPlayers({ club_id: homeClub.id }).catch(() => []));
+
+      Promise.all(promises).then((results) => {
+        const pMap: Record<number, Player> = {};
+        results.flat().forEach((p) => {
+          pMap[p.id] = p;
+        });
+        setPlayersMap((prev) => ({ ...prev, ...pMap }));
+      });
+    }
+  }, [awayClub?.id, homeClub?.id]);
 
   const handlePrevDay = () => {
     setNavDate((prev) => new Date(prev.getFullYear(), prev.getMonth(), prev.getDate() - 1));
@@ -158,16 +191,9 @@ export default function MatchDetail() {
     setNavDate((prev) => new Date(prev.getFullYear(), prev.getMonth(), prev.getDate() + 1));
   };
 
-  // 현재 선택된 경기 구하기
-  const currentMatch = allMatches.find((m) => m.id === selectedMatchId) || allMatches[0];
-
   // 현재 탐색 날짜(navDate)의 sim_day에 해당하는 경기 목록
   const currentSimDay = getSimDayFromDate(seasonYear, navDate);
   const currentDayMatches = allMatches.filter((m) => m.sim_day === currentSimDay);
-
-  // 팀 정보 매핑
-  const awayClub = currentMatch ? clubsMap[currentMatch.away_club_id] : null;
-  const homeClub = currentMatch ? clubsMap[currentMatch.home_club_id] : null;
 
   // 경기 상태 변환
   const parseMatchStatus = (statusStr?: string) => {
@@ -249,11 +275,6 @@ export default function MatchDetail() {
     ],
   };
 
-  const cheers = [
-    { user: '야구팬1', team: awayClub?.team_code || 'AWAY', text: `${awayClub?.name_ko || '어웨이'}팀 오늘 경기 힘내서 승리 가져옵시다!` },
-    { user: '홈팀수호신', team: homeClub?.team_code || 'HOME', text: `${homeClub?.name_ko || '홈'}팀 홈경기 꼭 승리로 닫아주세요!` },
-  ];
-
   const newsList = [
     { title: `[Match Review] ${awayClub?.name_ko || '어웨이'} vs ${homeClub?.name_ko || '홈'} 치열한 명승부 전개`, time: '1시간 전', category: '리뷰' },
     { title: '[Interview] 감독 청사진 "선수단의 집중력이 빛난 경기였다"', time: '2시간 전', category: '인터뷰' },
@@ -331,7 +352,7 @@ export default function MatchDetail() {
                 <table className="match-detail__scoreboard-table">
                   <thead>
                     <tr>
-                      <th className="match-detail__th-team">구단</th>
+                      <th className="match-detail__th-team">팀</th>
                       {inningsHeaderList.map((i) => (
                         <th key={i}>{i}</th>
                       ))}
@@ -457,10 +478,10 @@ export default function MatchDetail() {
               주요 기록
             </button>
             <button
-              className={`match-detail__tab-btn ${activeTab === 'cheer' ? 'match-detail__tab-btn--active' : ''}`}
-              onClick={() => setActiveTab('cheer')}
+              className={`match-detail__tab-btn ${activeTab === 'broadcast' ? 'match-detail__tab-btn--active' : ''}`}
+              onClick={() => setActiveTab('broadcast')}
             >
-              승부예측 & 응원
+              중계
             </button>
             <button
               className={`match-detail__tab-btn ${activeTab === 'news' ? 'match-detail__tab-btn--active' : ''}`}
@@ -492,11 +513,12 @@ export default function MatchDetail() {
               <BoxscoreTab pitchRecords={pitchRecords} />
             )}
 
-            {activeTab === 'cheer' && (
-              <CheerTab
-                cheers={cheers}
-                awayTeamCode={awayClub?.team_code}
-                homeTeamCode={homeClub?.team_code}
+            {activeTab === 'broadcast' && (
+              <BroadcastTab
+                matchLog={matchDetailData?.match_log_json || matchDetailData?.match_log}
+                awayClub={awayClub}
+                homeClub={homeClub}
+                playersMap={playersMap}
               />
             )}
 

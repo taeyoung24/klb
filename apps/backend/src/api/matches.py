@@ -37,6 +37,27 @@ def get_matches(
     query = query.order_by(asc(Match.sim_day), asc(Match.home_club_id))
     return session.exec(query).all()
 
+@router.get("/{match_id}", response_model=Match)
+def get_match(
+    match_id: int,
+    session: Session = Depends(get_session)
+):
+    match = session.get(Match, match_id)
+    if not match:
+        raise HTTPException(status_code=404, detail="Match not found")
+    
+    # match_log_json이 없고 match_log가 존재하는 경우 match_log_json으로 딕셔너리 매핑
+    if match.match_log_json is None and match.match_log is not None:
+        try:
+            if hasattr(match.match_log, "model_dump"):
+                match.match_log_json = match.match_log.model_dump()
+            elif hasattr(match.match_log, "dict"):
+                match.match_log_json = match.match_log.dict()
+        except Exception:
+            pass
+            
+    return match
+
 @router.get("/{match_id}/scoreboard", response_model=IngameScoreboard)
 def get_match_scoreboard(
     match_id: int,
