@@ -49,8 +49,25 @@ export interface MatchDetailData extends Match {
   match_log_json?: IngameInstructionLog | string | null;
 }
 
+export interface MatchPlaceholder {
+  id: number;
+  round: string; // 'ROUND_OF_8' | 'SEMI_FINAL' | 'FINAL'
+  sim_day: number;
+  limit_extra_innings: boolean;
+  home_club_id?: number | null;
+  away_club_id?: number | null;
+  home_parent_id?: number | null;
+  away_parent_id?: number | null;
+  actual_match_id?: number | null;
+}
+
 export const getMatches = async (params: GetMatchesParams = {}): Promise<Match[]> => {
   const response = await client.get<Match[]>('/matches', { params });
+  return response.data;
+};
+
+export const getMatchPlaceholders = async (): Promise<MatchPlaceholder[]> => {
+  const response = await client.get<MatchPlaceholder[]>('/matches/placeholders');
   return response.data;
 };
 

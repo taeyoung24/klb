@@ -188,41 +188,24 @@
 
 .match-broadcast__pa-badge {
   font-size: 0.8rem;
-  font-weight: 700;
-  padding: 4px 10px;
-  border-radius: 6px;
-  letter-spacing: 0.01em;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 4px;
+  color: #64748b;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  box-shadow: none;
 }
 
-.match-broadcast__pa-badge--hit {
-  background: #dcfce7;
-  color: #15803d;
-  border: 1px solid #bbf7d0;
-}
-
-.match-broadcast__pa-badge--homerun {
-  background: #fef9c3;
-  color: #a16207;
-  border: 1px solid #fef08a;
-  box-shadow: 0 1px 4px rgba(234, 179, 8, 0.15);
-}
-
-.match-broadcast__pa-badge--out {
-  background: #fee2e2;
-  color: #b91c1c;
-  border: 1px solid #fecaca;
-}
-
-.match-broadcast__pa-badge--walk {
-  background: #e0f2fe;
-  color: #0369a1;
-  border: 1px solid #bae6fd;
-}
-
+.match-broadcast__pa-badge--hit,
+.match-broadcast__pa-badge--homerun,
+.match-broadcast__pa-badge--out,
+.match-broadcast__pa-badge--walk,
 .match-broadcast__pa-badge--etc {
   background: #f1f5f9;
-  color: #475569;
+  color: #64748b;
   border: 1px solid #e2e8f0;
+  box-shadow: none;
 }
 
 .match-broadcast__pa-body {
@@ -241,24 +224,53 @@
   content: '';
   position: absolute;
   left: 6px;
-  top: 6px;
-  bottom: 6px;
+  top: 10px;
+  bottom: 10px;
   width: 2px;
   background: #e2e8f0;
 }
 
 .match-broadcast__timeline-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
   position: relative;
   font-size: 0.9rem;
   line-height: 1.45;
   color: #334155;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.match-broadcast__pitch-num {
+  flex: 0 0 32px;
+  font-weight: 700;
+  color: #64748b;
+  font-size: 0.85rem;
+}
+
+.match-broadcast__pitch-result {
+  flex: 1;
+  min-width: 0;
+  font-weight: 500;
+  color: #1e293b;
+}
+
+.match-broadcast__pitch-count {
+  flex: 0 0 44px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #64748b;
+  text-align: right;
+  font-family: SFMono-Regular, Consolas, Monaco, monospace;
 }
 
 .match-broadcast__timeline-item::before {
   content: '';
   position: absolute;
   left: -16px;
-  top: 7px;
+  top: 50%;
+  transform: translateY(-50%);
   width: 6px;
   height: 6px;
   border-radius: 50%;

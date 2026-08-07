@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { FaChevronLeft, FaChevronRight } from 'react-icons/fa';
 import { getClubs, type Club } from '../../api/clubs';
-import { getMatches, getMatchScoreboard, getMatch, type Match, type MatchDetailData, type IngameScoreboard } from '../../api/matches';
+import { getMatches, getMatchScoreboard, getMatch, getMatchPlaceholders, type Match, type MatchDetailData, type IngameScoreboard, type MatchPlaceholder } from '../../api/matches';
 import { getPlayers, type Player } from '../../api/players';
 import { getSystemInfo } from '../../api/system';
 import TeamLogo from '../../components/TeamLogo/TeamLogo';
@@ -22,7 +22,12 @@ const LEAGUE_INFO: Record<number, { name: string; code: string }> = {
   4: { name: '매그놀리아', code: 'ML' },
 };
 
-const getMatchTitle = (match: Match | null, homeClub: Club | null, seasonYear: number): string => {
+const getMatchTitle = (
+  match: Match | null, 
+  homeClub: Club | null, 
+  seasonYear: number,
+  placeholders: MatchPlaceholder[] = []
+): string => {
   if (!match) return `${seasonYear} KLB 정규리그`;
 
   const simDay = match.sim_day;
@@ -32,9 +37,21 @@ const getMatchTitle = (match: Match | null, homeClub: Club | null, seasonYear: n
   if (isPostSeason) {
     const isKnockout = match.limit_extra_innings === false;
     if (isKnockout) {
-      if (simDay >= 261) {
-        return `${seasonYear} 포스트시즌 결승전`;
-      } else if (simDay >= 245) {
+      // DB MatchPlaceholder에서 해당 경기 ID(actual_match_id) 매핑 검색
+      const ph = placeholders.find(p => p.actual_match_id === match.id);
+      if (ph) {
+        if (ph.round === 'ROUND_OF_8') return `${seasonYear} 포스트시즌 8강전`;
+        if (ph.round === 'SEMI_FINAL') return `${seasonYear} 포스트시즌 준결승전`;
+        if (ph.round === 'FINAL') return `${seasonYear} 포스트시즌 결승전 (KROWN SERIES)`;
+      }
+
+      // fallback: 녹아웃 시작일 기준 상대적 일자 계산
+      const knockoutPlaceholders = placeholders.filter(p => p.limit_extra_innings === false);
+      const minKoDay = knockoutPlaceholders.length > 0 ? Math.min(...knockoutPlaceholders.map(p => p.sim_day)) : 261;
+
+      if (simDay >= minKoDay + 8) {
+        return `${seasonYear} 포스트시즌 결승전 (KROWN SERIES)`;
+      } else if (simDay >= minKoDay + 3) {
         return `${seasonYear} 포스트시즌 준결승전`;
       } else {
         return `${seasonYear} 포스트시즌 8강전`;
@@ -94,7 +111,14 @@ export default function MatchDetail() {
   const [scoreboard, setScoreboard] = useState<IngameScoreboard | null>(null);
   const [matchDetailData, setMatchDetailData] = useState<MatchDetailData | null>(null);
   const [playersMap, setPlayersMap] = useState<Record<number, Player>>({});
+  const [placeholders, setPlaceholders] = useState<MatchPlaceholder[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+
+  useEffect(() => {
+    getMatchPlaceholders()
+      .then(list => setPlaceholders(list))
+      .catch(e => console.error("Failed to load match placeholders in MatchDetail", e));
+  }, []);
 
   useEffect(() => {
     setIsLoading(true);
@@ -221,7 +245,7 @@ export default function MatchDetail() {
   const statusInfo = getStatusBadgeInfo(currentStatusText);
 
   // 매치 타이틀 (정규시즌 / 포스트시즌 / 녹아웃 조건부 포맷)
-  const matchTitle = getMatchTitle(currentMatch, homeClub, seasonYear);
+  const matchTitle = getMatchTitle(currentMatch, homeClub, seasonYear, placeholders);
 
   // 경기 일자 및 구장
   const matchDateObj = currentMatch ? new Date(seasonYear, 0, currentMatch.sim_day) : navDate;

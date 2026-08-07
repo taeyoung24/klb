@@ -3,11 +3,18 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session, select, asc
 from sqlalchemy.orm import defer
-from src.models import Match, Club, IngameInstructionLog, IngameScoreboard
+from src.models import Match, Club, IngameInstructionLog, IngameScoreboard, MatchPlaceholder
 from src.services.common import get_session
 from src.services.ingame.main import get_scoreboard
 
 router = APIRouter(prefix="/matches", tags=["Matches"])
+
+@router.get("/placeholders", response_model=list[MatchPlaceholder])
+def get_match_placeholders(
+    session: Session = Depends(get_session)
+):
+    query = select(MatchPlaceholder).order_by(asc(MatchPlaceholder.id))
+    return session.exec(query).all()
 
 @router.get("", response_model=list[Match])
 def get_matches(

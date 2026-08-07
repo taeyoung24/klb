@@ -44,6 +44,14 @@ interface PitchRecord {
   text: string;
 }
 
+export interface TextLogItem {
+  id: string;
+  pitchNum?: number;
+  resultText: string;
+  countText?: string;
+  type?: 'normal' | 'highlight' | 'score';
+}
+
 interface PlateAppearance {
   paIndex: number;
   batterId?: number;
@@ -51,7 +59,7 @@ interface PlateAppearance {
   summary: string;
   resultType: 'HIT' | 'HOMERUN' | 'OUT' | 'WALK' | 'STRIKE_OUT' | 'ETC';
   pitches: PitchRecord[];
-  textLogs: { id: string; text: string; type?: 'normal' | 'highlight' | 'score' }[];
+  textLogs: TextLogItem[];
 }
 
 interface InningData {
@@ -66,14 +74,24 @@ interface InningData {
 }
 
 const PITCH_RESULT_MAP: Record<string, string> = {
+  STRIKE: '스트라이크',
   STRIKE_LOOKING: '루킹 스트라이크',
   STRIKE_SWINGING: '헛스윙 스트라이크',
   BALL: '볼',
   FOUL: '파울',
+  HIT_BY_PITCH: '몸에 맞은 공(사구)',
+  WILD_PITCH: '폭투',
+  INTENTIONAL_WALK: '고의사구',
   IN_PLAY: '인플레이 (타격)',
   HIT: '안타',
   HOMERUN: '홈런',
   OUT: '아웃',
+};
+
+const CONTACT_TYPE_MAP: Record<string, string> = {
+  CONTACT_IN_PLAY: '인플레이 타구',
+  FOUL: '파울 타구',
+  BUNT: '번트 타구',
 };
 
 const BASE_RUN_RESULT_MAP: Record<string, string> = {
@@ -127,7 +145,7 @@ export const BroadcastTab: React.FC<BroadcastTabProps> = ({ matchLog, awayClub, 
           const innNum = ev.inning || 1;
           const isTop = ev.is_top !== undefined ? ev.is_top : true;
           const innId = `${innNum}_${isTop ? 'top' : 'bot'}`;
-          
+
           if (ev.home_score !== undefined) homeScore = ev.home_score;
           if (ev.away_score !== undefined) awayScore = ev.away_score;
 
@@ -190,12 +208,14 @@ export const BroadcastTab: React.FC<BroadcastTabProps> = ({ matchLog, awayClub, 
         if (currentPA) {
           pitchCountInPA++;
           const resultStr = PITCH_RESULT_MAP[ev.result] || ev.result || '투구';
-          
+
           if (ev.result === 'BALL') balls++;
-          else if (ev.result === 'STRIKE_LOOKING' || ev.result === 'STRIKE_SWINGING') strikes++;
+          else if (ev.result === 'STRIKE' || ev.result === 'STRIKE_LOOKING' || ev.result === 'STRIKE_SWINGING') strikes++;
           else if (ev.result === 'FOUL' && strikes < 2) strikes++;
 
-          const pitchText = `${pitchCountInPA}구 ${resultStr} (B:${balls} S:${strikes} O:${outs})`;
+          const countStr = `${balls}-${strikes}`;
+          const pitchText = `${pitchCountInPA}구 ${resultStr} (${countStr})`;
+
           currentPA.pitches.push({
             pitchNum: pitchCountInPA,
             result: ev.result,
@@ -207,21 +227,27 @@ export const BroadcastTab: React.FC<BroadcastTabProps> = ({ matchLog, awayClub, 
 
           currentPA.textLogs.push({
             id: `ev_${pitchCountInPA}_${Math.random()}`,
-            text: pitchText,
+            pitchNum: pitchCountInPA,
+            resultText: resultStr,
+            countText: countStr,
             type: 'normal',
           });
         }
       } else if (type === 'BAT_CONTACT') {
         if (currentPA) {
-          const contactType = ev.contact_type || '타격';
+          const contactRaw = ev.contact_type || 'CONTACT_IN_PLAY';
+          const contactTypeKo = CONTACT_TYPE_MAP[contactRaw] || contactRaw;
+          if (contactRaw === 'FOUL' && strikes < 2) {
+            strikes++;
+          }
+
           const vel = ev.hit_velocity ? `${Math.round(ev.hit_velocity)}km/h` : '';
           const angle = ev.launch_angle ? `${Math.round(ev.launch_angle)}°` : '';
           const detail = [vel, angle].filter(Boolean).join(', ');
-          const contactText = `타격! [${contactType}] ${detail ? `(${detail})` : ''}`;
-
+          const contactText = `타격 [${contactTypeKo}] ${detail ? `(${detail})` : ''}`;
           currentPA.textLogs.push({
             id: `contact_${Math.random()}`,
-            text: contactText,
+            resultText: contactText,
             type: 'highlight',
           });
         }
@@ -235,7 +261,7 @@ export const BroadcastTab: React.FC<BroadcastTabProps> = ({ matchLog, awayClub, 
             resText = `주자 ${baseName} 대성공! 득점!`;
             currentPA.textLogs.push({
               id: `score_${Math.random()}`,
-              text: resText,
+              resultText: resText,
               type: 'score',
             });
             currentPA.resultType = 'HOMERUN';
@@ -252,7 +278,7 @@ export const BroadcastTab: React.FC<BroadcastTabProps> = ({ matchLog, awayClub, 
             }
             currentPA.textLogs.push({
               id: `run_${Math.random()}`,
-              text: resText,
+              resultText: resText,
               type: 'highlight',
             });
           } else if (res === 'TAG_OUT' || res === 'FORCE_OUT') {
@@ -263,7 +289,7 @@ export const BroadcastTab: React.FC<BroadcastTabProps> = ({ matchLog, awayClub, 
             }
             currentPA.textLogs.push({
               id: `out_${Math.random()}`,
-              text: resText,
+              resultText: resText,
               type: 'normal',
             });
           }
@@ -272,7 +298,7 @@ export const BroadcastTab: React.FC<BroadcastTabProps> = ({ matchLog, awayClub, 
         if (currentPA && ev.message) {
           currentPA.textLogs.push({
             id: `notice_${Math.random()}`,
-            text: ev.message,
+            resultText: ev.message,
             type: ev.message.includes('홈런') ? 'score' : ev.message.includes('안타') ? 'highlight' : 'normal',
           });
 
@@ -400,7 +426,13 @@ export const BroadcastTab: React.FC<BroadcastTabProps> = ({ matchLog, awayClub, 
                             else if (log.type === 'highlight') itemClass = 'match-broadcast__timeline-item--highlight';
                             return (
                               <div key={log.id} className={`match-broadcast__timeline-item ${itemClass}`}>
-                                {log.text}
+                                {log.pitchNum !== undefined && (
+                                  <span className="match-broadcast__pitch-num">{log.pitchNum}구</span>
+                                )}
+                                <span className="match-broadcast__pitch-result">{log.resultText}</span>
+                                {log.countText && (
+                                  <span className="match-broadcast__pitch-count">{log.countText}</span>
+                                )}
                               </div>
                             );
                           })}
