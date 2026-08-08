@@ -9,8 +9,16 @@ from src.enums import (
     IngameFieldingAction,
     IngameBaseRunReason,
     IngameBaseRunResult,
+    IngamePitchZone,
 )
 from .base import Player, Stadium
+
+
+class PitchSelectionResult(SQLModel):
+    """투수 구종 및 투구 코스/존 판단 선택 결과 DTO"""
+    pitch_type: IngamePitchType
+    target_zone: IngamePitchZone
+
 
 
 class IngameEvent(SQLModel):

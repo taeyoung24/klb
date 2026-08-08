@@ -110,3 +110,31 @@ class IngameBaseRunResult(StrEnum):
     OUT   = "OUT"
 
 
+class IngamePitchAction(StrEnum):
+    """투수 행위 결정"""
+    PITCH    = "PITCH"     # 마운드 투구
+    PICK_OFF = "PICK_OFF"  # 견제구 투구
+
+
+class IngameBattingStrategy(StrEnum):
+    """타자 타석 전략 결정"""
+    SWING_FULL  = "SWING_FULL"   # 강공 스윙
+    BUNT        = "BUNT"         # 기습 번트
+    TAKE        = "TAKE"         # 웨이팅 (투구 지켜보기)
+    HIT_AND_RUN = "HIT_AND_RUN"  # 히트앤런
+
+
+class IngamePitchZone(StrEnum):
+    """투수 투구 목표 코스/존"""
+    ZONE_CENTER       = "ZONE_CENTER"        # 중앙 스트라이크
+    ZONE_HIGH_INSIDE  = "ZONE_HIGH_INSIDE"   # 높은 몸쪽 스트라이크
+    ZONE_HIGH_OUTSIDE = "ZONE_HIGH_OUTSIDE"  # 높은 바깥쪽 스트라이크
+    ZONE_LOW_INSIDE   = "ZONE_LOW_INSIDE"    # 낮은 몸쪽 스트라이크
+    ZONE_LOW_OUTSIDE  = "ZONE_LOW_OUTSIDE"   # 낮은 바깥쪽 스트라이크
+    BALL_HIGH         = "BALL_HIGH"          # 유인구 (높은 볼)
+    BALL_LOW          = "BALL_LOW"           # 유인구 (낮은 볼)
+    BALL_INSIDE       = "BALL_INSIDE"        # 유인구 (몸쪽 볼)
+    BALL_OUTSIDE      = "BALL_OUTSIDE"       # 유인구 (바깥쪽 볼)
+
+
+

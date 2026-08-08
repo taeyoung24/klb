@@ -27,6 +27,7 @@ from .ingame import (
     IngameScoreboard,
     PitcherTracker,
     IngameContext,
+    PitchSelectionResult,
 )
 from .db import (
     IngameInstructionLogType,
@@ -63,6 +64,8 @@ __all__ = [
     "IngameScoreboard",
     "PitcherTracker",
     "IngameContext",
+    "PitchSelectionResult",
+
     # DB
     "IngameInstructionLogType",
     "DailyClubStanding",
