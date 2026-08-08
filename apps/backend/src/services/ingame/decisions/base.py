@@ -11,6 +11,10 @@ from src.models import (
 )
 
 
+from ..physics import FieldingPhysicsResult
+
+
+
 class BaseDecisionEngine(ABC):
     """
     인게임 시뮬레이션의 모든 의사결정(투수, 타자, 주자, 야수, 감독)을 위한 추상 판단 인터페이스.
@@ -56,3 +60,15 @@ class BaseDecisionEngine(ABC):
     def decide_pitcher_change(self, context: IngameContext) -> Player | None:
         """감독의 투수 교체 판단 및 교체 투수 선택"""
         pass
+
+    @abstractmethod
+    def decide_baserunning_target_base(
+        self,
+        context: IngameContext,
+        runner: Player,
+        fielding_physics: FieldingPhysicsResult,
+    ) -> int:
+        """타격 이후 주자/타자의 목표 베이스(1루 vs 2루타 진루 도전) 판단 (추후 NN 모델 치환 영역)"""
+        pass
+
+

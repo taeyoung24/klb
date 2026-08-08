@@ -20,6 +20,7 @@ from src.models import (
     PitcherTracker,
     IngameContext,
 )
+from .decisions import BaseDecisionEngine, RuleBasedDecisionEngine
 from .simulation import simulate_plate_appearance
 from .lineup import select_team_roster_for_match
 from .utils import generate_mock_players
@@ -104,8 +105,14 @@ def determine_decisions(
     match.save_pitcher_id = save_pitcher_id
 
 
-def run_match(match: Match, session: Session | None = None):
+def run_match(
+    match: Match,
+    session: Session | None = None,
+    decision_engine: BaseDecisionEngine | None = None,
+):
     """단일 매치를 IngameContext 객체 중심으로 시뮬레이션하여 세부 이벤트 대본을 남깁니다."""
+    engine = decision_engine or RuleBasedDecisionEngine()
+
     # 1. 라인업 및 투수 스쿼드 추출
     away_sp, away_bp, away_batters = select_team_roster_for_match(match.away_club_id, session=session)
     home_sp, home_bp, home_batters = select_team_roster_for_match(match.home_club_id, session=session)
@@ -198,39 +205,36 @@ def run_match(match: Match, session: Session | None = None):
     game_over = False
 
     while not game_over:
-        # 투수 교체 훅 (선발 5이닝/아웃15 이상 완료 시 계투 교체, 8/9회 마무리 교체 등)
-        if context.is_top:
-            # 홈팀 수비투수 교체 검토
-            if context.home_pitcher_idx < len(context.home_pitchers) - 1:
-                if context.current_home_pitcher_log.outs_recorded >= 15 or (context.inning >= 8 and context.home_pitcher_idx < len(context.home_pitchers) - 1):
-                    context.current_home_pitcher_log.exit_inning = context.inning
-                    context.current_home_pitcher_log.exit_top = context.is_top
-                    context.current_home_pitcher_log.exit_away_score = context.away_score
-                    context.current_home_pitcher_log.exit_home_score = context.home_score
+        # 감독 투수 교체 훅 (decision_engine.decide_pitcher_change 사용)
+        next_pitcher = engine.decide_pitcher_change(context)
+        if next_pitcher is not None:
+            if context.is_top and context.home_pitcher_idx < len(context.home_pitchers) - 1:
+                context.current_home_pitcher_log.exit_inning = context.inning
+                context.current_home_pitcher_log.exit_top = context.is_top
+                context.current_home_pitcher_log.exit_away_score = context.away_score
+                context.current_home_pitcher_log.exit_home_score = context.home_score
 
-                    context.home_pitcher_idx += 1
-                    on_base_cnt = sum(1 for r in [context.runner_1b, context.runner_2b, context.runner_3b] if r is not None)
-                    context.current_home_pitcher_log = PitcherTracker(
-                        context.home_pitchers[context.home_pitcher_idx], False, 'home', context.inning, context.is_top, context.away_score, context.home_score, on_base_cnt
-                    )
-                    context.home_pitcher_logs.append(context.current_home_pitcher_log)
-                    current_pitcher_responsible_home = context.current_home_pitcher_log
-        else:
-            # 어웨이팀 수비투수 교체 검토
-            if context.away_pitcher_idx < len(context.away_pitchers) - 1:
-                if context.current_away_pitcher_log.outs_recorded >= 15 or (context.inning >= 8 and context.away_pitcher_idx < len(context.away_pitchers) - 1):
-                    context.current_away_pitcher_log.exit_inning = context.inning
-                    context.current_away_pitcher_log.exit_top = context.is_top
-                    context.current_away_pitcher_log.exit_away_score = context.away_score
-                    context.current_away_pitcher_log.exit_home_score = context.home_score
+                context.home_pitcher_idx += 1
+                on_base_cnt = sum(1 for r in [context.runner_1b, context.runner_2b, context.runner_3b] if r is not None)
+                context.current_home_pitcher_log = PitcherTracker(
+                    next_pitcher, False, 'home', context.inning, context.is_top, context.away_score, context.home_score, on_base_cnt
+                )
+                context.home_pitcher_logs.append(context.current_home_pitcher_log)
+                current_pitcher_responsible_home = context.current_home_pitcher_log
 
-                    context.away_pitcher_idx += 1
-                    on_base_cnt = sum(1 for r in [context.runner_1b, context.runner_2b, context.runner_3b] if r is not None)
-                    context.current_away_pitcher_log = PitcherTracker(
-                        context.away_pitchers[context.away_pitcher_idx], False, 'away', context.inning, context.is_top, context.away_score, context.home_score, on_base_cnt
-                    )
-                    context.away_pitcher_logs.append(context.current_away_pitcher_log)
-                    current_pitcher_responsible_away = context.current_away_pitcher_log
+            elif not context.is_top and context.away_pitcher_idx < len(context.away_pitchers) - 1:
+                context.current_away_pitcher_log.exit_inning = context.inning
+                context.current_away_pitcher_log.exit_top = context.is_top
+                context.current_away_pitcher_log.exit_away_score = context.away_score
+                context.current_away_pitcher_log.exit_home_score = context.home_score
+
+                context.away_pitcher_idx += 1
+                on_base_cnt = sum(1 for r in [context.runner_1b, context.runner_2b, context.runner_3b] if r is not None)
+                context.current_away_pitcher_log = PitcherTracker(
+                    next_pitcher, False, 'away', context.inning, context.is_top, context.away_score, context.home_score, on_base_cnt
+                )
+                context.away_pitcher_logs.append(context.current_away_pitcher_log)
+                current_pitcher_responsible_away = context.current_away_pitcher_log
 
         context.logged_events.append(IngameGameStateEvent(
             event_type=IngameEventType.GAME_STATE,
@@ -270,7 +274,8 @@ def run_match(match: Match, session: Session | None = None):
             prev_away = context.away_score
             prev_home = context.home_score
 
-            runs = simulate_plate_appearance(context, defense_lineup)
+            runs = simulate_plate_appearance(context, defense_lineup, decision_engine=engine)
+
 
             # 아웃 추가량 기록
             outs_added = context.scoreboard.outs - prev_outs
