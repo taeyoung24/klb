@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react'
 import './App.css'
-import { getSystemInfo } from './api/system'
 import AppNewsSection from './pages/AppNewsSection'
 import AppScheduleSection from './pages/AppScheduleSection'
 import AppSeasonStandingSection from './pages/AppSeasonStandingSection'
@@ -17,36 +16,24 @@ import MagnoliaLeagueApp from './pages/league-ml/App'
 
 import WorldMap from './pages/world-map'
 
-function App() {
-  const [currentHash, setCurrentHash] = useState(window.location.hash || '#home')
-  const [latestDate, setLatestDate] = useState<Date>(new Date("2026-07-17"))
-  const [scheduleDate, setScheduleDate] = useState<Date>(new Date("2026-07-17"))
+import { useSystemContext } from './context/SystemContext'
 
+function App() {
+  const {
+    seasonYear,
+    currentDate: latestDate,
+    scheduleDate,
+    isLoaded: isSeasonYearLoaded,
+    handleScheduleDateChange,
+  } = useSystemContext()
+
+  const [currentHash, setCurrentHash] = useState(window.location.hash || '#home')
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
-  const [seasonYear, setSeasonYear] = useState<number | null>(null)
-  const [isSeasonYearLoaded, setIsSeasonYearLoaded] = useState(false)
 
   useEffect(() => {
     setIsMobileMenuOpen(false)
     window.scrollTo(0, 0)
   }, [currentHash])
-
-  useEffect(() => {
-    getSystemInfo()
-      .then(info => {
-        setSeasonYear(info.season_year)
-        const [y, m, d] = info.current_date.split('-')
-        const systemDate = new Date(Number(y), Number(m) - 1, Number(d))
-        setLatestDate(systemDate)
-        setScheduleDate(systemDate)
-        setIsSeasonYearLoaded(true)
-      })
-      .catch(e => {
-        console.error("Failed to fetch system info", e)
-        setSeasonYear(2026)
-        setIsSeasonYearLoaded(true)
-      })
-  }, [])
 
   useEffect(() => {
     const handleHashChange = () => {
@@ -58,12 +45,6 @@ function App() {
       window.removeEventListener('hashchange', handleHashChange)
     }
   }, [])
-
-  const handleScheduleDateChange = (days: number) => {
-    const nextDate = new Date(scheduleDate)
-    nextDate.setDate(nextDate.getDate() + days)
-    setScheduleDate(nextDate)
-  }
 
   if (currentHash === '#world-map') {
     return <WorldMap />

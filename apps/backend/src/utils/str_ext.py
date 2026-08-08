@@ -53,8 +53,8 @@ def generate_name() -> str:
     last = random.choice(LAST_NAMES)
 
     while True:
-        # 외자 이름 (약 20%)
-        if random.random() < 0.2:
+        # 외자 이름 (약 6%)
+        if random.random() < 0.06:
             given = random.choice(SINGLE_SYLLABLES)
         else:
             # 2글자 기본

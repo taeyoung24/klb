@@ -239,6 +239,17 @@
   overflow-y: auto;
   overflow-x: hidden;
   padding-right: 2px;
+  transition: opacity 0.15s ease-in-out, visibility 0.15s ease-in-out;
+}
+
+.match-detail__nav-content--loading {
+  visibility: hidden;
+  opacity: 0;
+}
+
+.match-detail__nav-content--loaded {
+  visibility: visible;
+  opacity: 1;
 }
 
 .match-detail__no-matches {

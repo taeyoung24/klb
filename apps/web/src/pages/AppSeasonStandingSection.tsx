@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react'
-import { getClubs, type Club } from '../api/clubs'
 import { getMatches, getMatchPlaceholders, type Match, type MatchPlaceholder } from '../api/matches'
 import { getStandings, type DailyClubStanding } from '../api/standings'
-import { getSystemInfo } from '../api/system'
+import { useSystemContext } from '../context/SystemContext'
 import MatchSeries from '../components/MatchSeries/MatchSeries'
 import TeamLogo from '../components/TeamLogo/TeamLogo'
 import './AppSeasonStandingSection.css'
@@ -52,8 +51,9 @@ export default function AppSeasonStandingSection({
   seasonYear,
   isSeasonYearLoaded,
 }: AppSeasonStandingSectionProps) {
+  const { clubsMap, hostLeagueName, hostLeagueId } = useSystemContext();
+
   const [activeLeague, setActiveLeague] = useState<'AL' | 'CL' | 'GL' | 'ML'>('AL')
-  const [clubsMap, setClubsMap] = useState<Record<number, Club>>({});
   const [allStandings, setAllStandings] = useState<Record<'AL' | 'CL' | 'GL' | 'ML', DailyClubStanding[]>>({
     AL: [],
     CL: [],
@@ -67,38 +67,7 @@ export default function AppSeasonStandingSection({
   const [eliteMatches, setEliteMatches] = useState<Match[]>([]);
   const [knockoutMatches, setKnockoutMatches] = useState<Match[]>([]);
   const [placeholders, setPlaceholders] = useState<MatchPlaceholder[]>([]);
-  const [hostLeagueName, setHostLeagueName] = useState<string | null>(null);
-  const [hostLeagueId, setHostLeagueId] = useState<number>(1);
   const [eliteStandings, setEliteStandings] = useState<DailyClubStanding[]>([]);
-
-  useEffect(() => {
-    getClubs()
-      .then(list => {
-        const map: Record<number, Club> = {};
-        list.forEach(c => {
-          map[c.id] = c;
-        });
-        setClubsMap(map);
-      })
-      .catch(e => {
-        console.error("Failed to fetch clubs", e);
-      });
-  }, []);
-
-  useEffect(() => {
-    getSystemInfo()
-      .then(info => {
-        if (info.host_league_name) {
-          setHostLeagueName(info.host_league_name);
-        }
-        if (info.host_league_id) {
-          setHostLeagueId(info.host_league_id);
-        }
-      })
-      .catch(e => {
-        console.error("Failed to fetch host league region", e);
-      });
-  }, []);
 
   useEffect(() => {
     const rawSimDay = getSimDayFromDate(matchDate, seasonYear || 2026);
@@ -557,7 +526,7 @@ export default function AppSeasonStandingSection({
 
   return (
     <section className="section section--black section--first">
-      <div className="section__container">
+      <div className={`section__container ${isSectionLoaded ? 'section__container--loaded' : 'section__container--loading'}`}>
         {/* 시즌 진행 현황 5단계 스텝 바 */}
         <div className={`progress-status ${isSectionLoaded ? 'loaded' : 'loading'}`}>
           <div className="progress-status__season-title">KLB {seasonYear}</div>

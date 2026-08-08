@@ -2,17 +2,17 @@ import { useEffect, useState } from 'react';
 import { FaChevronLeft, FaChevronRight } from 'react-icons/fa';
 import { getClubs, type Club } from '../../api/clubs';
 import {
-  getMatches,
-  getMatchScoreboard,
   getMatch,
-  getMatchPlaceholders,
+  getMatches,
   getMatchLineup,
+  getMatchPlaceholders,
+  getMatchScoreboard,
+  type IngameScoreboard,
   type Match,
   type MatchDetailData,
-  type IngameScoreboard,
-  type MatchPlaceholder,
-  type MatchLineupResponse,
   type MatchLineupItem,
+  type MatchLineupResponse,
+  type MatchPlaceholder,
 } from '../../api/matches';
 import { getPlayers, type Player } from '../../api/players';
 import { getSystemInfo } from '../../api/system';
@@ -20,9 +20,9 @@ import TeamLogo from '../../components/TeamLogo/TeamLogo';
 import './index.css';
 
 import AnalysisTab from './AnalysisTab';
-import LineupTab from './LineupTab';
 import BoxscoreTab from './BoxscoreTab';
 import BroadcastTab from './BroadcastTab';
+import LineupTab from './LineupTab';
 import NewsTab from './NewsTab';
 
 const POSITION_CODE_MAP: Record<string, string> = {
@@ -48,12 +48,12 @@ const LEAGUE_INFO: Record<number, { name: string; code: string }> = {
 };
 
 const getMatchTitle = (
-  match: Match | null, 
-  homeClub: Club | null, 
-  seasonYear: number,
+  match: Match | null,
+  homeClub: Club | null,
+  seasonYear: number | null,
   placeholders: MatchPlaceholder[] = []
 ): string => {
-  if (!match) return `${seasonYear} KLB 정규리그`;
+  if (!match) return `${seasonYear || 2026} KLB 정규리그`;
 
   const simDay = match.sim_day;
   const isPostSeason = simDay >= 229;
@@ -99,14 +99,16 @@ const getSimDayFromDate = (year: number, date: Date): number => {
   return Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
 };
 
-const formatNavDate = (date: Date) => {
+const formatNavDate = (date: Date | null) => {
+  if (!date) return '-';
   const month = date.getMonth() + 1;
   const day = date.getDate();
   const dayName = DAY_NAMES[date.getDay()];
   return `${month}.${day} ${dayName}`;
 };
 
-const formatFullDateStr = (date: Date) => {
+const formatFullDateStr = (date: Date | null) => {
+  if (!date) return '-';
   const year = date.getFullYear();
   const month = date.getMonth() + 1;
   const day = date.getDate();
@@ -127,11 +129,12 @@ const getMatchIdFromHash = (): number | null => {
 
 export default function MatchDetail() {
   const [activeTab, setActiveTab] = useState<'analysis' | 'lineup' | 'boxscore' | 'broadcast' | 'news'>('analysis');
-  const [navDate, setNavDate] = useState<Date>(new Date(2026, 6, 17));
-  const [seasonYear, setSeasonYear] = useState<number>(2026);
+  const [navDate, setNavDate] = useState<Date | null>(null);
+  const [seasonYear, setSeasonYear] = useState<number | null>(null);
 
   const [clubsMap, setClubsMap] = useState<Record<number, Club>>({});
-  const [allMatches, setAllMatches] = useState<Match[]>([]);
+  const [currentDayMatches, setCurrentDayMatches] = useState<Match[]>([]);
+  const [isMatchesLoading, setIsMatchesLoading] = useState<boolean>(false);
   const [selectedMatchId, setSelectedMatchId] = useState<number | null>(null);
   const [scoreboard, setScoreboard] = useState<IngameScoreboard | null>(null);
   const [matchDetailData, setMatchDetailData] = useState<MatchDetailData | null>(null);
@@ -146,51 +149,60 @@ export default function MatchDetail() {
       .catch(e => console.error("Failed to load match placeholders in MatchDetail", e));
   }, []);
 
+  // 초기 시스템 및 구단 정보, 타겟 매치 로드
   useEffect(() => {
     setIsLoading(true);
-    Promise.all([getClubs(), getMatches(), getSystemInfo()])
-      .then(([clubsList, matchesList, sysInfo]) => {
+    Promise.all([getClubs(), getSystemInfo()])
+      .then(async ([clubsList, sysInfo]) => {
         const cMap: Record<number, Club> = {};
         clubsList.forEach((c) => {
           cMap[c.id] = c;
         });
         setClubsMap(cMap);
-        setAllMatches(matchesList);
 
         const sysYear = sysInfo?.season_year || 2026;
         setSeasonYear(sysYear);
 
-        // URL 해시 파싱으로 전달받은 Match ID 확인
         const targetMatchId = getMatchIdFromHash();
-        let matchedMatch: Match | undefined;
-
         if (targetMatchId) {
-          matchedMatch = matchesList.find((m) => m.id === targetMatchId);
-        }
-
-        if (matchedMatch) {
-          setSelectedMatchId(matchedMatch.id);
-          const matchDate = new Date(sysYear, 0, matchedMatch.sim_day);
-          setNavDate(matchDate);
+          try {
+            const m = await getMatch(targetMatchId);
+            setSelectedMatchId(m.id);
+            const matchDate = new Date(sysYear, 0, m.sim_day);
+            setNavDate(matchDate);
+          } catch (e) {
+            console.error("Failed to fetch target match", e);
+            const currentSimDay = sysInfo?.current_sim_day || 1;
+            setNavDate(new Date(sysYear, 0, currentSimDay));
+          }
         } else if (sysInfo) {
           const currentSimDay = sysInfo.current_sim_day || 1;
-          const currentDate = new Date(sysYear, 0, currentSimDay);
-          setNavDate(currentDate);
-
-          const todayMatches = matchesList.filter((m) => m.sim_day === currentSimDay);
-          if (todayMatches.length > 0) {
-            setSelectedMatchId(todayMatches[0].id);
-          } else if (matchesList.length > 0) {
-            setSelectedMatchId(matchesList[0].id);
-          }
+          setNavDate(new Date(sysYear, 0, currentSimDay));
         }
         setIsLoading(false);
       })
       .catch((e) => {
-        console.error('Failed to load match detail API data', e);
+        console.error('Failed to load initial match detail data', e);
         setIsLoading(false);
       });
   }, []);
+
+  // 탐색 날짜(navDate)가 실제로 결정된 후 해당 날짜의 경기만 fetch (탐색 패널 전용)
+  useEffect(() => {
+    if (!navDate || !seasonYear) return;
+
+    const simDay = getSimDayFromDate(seasonYear, navDate);
+    setIsMatchesLoading(true);
+    getMatches({ sim_day: simDay })
+      .then((matchesList) => {
+        setCurrentDayMatches(matchesList);
+        setIsMatchesLoading(false);
+      })
+      .catch((e) => {
+        console.error('Failed to fetch matches for navDate', e);
+        setIsMatchesLoading(false);
+      });
+  }, [navDate, seasonYear]);
 
   useEffect(() => {
     if (selectedMatchId) {
@@ -215,8 +227,8 @@ export default function MatchDetail() {
     }
   }, [selectedMatchId]);
 
-  // 현재 선택된 경기 구하기
-  const currentMatch = allMatches.find((m) => m.id === selectedMatchId) || allMatches[0];
+  // 현재 선택된 경기 구하기 (메인 매치는 탐색 날짜와 독립적으로 보장)
+  const currentMatch = (matchDetailData as unknown as Match | null) || currentDayMatches.find((m) => m.id === selectedMatchId) || null;
 
   // 팀 정보 매핑
   const awayClub = currentMatch ? clubsMap[currentMatch.away_club_id] : null;
@@ -239,16 +251,12 @@ export default function MatchDetail() {
   }, [awayClub?.id, homeClub?.id]);
 
   const handlePrevDay = () => {
-    setNavDate((prev) => new Date(prev.getFullYear(), prev.getMonth(), prev.getDate() - 1));
+    setNavDate((prev) => (prev ? new Date(prev.getFullYear(), prev.getMonth(), prev.getDate() - 1) : null));
   };
 
   const handleNextDay = () => {
-    setNavDate((prev) => new Date(prev.getFullYear(), prev.getMonth(), prev.getDate() + 1));
+    setNavDate((prev) => (prev ? new Date(prev.getFullYear(), prev.getMonth(), prev.getDate() + 1) : null));
   };
-
-  // 현재 탐색 날짜(navDate)의 sim_day에 해당하는 경기 목록
-  const currentSimDay = getSimDayFromDate(seasonYear, navDate);
-  const currentDayMatches = allMatches.filter((m) => m.sim_day === currentSimDay);
 
   // 경기 상태 변환
   const parseMatchStatus = (statusStr?: string) => {
@@ -279,7 +287,7 @@ export default function MatchDetail() {
   const matchTitle = getMatchTitle(currentMatch, homeClub, seasonYear, placeholders);
 
   // 경기 일자 및 구장
-  const matchDateObj = currentMatch ? new Date(seasonYear, 0, currentMatch.sim_day) : navDate;
+  const matchDateObj = currentMatch ? new Date(seasonYear || 2026, 0, currentMatch.sim_day) : navDate;
   const matchDateText = formatFullDateStr(matchDateObj);
   const matchStadiumText = currentMatch?.stadium?.name || (homeClub ? homeClub.stadium_name_ko || `${homeClub.hometown_ko} 야구장` : '서울 잠실야구장');
 
@@ -342,7 +350,7 @@ export default function MatchDetail() {
   if (isLoading) {
     return (
       <div className="match-detail">
-        <div className="match-detail__container" style={{ textAlign: 'center', padding: '60px 0', color: '#6b7280' }}>
+        <div className="match-detail__container">
           경기 데이터를 로딩 중입니다...
         </div>
       </div>
@@ -468,7 +476,7 @@ export default function MatchDetail() {
                 </button>
               </div>
 
-              <div className="match-detail__nav-content">
+              <div className={`match-detail__nav-content ${isMatchesLoading ? 'match-detail__nav-content--loading' : 'match-detail__nav-content--loaded'}`}>
                 {currentDayMatches && currentDayMatches.length > 0 ? (
                   <div className="match-detail__other-matches-list">
                     {currentDayMatches.map((m) => {

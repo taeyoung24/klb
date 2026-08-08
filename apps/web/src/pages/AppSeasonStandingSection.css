@@ -21,6 +21,17 @@ section.section--first {
 
 .section--first .section__container {
   overflow: visible !important;
+  transition: opacity 0.2s ease-in-out, visibility 0.2s ease-in-out;
+}
+
+.section--first .section__container--loading {
+  visibility: hidden !important;
+  opacity: 0 !important;
+}
+
+.section--first .section__container--loaded {
+  visibility: visible !important;
+  opacity: 1 !important;
 }
 
 @keyframes waveGradient {
