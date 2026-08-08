@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import type { Club } from '../../api/clubs';
-import type { IngameInstructionLog } from '../../api/matches';
+import type { IngameInstructionLog, MatchLineupResponse } from '../../api/matches';
 import type { Player } from '../../api/players';
 import './BroadcastTab.css';
 
@@ -9,6 +9,7 @@ export interface BroadcastTabProps {
   awayClub?: Club | null;
   homeClub?: Club | null;
   playersMap?: Record<number, Player>;
+  lineupData?: MatchLineupResponse | null;
 }
 
 const POSITION_KO_MAP: Record<string, string> = {
@@ -24,13 +25,21 @@ const POSITION_KO_MAP: Record<string, string> = {
   DESIGNATED_HITTER: '지명타자',
 };
 
-const getPlayerLabel = (playerId?: number, playersMap?: Record<number, Player>, fallbackRole: string = '선수') => {
+const getPlayerLabel = (
+  playerId?: number,
+  playersMap?: Record<number, Player>,
+  fallbackRole: string = '선수',
+  batterOrderMap?: Record<number, number>
+) => {
   if (!playerId) return fallbackRole;
   const player = playersMap?.[playerId];
   if (!player) return `${fallbackRole} #${playerId}`;
 
   const posKo = POSITION_KO_MAP[player.position] || player.position || '';
-  return posKo ? `${posKo} ${player.name}` : player.name;
+  const order = batterOrderMap?.[playerId];
+  const orderPrefix = order ? `${order}번 ` : '';
+
+  return posKo ? `${orderPrefix}${posKo} ${player.name}` : `${orderPrefix}${player.name}`;
 };
 
 interface PitchRecord {
@@ -46,6 +55,7 @@ interface PitchRecord {
 export interface TextLogItem {
   id: string;
   pitchNum?: number;
+  labelTag?: string;
   resultText: string;
   countText?: string;
   type?: 'normal' | 'highlight' | 'score';
@@ -57,6 +67,9 @@ interface PlateAppearance {
   pitcherId?: number;
   summary: string;
   resultType: 'HIT' | 'HOMERUN' | 'OUT' | 'WALK' | 'STRIKE_OUT' | 'ETC';
+  runsScored?: number;
+  awayScore?: number;
+  homeScore?: number;
   pitches: PitchRecord[];
   textLogs: TextLogItem[];
 }
@@ -100,8 +113,60 @@ const BASE_RUN_RESULT_MAP: Record<string, string> = {
   SCORE: '득점',
 };
 
-export const BroadcastTab: React.FC<BroadcastTabProps> = ({ matchLog, awayClub, homeClub, playersMap }) => {
-  // 1. match_log_json 데이터 해석 및 이닝별 타석 데이터 그룹화
+export const BroadcastTab: React.FC<BroadcastTabProps> = ({ matchLog, awayClub, homeClub, playersMap, lineupData }) => {
+  // 1. 라인업 데이터 및 이닝 이벤트 기반 타자별 타순(1번~9번) 맵 생성
+  const batterOrderMap = useMemo<Record<number, number>>(() => {
+    const map: Record<number, number> = {};
+
+    // 선발 라인업 정보 반영
+    if (lineupData) {
+      const allLineups = [...(lineupData.away_lineup || []), ...(lineupData.home_lineup || [])];
+      for (const item of allLineups) {
+        if (item.player_id && item.batting_order) {
+          map[item.player_id] = item.batting_order;
+        }
+      }
+    }
+
+    // 인스트럭션 로그 이벤트를 순회하며 미등록 타자 타순 동적 보정 (1번~9번 순환)
+    if (matchLog) {
+      let log: IngameInstructionLog | null = null;
+      if (typeof matchLog === 'string') {
+        try {
+          log = JSON.parse(matchLog);
+        } catch (e) { }
+      } else {
+        log = matchLog;
+      }
+
+      if (log && Array.isArray(log.logged_events)) {
+        let awayOrderCounter = 1;
+        let homeOrderCounter = 1;
+        let isTop = true;
+
+        for (const ev of log.logged_events) {
+          if (ev.event_type === 'GAME_STATE') {
+            if (ev.is_top !== undefined) isTop = ev.is_top;
+          } else if (ev.event_type === 'BATTER_ENTER' && ev.batter_id) {
+            const bId = ev.batter_id;
+            if (!map[bId]) {
+              if (isTop) {
+                map[bId] = awayOrderCounter;
+                awayOrderCounter = (awayOrderCounter % 9) + 1;
+              } else {
+                map[bId] = homeOrderCounter;
+                homeOrderCounter = (homeOrderCounter % 9) + 1;
+              }
+            }
+          }
+        }
+      }
+    }
+
+    return map;
+  }, [lineupData, matchLog]);
+
+  // 2. match_log_json 데이터 해석 및 이닝별 타석 데이터 그룹화
   const inningsData = useMemo<InningData[]>(() => {
     if (!matchLog) return [];
 
@@ -203,8 +268,9 @@ export const BroadcastTab: React.FC<BroadcastTabProps> = ({ matchLog, awayClub, 
           paIndex: paCounter++,
           batterId: ev.batter_id,
           pitcherId: ev.pitcher_id,
-          summary: '타석 진행 중',
+          summary: '타석 진행',
           resultType: 'ETC',
+          runsScored: 0,
           pitches: [],
           textLogs: [],
         };
@@ -217,6 +283,13 @@ export const BroadcastTab: React.FC<BroadcastTabProps> = ({ matchLog, awayClub, 
           if (ev.result === 'BALL') balls++;
           else if (ev.result === 'STRIKE' || ev.result === 'STRIKE_LOOKING' || ev.result === 'STRIKE_SWINGING') strikes++;
           else if (ev.result === 'FOUL' && strikes < 2) strikes++;
+
+          // 3스트라이크 삼진 아웃 처리
+          if (strikes >= 3) {
+            outs++;
+            currentPA.summary = '삼진 아웃';
+            currentPA.resultType = 'STRIKE_OUT';
+          }
 
           const countStr = `${balls}-${strikes}`;
           const pitchText = `${pitchCountInPA}구 ${resultStr} (${countStr})`;
@@ -249,12 +322,34 @@ export const BroadcastTab: React.FC<BroadcastTabProps> = ({ matchLog, awayClub, 
           const vel = ev.hit_velocity ? `${Math.round(ev.hit_velocity)}km/h` : '';
           const angle = ev.launch_angle ? `${Math.round(ev.launch_angle)}°` : '';
           const detail = [vel, angle].filter(Boolean).join(', ');
-          const contactText = `타격 [${contactTypeKo}] ${detail ? `(${detail})` : ''}`;
+          const contactText = `[${contactTypeKo}] ${detail ? `(${detail})` : ''}`;
           currentPA.textLogs.push({
             id: `contact_${Math.random()}`,
+            labelTag: '타격',
             resultText: contactText,
             type: 'highlight',
           });
+        }
+      } else if (type === 'FIELDING_ACTION') {
+        if (currentPA) {
+          const actionType = ev.action_type;
+          if (actionType === 'CATCH') {
+            outs++;
+            currentPA.summary = '플라이 아웃';
+            currentPA.resultType = 'OUT';
+            currentPA.textLogs.push({
+              id: `field_${Math.random()}`,
+              resultText: '야수 뜬공 포구 (플라이 아웃)',
+              type: 'normal',
+            });
+          } else if (actionType === 'ERROR' || actionType === 'DROP') {
+            currentPA.summary = '야수 실책';
+            currentPA.textLogs.push({
+              id: `field_err_${Math.random()}`,
+              resultText: '야수 수비 실책 (에러)',
+              type: 'highlight',
+            });
+          }
         }
       } else if (type === 'BASE_RUN_RESULT') {
         if (currentPA) {
@@ -262,8 +357,19 @@ export const BroadcastTab: React.FC<BroadcastTabProps> = ({ matchLog, awayClub, 
           const baseName = ev.target_base === 4 ? '홈' : `${ev.target_base}루`;
           let resText = `${baseName}에서 ${BASE_RUN_RESULT_MAP[res] || res}`;
 
-          if (res === 'SCORE') {
-            resText = `주자 ${baseName} 홈인! 득점!`;
+          const isScoreEvent = res === 'SCORE' || (res === 'SAFE' && ev.target_base === 4);
+
+          if (isScoreEvent) {
+            const isBatterHomerun = ev.runner_id && ev.runner_id === currentPA.batterId;
+            if (isBatterHomerun) {
+              currentPA.summary = '홈런';
+              currentPA.resultType = 'HOMERUN';
+              resText = '타자 솔로/대형 홈런 (득점)';
+            } else {
+              resText = `주자 ${baseName} 홈인 (득점)`;
+            }
+
+            currentPA.runsScored = (currentPA.runsScored || 0) + 1;
             if (currentInning) {
               if (currentInning.isTop) {
                 awayScore += 1;
@@ -273,6 +379,8 @@ export const BroadcastTab: React.FC<BroadcastTabProps> = ({ matchLog, awayClub, 
                 currentInning.homeScore = homeScore;
               }
             }
+            currentPA.awayScore = awayScore;
+            currentPA.homeScore = homeScore;
             currentPA.textLogs.push({
               id: `score_${Math.random()}`,
               resultText: resText,
@@ -319,7 +427,7 @@ export const BroadcastTab: React.FC<BroadcastTabProps> = ({ matchLog, awayClub, 
           });
 
           if (ev.message.includes('홈런')) {
-            currentPA.summary = '홈런!';
+            currentPA.summary = '홈런';
             currentPA.resultType = 'HOMERUN';
           } else if (ev.message.includes('삼진')) {
             currentPA.summary = '삼진 아웃';
@@ -354,6 +462,11 @@ export const BroadcastTab: React.FC<BroadcastTabProps> = ({ matchLog, awayClub, 
 
   // 2. 선택된 이닝 상태 관리
   const [selectedInningId, setSelectedInningId] = useState<string>('');
+
+  // matchLog 데이터 변경 시(다른 경기로 이동 시) 선택 이닝 상태 초기화
+  React.useEffect(() => {
+    setSelectedInningId('');
+  }, [matchLog]);
 
   // default 선택 이닝
   const activeInningId = selectedInningId || (inningsData.length > 0 ? inningsData[0].id : '');
@@ -425,13 +538,15 @@ export const BroadcastTab: React.FC<BroadcastTabProps> = ({ matchLog, awayClub, 
                 else if (pa.resultType === 'WALK') badgeClass = 'match-broadcast__pa-badge--walk';
                 else if (pa.resultType === 'OUT' || pa.resultType === 'STRIKE_OUT') badgeClass = 'match-broadcast__pa-badge--out';
 
+                const isScored = Boolean(pa.runsScored && pa.runsScored > 0);
+
                 return (
-                  <div key={idx} className="match-broadcast__pa-card">
+                  <div key={idx} className={`match-broadcast__pa-card ${isScored ? 'match-broadcast__pa-card--scored' : ''}`}>
                     <div className="match-broadcast__pa-header">
                       <div className="match-broadcast__pa-title-group">
                         <span className="match-broadcast__pa-num">타석 #{pa.paIndex}</span>
                         <span className="match-broadcast__pa-player">
-                          {getPlayerLabel(pa.batterId, playersMap, '타자')}
+                          {getPlayerLabel(pa.batterId, playersMap, '타자', batterOrderMap)}
                         </span>
                         {pa.pitcherId && (
                           <span className="match-broadcast__pa-vs">
@@ -439,9 +554,16 @@ export const BroadcastTab: React.FC<BroadcastTabProps> = ({ matchLog, awayClub, 
                           </span>
                         )}
                       </div>
-                      <span className={`match-broadcast__pa-badge ${badgeClass}`}>
-                        {pa.summary}
-                      </span>
+                      <div className="match-broadcast__pa-status-group">
+                        <span className={`match-broadcast__pa-badge ${badgeClass}`}>
+                          {pa.summary}
+                        </span>
+                        {isScored && pa.awayScore !== undefined && pa.homeScore !== undefined && (
+                          <span className="match-broadcast__pa-score-changed">
+                            {pa.awayScore}:{pa.homeScore}
+                          </span>
+                        )}
+                      </div>
                     </div>
 
                     <div className="match-broadcast__pa-body">
@@ -453,9 +575,11 @@ export const BroadcastTab: React.FC<BroadcastTabProps> = ({ matchLog, awayClub, 
                             else if (log.type === 'highlight') itemClass = 'match-broadcast__timeline-item--highlight';
                             return (
                               <div key={log.id} className={`match-broadcast__timeline-item ${itemClass}`}>
-                                {log.pitchNum !== undefined && (
+                                {log.pitchNum !== undefined ? (
                                   <span className="match-broadcast__pitch-num">{log.pitchNum}구</span>
-                                )}
+                                ) : log.labelTag ? (
+                                  <span className="match-broadcast__pitch-num">{log.labelTag}</span>
+                                ) : null}
                                 <span className="match-broadcast__pitch-result">{log.resultText}</span>
                                 {log.countText && (
                                   <span className="match-broadcast__pitch-count">{log.countText}</span>

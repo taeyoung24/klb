@@ -149,11 +149,16 @@
   transition: border-color 0.15s ease;
 }
 
+/* 득점이 터진 타석 카드의 은은한 구분 테두리 */
+.match-broadcast__pa-card--scored {
+  border: 1px solid #cbd5e1;
+}
+
 .match-broadcast__pa-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 18px;
+  padding: 12px;
   background: #f9fafb;
   border-bottom: 1px solid #f3f4f6;
 }
@@ -162,6 +167,12 @@
   display: flex;
   align-items: center;
   gap: 10px;
+}
+
+.match-broadcast__pa-status-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .match-broadcast__pa-num {
@@ -194,6 +205,18 @@
   color: #64748b;
   background: #f1f5f9;
   border: 1px solid #e2e8f0;
+  box-shadow: none;
+}
+
+/* 득점 타석 우측에 표출되는 변경 스코어 태그 박스 (또렷한 다크 톤 스코어 박스) */
+.match-broadcast__pa-score-changed {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #0f172a;
+  background: #e2e8f0;
+  border: 1px solid #94a3b8;
+  padding: 2px 7px;
+  border-radius: 4px;
   box-shadow: none;
 }
 
@@ -278,21 +301,21 @@
 }
 
 .match-broadcast__timeline-item--highlight {
-  color: #0284c7;
+  color: #111827;
   font-weight: 600;
 }
 
 .match-broadcast__timeline-item--highlight::before {
-  background: #0284c7;
+  background: #475569;
 }
 
 .match-broadcast__timeline-item--score {
-  color: #d97706;
+  color: #111827;
   font-weight: 700;
 }
 
 .match-broadcast__timeline-item--score::before {
-  background: #f59e0b;
+  background: #111827;
 }
 
 /* Empty State / Fallback Card */

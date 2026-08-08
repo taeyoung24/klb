@@ -355,8 +355,8 @@ export default function MatchDetail() {
 
   if (isLoading) {
     return (
-      <div className="match-detail">
-        <LoadingSpinner fullScreen message="데이터를 불러오는 중입니다..." dimmed={true} />
+      <div className="match-detail" style={{ position: 'relative', minHeight: '600px' }}>
+        <LoadingSpinner message="데이터를 불러오는 중입니다..." dimmed={true} />
       </div>
     );
   }
@@ -565,7 +565,7 @@ export default function MatchDetail() {
           </nav>
 
           {/* 싱글 컬럼 탭 컨텐츠 */}
-          <main className="match-detail__content">
+          <main key={selectedMatchId || 'default'} className="match-detail__content">
             {activeTab === 'analysis' && (
               <AnalysisTab
                 awayTeamName={awayClub ? (awayClub.hometown_ko ? `${awayClub.hometown_ko} ${awayClub.name_ko}` : awayClub.name_ko) : '원정팀'}
@@ -601,6 +601,7 @@ export default function MatchDetail() {
                 awayClub={awayClub}
                 homeClub={homeClub}
                 playersMap={playersMap}
+                lineupData={lineupData}
               />
             )}
 

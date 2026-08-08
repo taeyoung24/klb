@@ -17,14 +17,14 @@
   justify-content: center;
   align-items: center;
   gap: 14px;
-  z-index: 1000;
+  z-index: 100;
   border-radius: inherit;
   transition: opacity 0.2s ease-in-out;
 }
 
 .loading-overlay--fullscreen {
   position: fixed;
-  z-index: 9999;
+  z-index: 9000; /* 최상단 앱 글로벌 헤더(z-index: 10000) 아래로 배치 */
 }
 
 .loading-spinner {
