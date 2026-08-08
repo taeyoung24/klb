@@ -303,7 +303,8 @@ def simulate_plate_appearance(
             event_type=IngameEventType.PITCH_START,
             sim_timestamp=context.sim_timestamp,
             pitcher_id=pitcher.id,
-            pitch_type=pitch_type
+            pitch_type=pitch_type,
+            pitch_velocity=pitch_physics.pitch_velocity
         ))
         
         # 3. 타자 타석 전략 및 스윙 의도 판단
@@ -312,8 +313,6 @@ def simulate_plate_appearance(
         
         # 투수의 제구(control) 스탯 기반 정밀 탄착점 결과로 스트라이크 판정
         is_strike_pitch = pitch_physics.is_strike_zone
-
-
         
         if not did_swing:
             if is_strike_pitch:
@@ -323,7 +322,8 @@ def simulate_plate_appearance(
                     sim_timestamp=context.sim_timestamp,
                     pitcher_id=pitcher.id,
                     batter_id=batter.id,
-                    result=IngamePitchResult.STRIKE
+                    result=IngamePitchResult.STRIKE,
+                    pitch_velocity=pitch_physics.pitch_velocity
                 ))
                 if context.scoreboard.strikes == 3:
                     context.scoreboard.outs += 1
@@ -335,7 +335,8 @@ def simulate_plate_appearance(
                     sim_timestamp=context.sim_timestamp,
                     pitcher_id=pitcher.id,
                     batter_id=batter.id,
-                    result=IngamePitchResult.BALL
+                    result=IngamePitchResult.BALL,
+                    pitch_velocity=pitch_physics.pitch_velocity
                 ))
                 if context.scoreboard.balls == 4:
                     runs_scored = advance_runners_walk(context)
@@ -348,10 +349,6 @@ def simulate_plate_appearance(
             # batting.py 모듈의 3D 투구 오프셋 및 타자 스탯 기반 컨택트 물리 함수 호출
             p_contact = calculate_swing_contact_probability(batter, pitch_physics)
             did_contact = random.random() < p_contact
-
-
-
-
             
             if not did_contact:
                 context.scoreboard.strikes += 1
@@ -360,7 +357,9 @@ def simulate_plate_appearance(
                     sim_timestamp=context.sim_timestamp,
                     pitcher_id=pitcher.id,
                     batter_id=batter.id,
-                    result=IngamePitchResult.STRIKE
+                    result=IngamePitchResult.STRIKE,
+                    pitch_velocity=pitch_physics.pitch_velocity
+
                 ))
                 if context.scoreboard.strikes == 3:
                     context.scoreboard.outs += 1
@@ -393,10 +392,11 @@ def simulate_plate_appearance(
                     break
 
                 # [경우 B] 인플레이 타구 (IN_FIELD, FENCE_HIT, FOUL_OUT)
-                # 의사결정 엔진(decision_engine)을 통해 주자의 진루 목표 베이스(1루 vs 2루타 도전) 판단
+                # 의사결정 엔진(engine)을 통해 주자의 진루 목표 베이스(1루 vs 2루타 도전) 판단
                 # (기본 룰베이스 엔진 -> 향후 인공신경망 NN 러닝 엔진으로 1:1 대체)
                 fielding_physics_est = calculate_fielding_physics(defense_lineup, trajectory_physics, target_base=1)
-                target_base = decision_engine.decide_baserunning_target_base(context, batter, fielding_physics_est)
+                target_base = engine.decide_baserunning_target_base(context, batter, fielding_physics_est)
+
 
 
 

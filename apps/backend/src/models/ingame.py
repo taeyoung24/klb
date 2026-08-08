@@ -60,11 +60,12 @@ class IngameBatterEnterEvent(IngameEvent):
 
 class IngamePitchStartEvent(IngameEvent):
     """
-    투수가 와인드업/투구 동작을 시작하며 구종을 결정했음을 알리는 이벤트.
+    투수가 와인드업/투구 동작을 시작하며 구종과 구속을 결정했음을 알리는 이벤트.
     """
     event_type: Literal[IngameEventType.PITCH_START] = IngameEventType.PITCH_START
     pitcher_id: int  # 투구 동작을 시작한 투수의 선수 ID
     pitch_type: IngamePitchType  # 던질 예정인 선택 구종 (직구, 슬라이더 등)
+    pitch_velocity: Optional[float] = None  # 실측 구속 (km/h)
 
 
 class IngamePitchEvent(IngameEvent):
@@ -75,6 +76,8 @@ class IngamePitchEvent(IngameEvent):
     pitcher_id: int  # 투수 선수 ID
     batter_id: int  # 타자 선수 ID
     result: IngamePitchResult  # 투구 판정 결과 (스트라이크, 볼, 파울, 인플레이 등)
+    pitch_velocity: Optional[float] = None  # 실측 구속 (km/h)
+
 
 
 class IngameBatContactEvent(IngameEvent):

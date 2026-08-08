@@ -26,21 +26,23 @@ const POSITION_KO_MAP: Record<string, string> = {
 };
 
 const getPlayerLabel = (
-  playerId?: number,
+  playerId?: number | string,
   playersMap?: Record<number, Player>,
   fallbackRole: string = '선수',
   batterOrderMap?: Record<number, number>
 ) => {
   if (!playerId) return fallbackRole;
-  const player = playersMap?.[playerId];
-  if (!player) return `${fallbackRole} #${playerId}`;
+  const pId = Number(playerId);
+  const player = playersMap?.[pId] || (playersMap ? Object.values(playersMap).find((p) => p.id === pId) : undefined);
+  if (!player) return `${fallbackRole} #${pId}`;
 
   const posKo = POSITION_KO_MAP[player.position] || player.position || '';
-  const order = batterOrderMap?.[playerId];
+  const order = batterOrderMap?.[pId];
   const orderPrefix = order ? `${order}번 ` : '';
 
   return posKo ? `${orderPrefix}${posKo} ${player.name}` : `${orderPrefix}${player.name}`;
 };
+
 
 interface PitchRecord {
   pitchNum: number;
@@ -106,12 +108,35 @@ const CONTACT_TYPE_MAP: Record<string, string> = {
   BUNT: '번트 타구',
 };
 
+const PITCH_TYPE_MAP: Record<string, string> = {
+  FASTBALL: '직구',
+  SLIDER: '슬라이더',
+  CURVEBALL: '커브',
+  CHANGEUP: '체인지업',
+  SINKER: '싱커',
+  SPLITTER: '스플리터',
+};
+
+const FIELDING_ACTION_MAP: Record<string, string> = {
+  CATCH: '포구 성공',
+  ERROR: '수비 실책 (에러)',
+  DROP: '타구 낙구 (포구 실패)',
+};
+
+const BASE_RUN_REASON_MAP: Record<string, string> = {
+  STEAL: '도루 시도',
+  HIT_RUN: '인플레이 진루',
+  TAG_UP: '태그업 진루',
+};
+
 const BASE_RUN_RESULT_MAP: Record<string, string> = {
   SAFE: '세이프',
+  OUT: '아웃',
   TAG_OUT: '태그아웃',
   FORCE_OUT: '포스아웃',
   SCORE: '득점',
 };
+
 
 export const BroadcastTab: React.FC<BroadcastTabProps> = ({ matchLog, awayClub, homeClub, playersMap, lineupData }) => {
   // 1. 라인업 데이터 및 이닝 이벤트 기반 타자별 타순(1번~9번) 맵 생성
@@ -196,6 +221,12 @@ export const BroadcastTab: React.FC<BroadcastTabProps> = ({ matchLog, awayClub, 
     let homeScore = 0;
     let pitchCountInPA = 0;
     let paCounter = 1;
+    let currentPitchType: string | null = null;
+    let currentPitchVel: number | null = null;
+    const runnerStartBaseMap: Record<number, number> = {};
+
+
+
 
     for (const ev of log.logged_events) {
       const type = ev.event_type;
@@ -275,10 +306,27 @@ export const BroadcastTab: React.FC<BroadcastTabProps> = ({ matchLog, awayClub, 
           textLogs: [],
         };
         currentInning.plateAppearances.push(currentPA);
+      } else if (type === 'PITCH_START') {
+        if (ev.pitch_type) {
+          currentPitchType = ev.pitch_type;
+        }
+        if (ev.pitch_velocity) {
+          currentPitchVel = ev.pitch_velocity;
+        }
       } else if (type === 'PITCH') {
         if (currentPA) {
           pitchCountInPA++;
           const resultStr = PITCH_RESULT_MAP[ev.result] || ev.result || '투구';
+          const pitchName = currentPitchType ? (PITCH_TYPE_MAP[currentPitchType] || currentPitchType) : '';
+          const velVal = ev.pitch_velocity || currentPitchVel;
+          const velStr = velVal ? `${Math.round(velVal)}km/h` : '';
+
+          let pitchDetailStr = '';
+          if (pitchName && velStr) pitchDetailStr = ` (${pitchName} ${velStr})`;
+          else if (pitchName) pitchDetailStr = ` (${pitchName})`;
+          else if (velStr) pitchDetailStr = ` (${velStr})`;
+
+          const resultWithPitch = `${resultStr}${pitchDetailStr}`;
 
           if (ev.result === 'BALL') balls++;
           else if (ev.result === 'STRIKE' || ev.result === 'STRIKE_LOOKING' || ev.result === 'STRIKE_SWINGING') strikes++;
@@ -292,7 +340,7 @@ export const BroadcastTab: React.FC<BroadcastTabProps> = ({ matchLog, awayClub, 
           }
 
           const countStr = `${balls}-${strikes}`;
-          const pitchText = `${pitchCountInPA}구 ${resultStr} (${countStr})`;
+          const pitchText = `${pitchCountInPA}구 ${resultWithPitch} (${countStr})`;
 
           currentPA.pitches.push({
             pitchNum: pitchCountInPA,
@@ -306,12 +354,17 @@ export const BroadcastTab: React.FC<BroadcastTabProps> = ({ matchLog, awayClub, 
           currentPA.textLogs.push({
             id: `ev_${pitchCountInPA}_${Math.random()}`,
             pitchNum: pitchCountInPA,
-            resultText: resultStr,
+            resultText: resultWithPitch,
             countText: countStr,
             type: 'normal',
           });
+          currentPitchType = null;
+          currentPitchVel = null;
         }
-      } else if (type === 'BAT_CONTACT') {
+      }
+
+
+ else if (type === 'BAT_CONTACT') {
         if (currentPA) {
           const contactRaw = ev.contact_type || 'CONTACT_IN_PLAY';
           const contactTypeKo = CONTACT_TYPE_MAP[contactRaw] || contactRaw;
@@ -333,6 +386,7 @@ export const BroadcastTab: React.FC<BroadcastTabProps> = ({ matchLog, awayClub, 
       } else if (type === 'FIELDING_ACTION') {
         if (currentPA) {
           const actionType = ev.action_type;
+          const actionKo = FIELDING_ACTION_MAP[actionType] || actionType;
           if (actionType === 'CATCH') {
             outs++;
             currentPA.summary = '플라이 아웃';
@@ -343,30 +397,79 @@ export const BroadcastTab: React.FC<BroadcastTabProps> = ({ matchLog, awayClub, 
               type: 'normal',
             });
           } else if (actionType === 'ERROR' || actionType === 'DROP') {
-            currentPA.summary = '야수 실책';
+            currentPA.summary = '야수 실책/낙구';
             currentPA.textLogs.push({
               id: `field_err_${Math.random()}`,
-              resultText: '야수 수비 실책 (에러)',
+              resultText: `야수 수비 ${actionKo}`,
               type: 'highlight',
             });
           }
+        }
+      } else if (type === 'THROW_ACTION') {
+        if (currentPA && ev.target_base) {
+          const baseName = ev.target_base === 4 ? '홈' : `${ev.target_base}루`;
+          const throwerLabel = getPlayerLabel(ev.thrower_id, playersMap, '수비수', batterOrderMap);
+          currentPA.textLogs.push({
+            id: `throw_${Math.random()}`,
+            resultText: `${throwerLabel} ${baseName} 송구`,
+            type: 'normal',
+          });
+        }
+      } else if (type === 'BASE_RUN_START') {
+        if (currentPA && ev.reason) {
+          if (ev.runner_id && ev.start_base !== undefined) {
+            runnerStartBaseMap[Number(ev.runner_id)] = ev.start_base;
+          }
+
+          const reasonKo = BASE_RUN_REASON_MAP[ev.reason] || ev.reason;
+          const isCurrentBatter = ev.runner_id && Number(ev.runner_id) === currentPA.batterId;
+          const sBase = ev.start_base !== undefined ? ev.start_base : (ev.runner_id ? runnerStartBaseMap[Number(ev.runner_id)] : undefined);
+
+          let runnerLabel = '';
+          if (!isCurrentBatter && ev.runner_id) {
+            const pId = Number(ev.runner_id);
+            const player = playersMap?.[pId] || (playersMap ? Object.values(playersMap).find((p) => p.id === pId) : undefined);
+            const pName = player ? player.name : `#${pId}`;
+            const basePrefix = sBase === 1 ? '1루 주자' : sBase === 2 ? '2루 주자' : sBase === 3 ? '3루 주자' : '주자';
+            runnerLabel = `${basePrefix} ${pName} `;
+          }
+
+          const targetName = ev.target_base === 4 ? '홈' : `${ev.target_base}루`;
+          currentPA.textLogs.push({
+            id: `run_start_${Math.random()}`,
+            resultText: `${runnerLabel}${targetName} ${reasonKo}`.trim(),
+            type: 'highlight',
+          });
         }
       } else if (type === 'BASE_RUN_RESULT') {
         if (currentPA) {
           const res = ev.result;
           const baseName = ev.target_base === 4 ? '홈' : `${ev.target_base}루`;
-          let resText = `${baseName}에서 ${BASE_RUN_RESULT_MAP[res] || res}`;
+          const isCurrentBatter = ev.runner_id && Number(ev.runner_id) === currentPA.batterId;
+          const sBase = ev.runner_id ? runnerStartBaseMap[Number(ev.runner_id)] : undefined;
+
+          let runnerLabel = '';
+          if (!isCurrentBatter && ev.runner_id) {
+            const pId = Number(ev.runner_id);
+            const player = playersMap?.[pId] || (playersMap ? Object.values(playersMap).find((p) => p.id === pId) : undefined);
+            const pName = player ? player.name : `#${pId}`;
+            const basePrefix = sBase === 1 ? '1루 주자' : sBase === 2 ? '2루 주자' : sBase === 3 ? '3루 주자' : '주자';
+            runnerLabel = `${basePrefix} ${pName}`;
+          }
+
+          const prefix = runnerLabel ? `${runnerLabel} ` : '';
+          let resText = `${prefix}${baseName}에서 ${BASE_RUN_RESULT_MAP[res] || res}`;
 
           const isScoreEvent = res === 'SCORE' || (res === 'SAFE' && ev.target_base === 4);
 
           if (isScoreEvent) {
-            const isBatterHomerun = ev.runner_id && ev.runner_id === currentPA.batterId;
+            const isBatterHomerun = ev.runner_id && Number(ev.runner_id) === currentPA.batterId;
             if (isBatterHomerun) {
               currentPA.summary = '홈런';
               currentPA.resultType = 'HOMERUN';
-              resText = '타자 솔로/대형 홈런 (득점)';
+              resText = '솔로/대형 홈런 (득점)';
             } else {
-              resText = `주자 ${baseName} 홈인 (득점)`;
+              resText = `${prefix}${baseName} 홈인 (득점)`;
             }
 
             currentPA.runsScored = (currentPA.runsScored || 0) + 1;
@@ -405,10 +508,10 @@ export const BroadcastTab: React.FC<BroadcastTabProps> = ({ matchLog, awayClub, 
               resultText: resText,
               type: 'highlight',
             });
-          } else if (res === 'TAG_OUT' || res === 'FORCE_OUT') {
+          } else if (res === 'OUT' || res === 'TAG_OUT' || res === 'FORCE_OUT') {
             outs++;
             if (currentPA.resultType === 'ETC') {
-              currentPA.summary = `${baseName} ${BASE_RUN_RESULT_MAP[res]}`;
+              currentPA.summary = `${baseName} ${BASE_RUN_RESULT_MAP[res] || '아웃'}`;
               currentPA.resultType = 'OUT';
             }
             currentPA.textLogs.push({
@@ -418,8 +521,11 @@ export const BroadcastTab: React.FC<BroadcastTabProps> = ({ matchLog, awayClub, 
             });
           }
         }
-      } else if (type === 'NOTICE') {
+      }
+
+ else if (type === 'NOTICE') {
         if (currentPA && ev.message) {
+
           currentPA.textLogs.push({
             id: `notice_${Math.random()}`,
             resultText: ev.message,
