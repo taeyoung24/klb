@@ -31,11 +31,11 @@ class PitcherTracker:
         self.entry_away_score = away_score
         self.entry_home_score = home_score
         self.entry_on_base = on_base_count
-        self.outs_recorded = 0
-        self.exit_inning = None
-        self.exit_top = None
-        self.exit_away_score = None
-        self.exit_home_score = None
+        self.outs_recorded: int = 0
+        self.exit_inning: int | None = None
+        self.exit_top: bool | None = None
+        self.exit_away_score: int | None = None
+        self.exit_home_score: int | None = None
 
     @property
     def entry_lead(self) -> int:
