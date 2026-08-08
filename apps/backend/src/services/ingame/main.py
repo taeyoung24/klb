@@ -1,3 +1,5 @@
+from sqlmodel import Session
+
 from settings import CONFIG
 from src.enums import (
     MatchStatus,
@@ -15,56 +17,20 @@ from src.models import (
     IngameGameStateEvent,
     IngameScoreboard,
     MatchLineup,
+    PitcherTracker,
+    IngameContext,
 )
 from .simulation import simulate_plate_appearance
 from .lineup import select_team_roster_for_match
 from .utils import generate_mock_players
 
 
-class PitcherTracker:
-    def __init__(self, pitcher: Player, is_starter: bool, team: str, entry_inning: int, entry_top: bool, away_score: int, home_score: int, on_base_count: int):
-        self.pitcher = pitcher
-        self.is_starter = is_starter
-        self.team = team  # 'away' or 'home'
-        self.entry_inning = entry_inning
-        self.entry_top = entry_top
-        self.entry_away_score = away_score
-        self.entry_home_score = home_score
-        self.entry_on_base = on_base_count
-        self.outs_recorded: int = 0
-        self.exit_inning: int | None = None
-        self.exit_top: bool | None = None
-        self.exit_away_score: int | None = None
-        self.exit_home_score: int | None = None
-
-    @property
-    def entry_lead(self) -> int:
-        if self.team == 'away':
-            return self.entry_away_score - self.entry_home_score
-        else:
-            return self.entry_home_score - self.entry_away_score
-
-    @property
-    def exit_lead(self) -> int:
-        if self.exit_away_score is None or self.exit_home_score is None:
-            return self.entry_lead
-        if self.team == 'away':
-            return self.exit_away_score - self.exit_home_score
-        else:
-            return self.exit_home_score - self.exit_away_score
-
-
 def determine_decisions(
     match: Match,
-    away_logs: list[PitcherTracker],
-    home_logs: list[PitcherTracker],
-    go_ahead_pitcher_away: PitcherTracker | None,
-    go_ahead_pitcher_home: PitcherTracker | None,
-    go_ahead_responsible_pitcher_away: PitcherTracker | None,
-    go_ahead_responsible_pitcher_home: PitcherTracker | None,
+    context: IngameContext,
 ):
     """
-    제출된 야구 규정에 맞추어 승리/패전/세이브 투수 ID를 결정합니다.
+    제출된 야구 규정에 맞추어 IngameContext의 투수 기록 데이터를 조회하여 승리/패전/세이브 투수 ID를 결정합니다.
     """
     if match.away_score is None or match.home_score is None or match.away_score == match.home_score:
         match.winning_pitcher_id = None
@@ -73,11 +39,11 @@ def determine_decisions(
         return
 
     win_team = 'away' if match.away_score > match.home_score else 'home'
-    win_logs = away_logs if win_team == 'away' else home_logs
-    lose_logs = home_logs if win_team == 'away' else away_logs
+    win_logs = context.away_pitcher_logs if win_team == 'away' else context.home_pitcher_logs
+    lose_logs = context.home_pitcher_logs if win_team == 'away' else context.away_pitcher_logs
 
-    go_ahead_win_pitcher = go_ahead_pitcher_away if win_team == 'away' else go_ahead_pitcher_home
-    go_ahead_lose_resp_pitcher = go_ahead_responsible_pitcher_home if win_team == 'away' else go_ahead_responsible_pitcher_away
+    go_ahead_win_pitcher = context.go_ahead_pitcher_away if win_team == 'away' else context.go_ahead_pitcher_home
+    go_ahead_lose_resp_pitcher = context.go_ahead_resp_pitcher_home if win_team == 'away' else context.go_ahead_resp_pitcher_away
 
     winning_pitcher_log: PitcherTracker | None = None
 
@@ -138,8 +104,8 @@ def determine_decisions(
     match.save_pitcher_id = save_pitcher_id
 
 
-def run_match(match: Match, session=None):
-    """단일 매치를 시뮬레이션하여 세부 이벤트 대본을 남깁니다."""
+def run_match(match: Match, session: Session | None = None):
+    """단일 매치를 IngameContext 객체 중심으로 시뮬레이션하여 세부 이벤트 대본을 남깁니다."""
     # 1. 라인업 및 투수 스쿼드 추출
     away_sp, away_bp, away_batters = select_team_roster_for_match(match.away_club_id, session=session)
     home_sp, home_bp, home_batters = select_team_roster_for_match(match.home_club_id, session=session)
@@ -195,25 +161,32 @@ def run_match(match: Match, session=None):
                         batting_order=idx,
                         is_starter=True
                     ))
-            session.flush()
+            session.commit()
         except Exception as e:
+            session.rollback()
             print("Failed to save MatchLineup in run_match:", e)
 
-    away_pitchers = [away_sp] + away_bp
-    home_pitchers = [home_sp] + home_bp
+    # 2. IngameContext 캡슐화 객체 생성 및 초기화
+    context = IngameContext(
+        match_id=match.id,
+        stadium_id=match.stadium_id,
+        away_batters=away_batters,
+        home_batters=home_batters,
+        away_pitchers=[away_sp] + away_bp,
+        home_pitchers=[home_sp] + home_bp,
+    )
 
-    away_p_idx = 0
-    home_p_idx = 0
+    context.current_away_pitcher_log = PitcherTracker(context.away_pitchers[0], True, 'away', 1, True, 0, 0, 0)
+    context.current_home_pitcher_log = PitcherTracker(context.home_pitchers[0], True, 'home', 1, True, 0, 0, 0)
+    context.away_pitcher_logs.append(context.current_away_pitcher_log)
+    context.home_pitcher_logs.append(context.current_home_pitcher_log)
 
-    # 2. 게임 상태 및 누적 점수 변수 초기화
-    home_score = 0
-    away_score = 0
-    sim_timestamp = 0.0
-    logged_events = []
+    current_pitcher_responsible_away = context.current_away_pitcher_log
+    current_pitcher_responsible_home = context.current_home_pitcher_log
 
-    logged_events.append(IngameGameStateEvent(
+    context.logged_events.append(IngameGameStateEvent(
         event_type=IngameEventType.GAME_STATE,
-        sim_timestamp=sim_timestamp,
+        sim_timestamp=context.sim_timestamp,
         state_type=IngameGameState.MATCH_START,
         inning=1,
         is_top=True,
@@ -221,207 +194,180 @@ def run_match(match: Match, session=None):
         away_score=0
     ))
 
-    inning = 1
-    is_top = True
-
-    away_batter_idx = 0
-    home_batter_idx = 0
-
-    # 투수 등판 트래커
-    current_away_pitcher_log = PitcherTracker(away_pitchers[0], True, 'away', 1, True, 0, 0, 0)
-    current_home_pitcher_log = PitcherTracker(home_pitchers[0], True, 'home', 1, True, 0, 0, 0)
-
-    away_pitcher_logs: list[PitcherTracker] = [current_away_pitcher_log]
-    home_pitcher_logs: list[PitcherTracker] = [current_home_pitcher_log]
-
-    # 결승 리드 형성 및 책임 투수 트래킹
-    go_ahead_pitcher_away: PitcherTracker | None = None
-    go_ahead_pitcher_home: PitcherTracker | None = None
-    go_ahead_resp_pitcher_away: PitcherTracker | None = None
-    go_ahead_resp_pitcher_home: PitcherTracker | None = None
-
-    current_pitcher_responsible_away = current_away_pitcher_log
-    current_pitcher_responsible_home = current_home_pitcher_log
-
     max_innings = 11 if match.limit_extra_innings else 100
     game_over = False
 
     while not game_over:
         # 투수 교체 훅 (선발 5이닝/아웃15 이상 완료 시 계투 교체, 8/9회 마무리 교체 등)
-        if is_top:
+        if context.is_top:
             # 홈팀 수비투수 교체 검토
-            if home_p_idx < len(home_pitchers) - 1:
-                # 선발 투수가 5이닝(15아웃) 이상 투구 후 다음 투수로 교체
-                if current_home_pitcher_log.outs_recorded >= 15 or (inning >= 8 and home_p_idx < len(home_pitchers) - 1):
-                    current_home_pitcher_log.exit_inning = inning
-                    current_home_pitcher_log.exit_top = is_top
-                    current_home_pitcher_log.exit_away_score = away_score
-                    current_home_pitcher_log.exit_home_score = home_score
+            if context.home_pitcher_idx < len(context.home_pitchers) - 1:
+                if context.current_home_pitcher_log.outs_recorded >= 15 or (context.inning >= 8 and context.home_pitcher_idx < len(context.home_pitchers) - 1):
+                    context.current_home_pitcher_log.exit_inning = context.inning
+                    context.current_home_pitcher_log.exit_top = context.is_top
+                    context.current_home_pitcher_log.exit_away_score = context.away_score
+                    context.current_home_pitcher_log.exit_home_score = context.home_score
 
-                    home_p_idx += 1
-                    on_base_cnt = sum(1 for b in [None, None, None] if b is not None)
-                    current_home_pitcher_log = PitcherTracker(
-                        home_pitchers[home_p_idx], False, 'home', inning, is_top, away_score, home_score, on_base_cnt
+                    context.home_pitcher_idx += 1
+                    on_base_cnt = sum(1 for r in [context.runner_1b, context.runner_2b, context.runner_3b] if r is not None)
+                    context.current_home_pitcher_log = PitcherTracker(
+                        context.home_pitchers[context.home_pitcher_idx], False, 'home', context.inning, context.is_top, context.away_score, context.home_score, on_base_cnt
                     )
-                    home_pitcher_logs.append(current_home_pitcher_log)
-                    current_pitcher_responsible_home = current_home_pitcher_log
+                    context.home_pitcher_logs.append(context.current_home_pitcher_log)
+                    current_pitcher_responsible_home = context.current_home_pitcher_log
         else:
             # 어웨이팀 수비투수 교체 검토
-            if away_p_idx < len(away_pitchers) - 1:
-                if current_away_pitcher_log.outs_recorded >= 15 or (inning >= 8 and away_p_idx < len(away_pitchers) - 1):
-                    current_away_pitcher_log.exit_inning = inning
-                    current_away_pitcher_log.exit_top = is_top
-                    current_away_pitcher_log.exit_away_score = away_score
-                    current_away_pitcher_log.exit_home_score = home_score
+            if context.away_pitcher_idx < len(context.away_pitchers) - 1:
+                if context.current_away_pitcher_log.outs_recorded >= 15 or (context.inning >= 8 and context.away_pitcher_idx < len(context.away_pitchers) - 1):
+                    context.current_away_pitcher_log.exit_inning = context.inning
+                    context.current_away_pitcher_log.exit_top = context.is_top
+                    context.current_away_pitcher_log.exit_away_score = context.away_score
+                    context.current_away_pitcher_log.exit_home_score = context.home_score
 
-                    away_p_idx += 1
-                    on_base_cnt = sum(1 for b in [None, None, None] if b is not None)
-                    current_away_pitcher_log = PitcherTracker(
-                        away_pitchers[away_p_idx], False, 'away', inning, is_top, away_score, home_score, on_base_cnt
+                    context.away_pitcher_idx += 1
+                    on_base_cnt = sum(1 for r in [context.runner_1b, context.runner_2b, context.runner_3b] if r is not None)
+                    context.current_away_pitcher_log = PitcherTracker(
+                        context.away_pitchers[context.away_pitcher_idx], False, 'away', context.inning, context.is_top, context.away_score, context.home_score, on_base_cnt
                     )
-                    away_pitcher_logs.append(current_away_pitcher_log)
-                    current_pitcher_responsible_away = current_away_pitcher_log
+                    context.away_pitcher_logs.append(context.current_away_pitcher_log)
+                    current_pitcher_responsible_away = context.current_away_pitcher_log
 
-        logged_events.append(IngameGameStateEvent(
+        context.logged_events.append(IngameGameStateEvent(
             event_type=IngameEventType.GAME_STATE,
-            sim_timestamp=sim_timestamp,
+            sim_timestamp=context.sim_timestamp,
             state_type=IngameGameState.INNING_START,
-            inning=inning,
-            is_top=is_top,
-            home_score=home_score,
-            away_score=away_score
+            inning=context.inning,
+            is_top=context.is_top,
+            home_score=context.home_score,
+            away_score=context.away_score
         ))
 
-        outs = 0
-        bases: dict[int, Player | None] = {1: None, 2: None, 3: None}
+        context.scoreboard.outs = 0
+        context.runner_1b = None
+        context.runner_2b = None
+        context.runner_3b = None
 
-        if is_top:
-            batters = away_batters
-            pitcher = current_home_pitcher_log.pitcher
-            defense_lineup = home_batters
-            current_batter_idx = away_batter_idx
+        if context.is_top:
+            batters = context.away_batters
+            context.current_pitcher = context.current_home_pitcher_log.pitcher
+            defense_lineup = context.home_batters
+            current_batter_idx = context.away_batter_idx
         else:
-            batters = home_batters
-            pitcher = current_away_pitcher_log.pitcher
-            defense_lineup = away_batters
-            current_batter_idx = home_batter_idx
+            batters = context.home_batters
+            context.current_pitcher = context.current_away_pitcher_log.pitcher
+            defense_lineup = context.away_batters
+            current_batter_idx = context.home_batter_idx
 
-        while outs < 3:
+        while context.scoreboard.outs < 3:
             # 9회말 또는 연장전 말에 홈팀이 리드하면 즉시 끝내기로 경기 종료
-            if not is_top and inning >= 9 and home_score > away_score:
+            if not context.is_top and context.inning >= 9 and context.home_score > context.away_score:
                 game_over = True
                 break
 
-            batter = batters[current_batter_idx]
+            context.current_batter = batters[current_batter_idx]
 
-            prev_outs = outs
-            prev_away = away_score
-            prev_home = home_score
+            prev_outs = context.scoreboard.outs
+            prev_away = context.away_score
+            prev_home = context.home_score
 
-            sim_timestamp, outs, bases, runs = simulate_plate_appearance(
-                batter, pitcher, defense_lineup, bases, outs, logged_events, sim_timestamp
-            )
+            runs = simulate_plate_appearance(context, defense_lineup)
 
             # 아웃 추가량 기록
-            outs_added = outs - prev_outs
+            outs_added = context.scoreboard.outs - prev_outs
             if outs_added > 0:
-                if is_top:
-                    current_home_pitcher_log.outs_recorded += outs_added
+                if context.is_top:
+                    context.current_home_pitcher_log.outs_recorded += outs_added
                 else:
-                    current_away_pitcher_log.outs_recorded += outs_added
+                    context.current_away_pitcher_log.outs_recorded += outs_added
 
             # 득점 발생 시 결승점 및 책임 투수 트래킹
             if runs > 0:
-                if is_top:
-                    away_score += runs
-                    # 어웨이가 결승 리드를 잡거나 굳히는 점수인지 판정
-                    if prev_away <= prev_home and away_score > home_score:
-                        go_ahead_pitcher_away = current_away_pitcher_log
-                        go_ahead_resp_pitcher_home = current_pitcher_responsible_home
+                if context.is_top:
+                    context.away_score += runs
+                    context.scoreboard.away_r = context.away_score
+                    if prev_away <= prev_home and context.away_score > context.home_score:
+                        context.go_ahead_pitcher_away = context.current_away_pitcher_log
+                        context.go_ahead_resp_pitcher_home = current_pitcher_responsible_home
                 else:
-                    home_score += runs
-                    if prev_home <= prev_away and home_score > away_score:
-                        go_ahead_pitcher_home = current_home_pitcher_log
-                        go_ahead_resp_pitcher_away = current_pitcher_responsible_away
+                    context.home_score += runs
+                    context.scoreboard.home_r = context.home_score
+                    if prev_home <= prev_away and context.home_score > context.away_score:
+                        context.go_ahead_pitcher_home = context.current_home_pitcher_log
+                        context.go_ahead_resp_pitcher_away = current_pitcher_responsible_away
 
             current_batter_idx = (current_batter_idx + 1) % 9
 
-        if is_top:
-            away_batter_idx = current_batter_idx
+        if context.is_top:
+            context.away_batter_idx = current_batter_idx
         else:
-            home_batter_idx = current_batter_idx
+            context.home_batter_idx = current_batter_idx
 
         if game_over:
             break
 
-        logged_events.append(IngameGameStateEvent(
+        context.logged_events.append(IngameGameStateEvent(
             event_type=IngameEventType.GAME_STATE,
-            sim_timestamp=sim_timestamp,
+            sim_timestamp=context.sim_timestamp,
             state_type=IngameGameState.INNING_END,
-            inning=inning,
-            is_top=is_top,
-            home_score=home_score,
-            away_score=away_score
+            inning=context.inning,
+            is_top=context.is_top,
+            home_score=context.home_score,
+            away_score=context.away_score
         ))
 
-        sim_timestamp += 120.0
+        context.sim_timestamp += 120.0
 
         # 경기 종료 판정
-        if inning == 9 and is_top and home_score > away_score:
+        if context.inning == 9 and context.is_top and context.home_score > context.away_score:
             game_over = True
-        elif not is_top and inning >= 9:
-            if home_score != away_score:
+        elif not context.is_top and context.inning >= 9:
+            if context.home_score != context.away_score:
                 game_over = True
-            elif inning >= max_innings:
+            elif context.inning >= max_innings:
                 game_over = True
 
         if not game_over:
-            if is_top:
-                is_top = False
+            if context.is_top:
+                context.is_top = False
             else:
-                is_top = True
-                inning += 1
+                context.is_top = True
+                context.inning += 1
 
     # 강판 점수 동기화
-    current_away_pitcher_log.exit_inning = inning
-    current_away_pitcher_log.exit_top = is_top
-    current_away_pitcher_log.exit_away_score = away_score
-    current_away_pitcher_log.exit_home_score = home_score
+    if context.current_away_pitcher_log:
+        context.current_away_pitcher_log.exit_inning = context.inning
+        context.current_away_pitcher_log.exit_top = context.is_top
+        context.current_away_pitcher_log.exit_away_score = context.away_score
+        context.current_away_pitcher_log.exit_home_score = context.home_score
 
-    current_home_pitcher_log.exit_inning = inning
-    current_home_pitcher_log.exit_top = is_top
-    current_home_pitcher_log.exit_away_score = away_score
-    current_home_pitcher_log.exit_home_score = home_score
+    if context.current_home_pitcher_log:
+        context.current_home_pitcher_log.exit_inning = context.inning
+        context.current_home_pitcher_log.exit_top = context.is_top
+        context.current_home_pitcher_log.exit_away_score = context.away_score
+        context.current_home_pitcher_log.exit_home_score = context.home_score
 
-    match.home_score = home_score
-    match.away_score = away_score
+    match.home_score = context.home_score
+    match.away_score = context.away_score
     match.status = MatchStatus.COMPLETED
 
-    # 승/패/세 투수 결정 알고리즘 실행
-    determine_decisions(
-        match,
-        away_pitcher_logs,
-        home_pitcher_logs,
-        go_ahead_pitcher_away,
-        go_ahead_pitcher_home,
-        go_ahead_resp_pitcher_away,
-        go_ahead_resp_pitcher_home,
-    )
+    # 승/패/세 투수 결정 알고리즘 실행 (context 전달)
+    determine_decisions(match, context)
 
-    logged_events.append(IngameGameStateEvent(
+    context.logged_events.append(IngameGameStateEvent(
         event_type=IngameEventType.GAME_STATE,
-        sim_timestamp=sim_timestamp,
+        sim_timestamp=context.sim_timestamp,
         state_type=IngameGameState.MATCH_END,
-        inning=inning,
-        is_top=is_top,
-        home_score=home_score,
-        away_score=away_score
+        inning=context.inning,
+        is_top=context.is_top,
+        home_score=context.home_score,
+        away_score=context.away_score
     ))
 
     match.match_log = IngameInstructionLog(
         simulation_version=CONFIG.simulation_version,
-        logged_events=logged_events
+        logged_events=context.logged_events
     )
+
 
 
 def get_scoreboard(match_log: IngameInstructionLog) -> IngameScoreboard:
