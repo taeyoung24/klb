@@ -3,12 +3,14 @@ import { FaChevronLeft, FaChevronRight } from 'react-icons/fa';
 import { getClubs, type Club } from '../../api/clubs';
 import {
   getMatch,
+  getMatchAnalysis,
   getMatches,
   getMatchLineup,
   getMatchPlaceholders,
   getMatchScoreboard,
   type IngameScoreboard,
   type Match,
+  type MatchAnalysisData,
   type MatchDetailData,
   type MatchLineupItem,
   type MatchLineupResponse,
@@ -16,6 +18,7 @@ import {
 } from '../../api/matches';
 import { getPlayers, type Player } from '../../api/players';
 import { getSystemInfo } from '../../api/system';
+import LoadingSpinner from '../../components/LoadingSpinner/LoadingSpinner';
 import TeamLogo from '../../components/TeamLogo/TeamLogo';
 import './index.css';
 
@@ -139,9 +142,11 @@ export default function MatchDetail() {
   const [scoreboard, setScoreboard] = useState<IngameScoreboard | null>(null);
   const [matchDetailData, setMatchDetailData] = useState<MatchDetailData | null>(null);
   const [lineupData, setLineupData] = useState<MatchLineupResponse | null>(null);
+  const [analysisApiData, setAnalysisApiData] = useState<MatchAnalysisData | null>(null);
   const [playersMap, setPlayersMap] = useState<Record<number, Player>>({});
   const [placeholders, setPlaceholders] = useState<MatchPlaceholder[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isDetailLoading, setIsDetailLoading] = useState<boolean>(false);
 
   useEffect(() => {
     getMatchPlaceholders()
@@ -206,6 +211,7 @@ export default function MatchDetail() {
 
   useEffect(() => {
     if (selectedMatchId) {
+      setIsDetailLoading(true);
       Promise.all([
         getMatchScoreboard(selectedMatchId).catch((e) => {
           console.error('Failed to load scoreboard', e);
@@ -219,11 +225,22 @@ export default function MatchDetail() {
           console.error('Failed to load match lineup', e);
           return null;
         }),
-      ]).then(([sb, detail, lineup]) => {
-        setScoreboard(sb);
-        setMatchDetailData(detail);
-        setLineupData(lineup);
-      });
+        getMatchAnalysis(selectedMatchId).catch((e) => {
+          console.error('Failed to load match analysis', e);
+          return null;
+        }),
+      ])
+        .then(([sb, detail, lineup, analysis]) => {
+          setScoreboard(sb);
+          setMatchDetailData(detail);
+          setLineupData(lineup);
+          if (analysis) {
+            setAnalysisApiData(analysis);
+          }
+        })
+        .finally(() => {
+          setIsDetailLoading(false);
+        });
     }
   }, [selectedMatchId]);
 
@@ -295,17 +312,6 @@ export default function MatchDetail() {
   const awayScore = currentMatch?.away_score ?? 0;
   const homeScore = currentMatch?.home_score ?? 0;
 
-  // 탭 목데이터
-  const analysisData = {
-    headToHead: `${awayClub?.name_ko || '원정팀'} VS ${homeClub?.name_ko || '홈팀'} 시즌 첫 맞대결`,
-    metrics: [
-      { label: '팀 타율', away: '.278', home: '.262', awayWin: true },
-      { label: '팀 ERA', away: '3.42', home: '3.98', awayWin: true },
-      { label: '팀 홈런', away: '84개', home: '92개', awayWin: false },
-      { label: '득점권 타율', away: '.295', home: '.251', awayWin: true },
-    ],
-  };
-
   const targetMatch = matchDetailData || currentMatch;
 
   const getPitcherName = (pitcherId?: number | null) => {
@@ -350,9 +356,7 @@ export default function MatchDetail() {
   if (isLoading) {
     return (
       <div className="match-detail">
-        <div className="match-detail__container">
-          경기 데이터를 로딩 중입니다...
-        </div>
+        <LoadingSpinner fullScreen message="데이터를 불러오는 중입니다..." dimmed={true} />
       </div>
     );
   }
@@ -367,7 +371,10 @@ export default function MatchDetail() {
 
   return (
     <div className="match-detail">
-      <div className="match-detail__container">
+      <div className="match-detail__container" style={{ position: 'relative' }}>
+        {isDetailLoading && (
+          <LoadingSpinner message="데이터를 불러오는 중입니다..." dimmed={true} />
+        )}
         {/* 상단 경기 정보 서머리 & 이닝별 스코어보드 */}
         <header className="match-detail__header">
           <div className="match-detail__header-layout">
@@ -382,7 +389,7 @@ export default function MatchDetail() {
               <div className="match-detail__hero">
                 {/* 원정팀 (flex: 1) */}
                 <div className="match-detail__team match-detail__team--away">
-                  <TeamLogo teamCode={awayClub?.team_code} teamName={awayClub?.name_ko || '원정팀'} size={44} />
+                  <TeamLogo teamCode={awayClub?.team_code} teamName={awayClub?.name_ko || '원정팀'} size={52} />
                   <div className="match-detail__team-info match-detail__team-info--away">
                     <span className="match-detail__team-name">
                       {awayClub ? `${awayClub.hometown_ko} ${awayClub.name_ko}` : '원정팀'}
@@ -409,7 +416,7 @@ export default function MatchDetail() {
                     </span>
                     <span className="match-detail__team-code">{homeClub?.abbr_name || homeClub?.team_code || 'HOME'}</span>
                   </div>
-                  <TeamLogo teamCode={homeClub?.team_code} teamName={homeClub?.name_ko || '홈팀'} size={44} />
+                  <TeamLogo teamCode={homeClub?.team_code} teamName={homeClub?.name_ko || '홈팀'} size={52} />
                 </div>
               </div>
 
@@ -561,8 +568,15 @@ export default function MatchDetail() {
           <main className="match-detail__content">
             {activeTab === 'analysis' && (
               <AnalysisTab
-                headToHead={analysisData.headToHead}
-                metrics={analysisData.metrics}
+                awayTeamName={awayClub ? (awayClub.hometown_ko ? `${awayClub.hometown_ko} ${awayClub.name_ko}` : awayClub.name_ko) : '원정팀'}
+                homeTeamName={homeClub ? (homeClub.hometown_ko ? `${homeClub.hometown_ko} ${homeClub.name_ko}` : homeClub.name_ko) : '홈팀'}
+                awayTeamCode={awayClub?.team_code}
+                homeTeamCode={homeClub?.team_code}
+                awayTeamRecord={analysisApiData?.away_team_record}
+                homeTeamRecord={analysisApiData?.home_team_record}
+                headToHeadDetail={analysisApiData?.head_to_head_detail}
+                metrics={analysisApiData?.metrics}
+                pitcherComparison={analysisApiData?.pitcher_comparison}
               />
             )}
 

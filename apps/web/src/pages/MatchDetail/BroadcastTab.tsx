@@ -30,8 +30,7 @@ const getPlayerLabel = (playerId?: number, playersMap?: Record<number, Player>, 
   if (!player) return `${fallbackRole} #${playerId}`;
 
   const posKo = POSITION_KO_MAP[player.position] || player.position || '';
-  const numStr = player.uniform_number ? ` (No.${player.uniform_number})` : '';
-  return posKo ? `${posKo} ${player.name}${numStr}` : `${player.name}${numStr}`;
+  return posKo ? `${posKo} ${player.name}` : player.name;
 };
 
 interface PitchRecord {

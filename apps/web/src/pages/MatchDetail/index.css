@@ -449,6 +449,7 @@
    -------------------------------------------------------------------------- */
 .match-detail__content {
   width: 100%;
+  padding-top: 16px;
 }
 
 .match-detail__panel {

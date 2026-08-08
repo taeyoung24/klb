@@ -1,0 +1,54 @@
+/* LoadingSpinner.css - 뒤가 전혀 보이지 않는 100% 불투명 순백색 배경 + 연하고 은은한 딤드 스피너/글자 */
+
+.loading-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  height: 100%;
+  min-height: 240px;
+  background-color: #ffffff; /* 뒤쪽 콘텐츠를 100% 완벽히 가리는 100% 불투명 순백색 */
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 14px;
+  z-index: 1000;
+  border-radius: inherit;
+  transition: opacity 0.2s ease-in-out;
+}
+
+.loading-overlay--fullscreen {
+  position: fixed;
+  z-index: 9999;
+}
+
+.loading-spinner {
+  display: inline-block;
+  border: 3px solid #f3f4f6;
+  border-top-color: #d1d5db; /* 더 연하고 은은하게 딤드 처리된 회색 스피너 링 */
+  border-radius: 50%;
+  animation: loading-spinner-rotate 0.8s linear infinite;
+  box-shadow: none;
+}
+
+.loading-message {
+  font-size: 13px;
+  font-weight: 500;
+  color: #9ca3af; /* 눈에 띄게 연하게 딤드 처리된 안내 텍스트 */
+  letter-spacing: -0.01em;
+  margin: 0;
+}
+
+@keyframes loading-spinner-rotate {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}

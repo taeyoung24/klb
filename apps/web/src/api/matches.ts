@@ -109,3 +109,44 @@ export const getMatchLineup = async (matchId: number): Promise<MatchLineupRespon
   return response.data;
 };
 
+export interface MetricItemData {
+  label: string;
+  away: string;
+  home: string;
+  away_win: boolean;
+}
+
+export interface HeadToHeadDetailData {
+  away_wins: number;
+  home_wins: number;
+  draws: number;
+  recent_results?: string;
+}
+
+export interface PitcherProfileData {
+  name: string;
+  hand: string;
+  era: string;
+  record: string;
+}
+
+export interface PitcherComparisonData {
+  away_pitcher: PitcherProfileData;
+  home_pitcher: PitcherProfileData;
+  metrics: MetricItemData[];
+}
+
+export interface MatchAnalysisData {
+  away_team_record?: string;
+  home_team_record?: string;
+  head_to_head_detail: HeadToHeadDetailData;
+  metrics: MetricItemData[];
+  pitcher_comparison: PitcherComparisonData;
+}
+
+export const getMatchAnalysis = async (matchId: number): Promise<MatchAnalysisData> => {
+  const response = await client.get<MatchAnalysisData>(`/matches/${matchId}/analysis`);
+  return response.data;
+};
+
+
