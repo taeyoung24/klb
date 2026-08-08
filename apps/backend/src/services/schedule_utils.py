@@ -1,6 +1,6 @@
 import datetime
 from typing import Optional, Union
-from src.enums import MatchStatus
+from src.enums import MatchStatus, MatchStage
 from src.models import Match, Club, MatchPlaceholder
 
 
@@ -89,6 +89,7 @@ def generate_regular_schedule(clubs: list[Club], year: int, base_sim_day: int) -
                     stadium_id=home_club.home_stadium_id,
                     sim_day=current_day,
                     status=MatchStatus.SCHEDULED,
+                    stage=MatchStage.REGULAR,
                     limit_extra_innings=True
                 ))
                 
@@ -164,6 +165,7 @@ def generate_krown_elite_schedule(clubs: list[Club], base_sim_day: int) -> list[
                 stadium_id=club_a.home_stadium_id,
                 sim_day=day1,
                 status=MatchStatus.SCHEDULED,
+                stage=MatchStage.ELITE,
                 limit_extra_innings=True
             ))
             # 2차전: club_b 홈 (경기일: day2)
@@ -173,6 +175,7 @@ def generate_krown_elite_schedule(clubs: list[Club], base_sim_day: int) -> list[
                 stadium_id=club_b.home_stadium_id,
                 sim_day=day2,
                 status=MatchStatus.SCHEDULED,
+                stage=MatchStage.ELITE,
                 limit_extra_innings=True
             ))
 
@@ -289,5 +292,6 @@ def generate_tiebreaker_schedule(
         stadium_id=final_stadium_id,
         sim_day=sim_day,
         status=MatchStatus.SCHEDULED,
+        stage=MatchStage.TIEBREAKER,
         limit_extra_innings=False,
     )

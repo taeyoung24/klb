@@ -60,7 +60,7 @@ const getMatchTitle = (
 
   // 1. 포스트시즌 경기 (sim_day >= 229)
   if (isPostSeason) {
-    const isKnockout = match.limit_extra_innings === false;
+    const isKnockout = match.stage === 'KNOCKOUT';
     if (isKnockout) {
       // DB MatchPlaceholder에서 해당 경기 ID(actual_match_id) 매핑 검색
       const ph = placeholders.find(p => p.actual_match_id === match.id);

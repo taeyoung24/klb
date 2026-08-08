@@ -7,6 +7,7 @@ from sqlalchemy.types import TypeDecorator
 from .enums import (
     TurfType,
     MatchStatus,
+    MatchStage,
     IngameRole,
     RosterStatus,
     IngameEventType,
@@ -150,6 +151,7 @@ class Match(SQLModel, table=True):
     stadium_id: Optional[int] = Field(default=None, foreign_key="stadium.id")
     sim_day: int         = Field(index=True)
     status: MatchStatus  = Field(default=MatchStatus.SCHEDULED, index=True)
+    stage: MatchStage    = Field(default=MatchStage.REGULAR, index=True)
     limit_extra_innings: bool = Field()
     
     # 경기 예정이거나 취소 상태일 때는 Null(None) 허용
@@ -180,7 +182,7 @@ class MatchLineup(SQLModel, table=True):
     """
     경기별 팀 선발/출전 라인업 장부 테이블
     """
-    id: Optional[int] = Field(default=None, primary_key=True)
+    id: int = Field(default=None, primary_key=True)
     match_id: int = Field(foreign_key="match.id", index=True)
     club_id: int = Field(foreign_key="club.id", index=True)
     player_id: int = Field(foreign_key="player.id")
@@ -193,7 +195,7 @@ class MatchPlaceholder(SQLModel, table=True):
     """
     토너먼트(녹아웃) 대진 스키마를 표현하는 플레이스홀더 테이블.
     """
-    id: Optional[int] = Field(default=None, primary_key=True)
+    id: int = Field(default=None, primary_key=True)
     round: str  # "ROUND_OF_8", "SEMI_FINAL", "FINAL"
     sim_day: int  # 경기가 치러질 예정 시뮬레이션 일자
     limit_extra_innings: bool = Field()

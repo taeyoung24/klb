@@ -6,7 +6,6 @@ from settings import DATABASE_URL, CONFIG
 from src.enums import IngameRole
 from src.models import League, Club, Player, Stadium, WorldState, DailyClubStanding
 from src.services.generation_utils import generate_player, generate_stadium
-from src.services.schedule_utils import generate_regular_schedule
 from src.utils.logger import logger
 
 engine = create_engine(DATABASE_URL)
@@ -95,39 +94,6 @@ def main():
             
             session.commit()
             logger.info(f"리그 '{league.name}' 소속 구단 선수 로스터(구단당 {CONFIG.roster_player_count}명) 데이터 생성 완료")
-
-            # 리그 소속 구단이 10개인 경우 정규시즌 일정 및 초기 순위 데이터 적재
-            if len(league_clubs) == 10:
-                # 정규시즌 일정 생성
-                matches = generate_regular_schedule(league_clubs, CONFIG.base_datetime.year, 1)
-                for m in matches:
-                    session.add(m)
-                
-                # 첫 경기 시작 sim_day 확인 및 전날 산출
-                start_sim_day = min(m.sim_day for m in matches)
-                standing_sim_day = start_sim_day - 1
-                
-                # 각 구단별 초기 순위(모두 공동 1위 타이) 데이터 생성
-                for club in league_clubs:
-                    standing = DailyClubStanding(
-                        sim_day=standing_sim_day,
-                        league_id=league.id,
-                        club_id=club.id,
-                        rank=1,
-                        win_rate=0.0,
-                        games_back=0,
-                        wins=0,
-                        draws=0,
-                        losses=0,
-                        games_played=0,
-                        streak=0,
-                        batting_average=0.0,
-                        era=0.0
-                    )
-                    session.add(standing)
-                
-                session.commit()
-                logger.info(f"리그 '{league.name}'의 정규시즌 일정(720경기) 및 초기 순위표(sim_day={standing_sim_day}) 저장 완료")
 
             logger.info(f"리그 '{league.name}'과 소속 클럽 데이터 추가됨")
         

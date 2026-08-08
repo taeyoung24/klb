@@ -13,6 +13,14 @@ class MatchStatus(StrEnum):
     COMPLETED    = "COMPLETED" # 완료
     CANCELED     = "CANCELED" # 취소
 
+class MatchStage(StrEnum):
+    """경기 진행 단계/종류"""
+    REGULAR     = "REGULAR"      # 정규시즌
+    TIEBREAKER  = "TIEBREAKER"   # 정규시즌 동률 타이브레이크
+    INTERLEAGUE = "INTERLEAGUE"  # 인터리그
+    ELITE       = "ELITE"        # 크라운 정예리그
+    KNOCKOUT    = "KNOCKOUT"     # 녹아웃 토너먼트 (포스트시즌 8강/4강/결승)
+
 class RosterStatus(StrEnum):
     """출전 가능 여부"""
     ACTIVE   = "ACTIVE" # 보통/정상 (출전 가능)
