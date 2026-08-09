@@ -1,103 +1,186 @@
 /* ==========================================================================
-   Schedule Page Style (BEM Convention - Light Theme)
+   Schedule Page Style (BEM Convention - Light Theme / Dimmed Full-Width Calendar)
    ========================================================================== */
 
 .schedule {
   width: 100%;
   min-height: 100vh;
   background-color: #ffffff;
-  color: #1e293b;
-  padding: 120px 24px 80px 24px;
+  color: #0f172a;
   box-sizing: border-box;
-  font-family: var(--sans);
+  font-family: 'Wanted Sans', var(--sans), system-ui, -apple-system, sans-serif;
 }
 
-.schedule__container {
+.schedule button,
+.schedule input,
+.schedule select {
+  font-family: 'Wanted Sans', var(--sans), system-ui, -apple-system, sans-serif;
+}
+
+/* --------------------------------------------------------------------------
+   1. Calendar Section (Full-Width Dimmed Background + Fixed Height)
+   -------------------------------------------------------------------------- */
+.schedule__calendar-section {
+  width: 100%;
+  background-color: #f1f5f9;
+  height: 700px;
+  padding: 120px 0 60px 0;
+  box-sizing: border-box;
+  display: flex;
+  align-items: stretch;
+}
+
+.schedule__calendar-container {
+  width: 100%;
   max-width: 1180px;
   margin: 0 auto;
-  display: flex;
-  flex-direction: column;
-  gap: 28px;
-}
-
-/* --------------------------------------------------------------------------
-   Header Section
-   -------------------------------------------------------------------------- */
-.schedule__header {
-  border-bottom: 2px solid #e2e8f0;
-  padding-bottom: 20px;
-}
-
-.schedule__title {
-  font-size: var(--fs-3xl);
-  font-weight: var(--fw-bold);
-  color: #0f172a;
-  margin: 0 0 8px 0;
-}
-
-.schedule__subtitle {
-  font-size: var(--fs-sm);
-  color: #64748b;
-  margin: 0;
-  line-height: 1.5;
-}
-
-/* --------------------------------------------------------------------------
-   Calendar & Detail Panel Layout
-   -------------------------------------------------------------------------- */
-.schedule__body {
+  padding: 0 24px;
+  box-sizing: border-box;
   display: grid;
-  grid-template-columns: 1fr 380px;
-  gap: 24px;
-  align-items: start;
+  grid-template-columns: 140px 1fr;
+  gap: 28px;
+  height: 100%;
 }
 
-/* --------------------------------------------------------------------------
-   Calendar Card
-   -------------------------------------------------------------------------- */
-.schedule__calendar-card {
-  background-color: #ffffff;
-  border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  padding: 24px;
+/* Column 1: Season Selector */
+.schedule__season-col {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  align-items: center;
+  height: 100%;
 }
 
-.schedule__month-bar {
+.schedule__col-title {
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-bold);
+  color: #475569;
+  margin: 0;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #cbd5e1;
+  text-align: center;
+  width: 100%;
+  line-height: 24px;
+  box-sizing: border-box;
+}
+
+.schedule__season-list {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  gap: 18px;
+  width: 100%;
+  overflow: hidden;
+}
+
+.schedule__season-btn {
+  background: transparent;
+  border: none;
+  padding: 4px 12px;
+  text-align: center;
+  cursor: pointer;
+  transition: color 0.15s, font-weight 0.15s, font-size 0.15s, opacity 0.15s;
+  width: 100%;
+  line-height: 1.2;
+}
+
+.schedule__season-btn--dist-0 {
+  color: #000000;
+  font-weight: 800;
+  font-size: 22px;
+  opacity: 1;
+}
+
+.schedule__season-btn--dist-1 {
+  color: #475569;
+  font-weight: 600;
+  font-size: 17px;
+  opacity: 0.85;
+}
+
+.schedule__season-btn--dist-2 {
+  color: #64748b;
+  font-weight: 500;
+  font-size: 15px;
+  opacity: 0.65;
+}
+
+.schedule__season-btn--dist-3 {
+  color: #94a3b8;
+  font-weight: 500;
+  font-size: 13px;
+  opacity: 0.45;
+}
+
+.schedule__season-btn--dist-4 {
+  color: #cbd5e1;
+  font-weight: 400;
+  font-size: 12px;
+  opacity: 0.3;
+}
+
+.schedule__season-btn:hover {
+  background-color: transparent;
+  opacity: 1;
+}
+
+/* Column 2: Main Calendar */
+.schedule__main-col {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* Month Selector (Header with 1~12 Months) */
+.schedule__month-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  border-bottom: 1px solid #f1f5f9;
-  padding-bottom: 16px;
+  border-bottom: 1px solid #cbd5e1;
+  padding: 0 24px 8px 24px;
+  box-sizing: border-box;
 }
 
-.schedule__month-label {
-  font-size: var(--fs-xl);
-  font-weight: var(--fw-bold);
-  color: #0f172a;
-  margin: 0;
+.schedule__month-pills {
   display: flex;
-  align-items: center;
   gap: 8px;
+  width: 100%;
+  justify-content: space-between;
+  align-items: center;
 }
 
-.schedule__calendar-icon {
-  color: #2563eb;
-}
-
-.schedule__month-nav-btn {
-  background-color: #f8fafc;
-  border: 1px solid #cbd5e1;
-  color: #475569;
-  width: 36px;
-  height: 36px;
-  border-radius: 6px;
+.schedule__month-pill {
+  width: auto;
+  height: 24px;
+  line-height: 24px;
+  border-radius: 0;
+  padding: 0 4px;
   display: flex;
   align-items: center;
   justify-content: center;
+  border: none;
+  background: transparent;
+  color: #94a3b8;
+  font-size: var(--fs-sm);
+  font-weight: 500;
   cursor: pointer;
+  white-space: nowrap;
+  transition: color 0.15s, font-weight 0.15s;
+  box-sizing: border-box;
+}
+
+.schedule__month-pill:hover {
+  background-color: transparent;
+  color: #475569;
+}
+
+.schedule__month-pill--active {
+  background-color: transparent;
+  color: #000000;
+  font-weight: 800;
 }
 
 /* Week Header */
@@ -108,8 +191,6 @@
   font-weight: var(--fw-bold);
   font-size: var(--fs-xs);
   color: #64748b;
-  padding-bottom: 8px;
-  border-bottom: 1px solid #f1f5f9;
 }
 
 .schedule__week-day--sun {
@@ -124,39 +205,51 @@
 .schedule__days-grid {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  gap: 6px;
+  grid-auto-rows: 1fr;
+  gap: 0;
+  flex: 1;
+  min-height: 0;
+  border-top: 1px solid #cbd5e1;
+  border-left: 1px solid #cbd5e1;
 }
 
 .schedule__day-cell {
-  background-color: #f8fafc;
-  border: 1px solid #e2e8f0;
-  border-radius: 6px;
-  min-height: 80px;
-  padding: 8px;
+  background: transparent;
+  border-right: 1px solid #cbd5e1;
+  border-bottom: 1px solid #cbd5e1;
+  border-radius: 0;
+  padding: 6px 8px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
   cursor: pointer;
   box-sizing: border-box;
+  position: relative;
+  transition: outline 0.15s;
 }
 
 .schedule__day-cell--empty {
-  background-color: transparent;
-  border-color: transparent;
+  background: transparent;
   cursor: default;
 }
 
+.schedule__day-cell:not(.schedule__day-cell--empty):hover {
+  background: transparent;
+}
+
 .schedule__day-cell--selected {
-  background-color: #eff6ff;
-  border: 2px solid #2563eb;
+  background: transparent;
+  outline: 2px solid #0f172a;
+  outline-offset: -2px;
+  z-index: 1;
 }
 
 .schedule__day-cell--has-matches {
-  background-color: #ffffff;
+  background: transparent;
 }
 
 .schedule__day-num {
-  font-size: var(--fs-sm);
+  font-size: var(--fs-xs);
   font-weight: var(--fw-bold);
   color: #1e293b;
 }
@@ -176,132 +269,197 @@
 .schedule__match-count {
   font-size: 10px;
   font-weight: var(--fw-bold);
-  background-color: #dbeafe;
-  color: #1e40af;
+  background-color: #e2e8f0;
+  color: #0f172a;
   padding: 2px 6px;
   border-radius: 4px;
   display: inline-block;
 }
 
 /* --------------------------------------------------------------------------
-   Detail Panel
+   2. Detail Container & Panel
    -------------------------------------------------------------------------- */
+.schedule__detail-container {
+  max-width: 1180px;
+  margin: 32px auto;
+  padding: 0 24px;
+  box-sizing: border-box;
+  width: 100%;
+}
+
 .schedule__detail-panel {
-  background-color: #f8fafc;
-  border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  padding: 24px;
+  background-color: transparent;
+  border: none;
+  border-radius: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.schedule__main-title {
+  font-size: var(--fs-xl);
+  font-weight: var(--fw-bold);
+  color: #0f172a;
+  margin: 0;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #cbd5e1;
+}
+
+.schedule__matches-section {
   display: flex;
   flex-direction: column;
   gap: 16px;
 }
 
-.schedule__detail-title {
+.schedule__section-title {
   font-size: var(--fs-md);
   font-weight: var(--fw-bold);
-  color: #0f172a;
+  color: #334155;
   margin: 0;
-  padding-bottom: 12px;
-  border-bottom: 1px solid #e2e8f0;
 }
 
 .schedule__match-list {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
   gap: 12px;
 }
 
 .schedule__match-card {
   background-color: #ffffff;
   border: 1px solid #cbd5e1;
-  border-radius: 8px;
-  padding: 16px;
+  border-radius: 6px;
+  height: 56px;
+  padding: 0 16px;
   text-decoration: none;
   color: inherit;
   display: flex;
-  flex-direction: column;
-  gap: 12px;
+  align-items: center;
+  gap: 16px;
+  box-sizing: border-box;
+  width: 100%;
+  transition: border-color 0.15s, background-color 0.15s;
 }
 
-.schedule__match-meta {
+.schedule__match-card:hover {
+  border-color: #64748b;
+  background-color: #f8fafc;
+}
+
+/* 왼쪽 열: 리그 심볼 + 시간 (2행, 슬림 폭 및 가운데 정렬) */
+.schedule__match-left-col {
   display: flex;
-  justify-content: space-between;
+  flex-direction: column;
   align-items: center;
+  justify-content: center;
+  gap: 2px;
+  width: 65px;
+  min-width: 65px;
+  border-right: 1px solid #e2e8f0;
+  padding-right: 10px;
+  height: 38px;
+  box-sizing: border-box;
+  text-align: center;
 }
 
 .schedule__match-league {
-  font-size: var(--fs-xs);
-  font-weight: var(--fw-bold);
+  font-size: 11px;
+  font-weight: 800;
   color: #475569;
+  line-height: 1.1;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
 }
 
-.schedule__match-status {
-  font-size: 10px;
-  font-weight: var(--fw-bold);
-  padding: 2px 6px;
-  border-radius: 3px;
+.schedule__match-time {
+  font-size: 12px;
+  font-weight: 700;
+  color: #0f172a;
+  line-height: 1.1;
+  white-space: nowrap;
 }
 
-.schedule__match-status--종료 {
-  background-color: #f1f5f9;
-  color: #64748b;
-}
-
-.schedule__match-status--예정 {
-  background-color: #dbeafe;
-  color: #1d4ed8;
-}
-
-.schedule__match-teams {
+/* 오른쪽 주 영역: 팀 - 상태 - 팀 */
+.schedule__match-main-col {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 4px 0;
+  flex: 1;
+  gap: 4px;
+  height: 100%;
 }
 
+/* team-info는 폭 fill(flex: 1) 및 space-between 양끝 정렬 */
 .schedule__team-info {
   display: flex;
   align-items: center;
-  gap: 8px;
+  justify-content: space-between;
   flex: 1;
+  min-width: 0;
+  height: 100%;
 }
 
-.schedule__team-info--home {
-  justify-content: flex-end;
+.schedule__team-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
 }
 
 .schedule__team-name {
   font-size: var(--fs-sm);
-  font-weight: var(--fw-bold);
+  font-weight: 600;
   color: #0f172a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .schedule__team-score {
-  font-size: var(--fs-lg);
-  font-weight: var(--fw-bold);
-  color: #2563eb;
+  font-size: 16px;
+  font-weight: 800;
+  color: #0f172a;
+  flex-shrink: 0;
 }
 
-.schedule__vs-divider {
-  font-size: var(--fs-xs);
-  font-weight: var(--fw-bold);
-  color: #94a3b8;
-  padding: 0 12px;
-}
-
-.schedule__match-footer {
-  display: flex;
-  gap: 16px;
-  font-size: var(--fs-xs);
-  color: #64748b;
-  border-top: 1px solid #f1f5f9;
-  padding-top: 8px;
-}
-
-.schedule__match-info-item {
+/* 중앙 경기상태 */
+.schedule__match-status-wrap {
   display: flex;
   align-items: center;
-  gap: 4px;
+  justify-content: center;
+  width: 54px;
+  min-width: 54px;
+  flex-shrink: 0;
+}
+
+.schedule__match-status {
+  font-size: 12px;
+  font-weight: 700;
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+  white-space: nowrap;
+  text-align: center;
+}
+
+.schedule__match-status--종료 {
+  background-color: transparent;
+  color: #64748b;
+}
+
+.schedule__match-status--예정 {
+  background-color: transparent;
+  color: #0f172a;
+}
+
+.schedule__match-status--진행중 {
+  background-color: transparent;
+  color: #dc2626;
+}
+
+.schedule__match-status--취소 {
+  background-color: transparent;
+  color: #9ca3af;
 }
 
 .schedule__no-matches {
@@ -311,11 +469,32 @@
   font-size: var(--fs-sm);
 }
 
-/* --------------------------------------------------------------------------
-   Responsive Design
-   -------------------------------------------------------------------------- */
-@media (max-width: 900px) {
-  .schedule__body {
+/* Responsive Design */
+@media (max-width: 860px) {
+  .schedule__calendar-section {
+    height: auto;
+  }
+
+  .schedule__calendar-container {
+    grid-template-columns: 1fr;
+  }
+
+  .schedule__season-col {
+    border-right: none;
+    border-bottom: 1px solid #cbd5e1;
+    padding-right: 0;
+    padding-bottom: 16px;
+  }
+
+  .schedule__season-list {
+    flex-direction: row;
+  }
+
+  .schedule__month-pills {
+    flex-wrap: wrap;
+  }
+
+  .schedule__match-list {
     grid-template-columns: 1fr;
   }
 }
