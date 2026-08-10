@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 
+import { getCalendarEvents, type CalendarEvent } from '../api/calendar';
 import { getClubs, type Club } from '../api/clubs';
 import { getMatches, type Match } from '../api/matches';
 import { getSystemInfo } from '../api/system';
@@ -37,18 +38,26 @@ export default function Schedule() {
   const [selectedDay, setSelectedDay] = useState<number>(1);
   const [clubsMap, setClubsMap] = useState<Record<number, Club>>({});
   const [allMatches, setAllMatches] = useState<Match[]>([]);
+  const [calendarEventsMap, setCalendarEventsMap] = useState<Record<string, CalendarEvent[]>>({});
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
   useEffect(() => {
     setIsLoading(true);
-    Promise.all([getClubs(), getMatches(), getSystemInfo()])
-      .then(([clubsList, matchesList, sysInfo]) => {
+    Promise.all([getClubs(), getMatches(), getSystemInfo(), getCalendarEvents(year)])
+      .then(([clubsList, matchesList, sysInfo, eventsList]) => {
         const cMap: Record<number, Club> = {};
         clubsList.forEach((c) => {
           cMap[c.id] = c;
         });
         setClubsMap(cMap);
         setAllMatches(matchesList);
+
+        const evMap: Record<string, CalendarEvent[]> = {};
+        eventsList.forEach((ev) => {
+          if (!evMap[ev.date]) evMap[ev.date] = [];
+          evMap[ev.date].push(ev);
+        });
+        setCalendarEventsMap(evMap);
 
         if (sysInfo) {
           const sysYear = sysInfo.season_year || 2026;
@@ -65,7 +74,7 @@ export default function Schedule() {
         console.error('Failed to load schedule data', e);
         setIsLoading(false);
       });
-  }, []);
+  }, [year]);
 
   const daysInMonth = new Date(year, month, 0).getDate();
   const firstDayOfWeek = new Date(year, month - 1, 1).getDay();
@@ -210,6 +219,8 @@ export default function Schedule() {
                 const daySimDay = getSimDayFromYearMonthDay(year, month, day);
                 const dayMatches = matchesBySimDay[daySimDay] || [];
                 const hasMatches = dayMatches.length > 0;
+                const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                const dayEvents = calendarEventsMap[dateStr] || [];
                 const isSelected = day === selectedDay;
                 const dayOfWeek = new Date(year, month - 1, day).getDay();
 
@@ -228,9 +239,16 @@ export default function Schedule() {
                     >
                       {day}
                     </span>
-                    {hasMatches && (
-                      <div className="schedule__match-indicator">
-                        <span className="schedule__match-count">{dayMatches.length}경기</span>
+                    {dayEvents.length > 0 && (
+                      <div className="schedule__event-container">
+                        {dayEvents.map((ev, idx) => (
+                          <span
+                            key={idx}
+                            className={`schedule__event-badge schedule__event-badge--${ev.event_type.toLowerCase()}`}
+                          >
+                            {ev.label}
+                          </span>
+                        ))}
                       </div>
                     )}
                   </div>

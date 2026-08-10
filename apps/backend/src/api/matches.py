@@ -7,7 +7,17 @@ from src.models import Match, Club, Player, IngameInstructionLog, IngameScoreboa
 from src.services.common import get_session
 from src.services.ingame.main import get_scoreboard
 
+from src.services.season_calendar import CalendarEvent, get_season_calendar_events
+
 router = APIRouter(prefix="/matches", tags=["Matches"])
+
+@router.get("/calendar-events", response_model=list[CalendarEvent])
+def get_calendar_events(
+    year: Optional[int] = None,
+    session: Session = Depends(get_session)
+):
+    target_year = year if year is not None else 2026
+    return get_season_calendar_events(session, target_year)
 
 @router.get("/placeholders", response_model=list[MatchPlaceholder])
 def get_match_placeholders(
