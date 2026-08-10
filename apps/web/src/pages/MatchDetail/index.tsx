@@ -196,9 +196,9 @@ export default function MatchDetail() {
   useEffect(() => {
     if (!navDate || !seasonYear) return;
 
-    const simDay = getSimDayFromDate(seasonYear, navDate);
+    const dateStr = `${navDate.getFullYear()}-${String(navDate.getMonth() + 1).padStart(2, '0')}-${String(navDate.getDate()).padStart(2, '0')}`;
     setIsMatchesLoading(true);
-    getMatches({ sim_day: simDay })
+    getMatches({ date: dateStr })
       .then((matchesList) => {
         setCurrentDayMatches(matchesList);
         setIsMatchesLoading(false);

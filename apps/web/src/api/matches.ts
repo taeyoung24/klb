@@ -25,6 +25,10 @@ export interface GetMatchesParams {
   league_id?: number;
   club_id?: number;
   sim_day?: number;
+  start_date?: string;
+  end_date?: string;
+  date?: string;
+  year?: number;
   status?: MatchStatus | string;
   stage?: MatchStage | string;
 }

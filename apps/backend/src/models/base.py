@@ -111,7 +111,7 @@ class Club(SQLModel, table=True):
 class Player(SQLModel, table=True):
     id: int = Field(default=None, primary_key=True)
     name: str
-    club_id: int = Field(foreign_key="club.id")
+    club_id: Optional[int] = Field(default=None, foreign_key="club.id")
     club: Optional["Club"] = Relationship(back_populates="players")
 
     uniform_number: str = Field(...)

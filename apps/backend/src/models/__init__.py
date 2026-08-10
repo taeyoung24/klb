@@ -40,6 +40,7 @@ from .db import (
     NewsAgency,
     Article,
     ArticleComment,
+    PlayerTransactionHistory,
 )
 
 __all__ = [
@@ -79,4 +80,5 @@ __all__ = [
     "NewsAgency",
     "Article",
     "ArticleComment",
+    "PlayerTransactionHistory",
 ]

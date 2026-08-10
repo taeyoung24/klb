@@ -67,11 +67,11 @@ export default function AppScheduleSection({
       });
   }, []);
 
-  // 2. 선택 날짜(sim_day)에 따른 매치 목록 조회
+  // 2. 선택 날짜(date)에 따른 매치 목록 조회
   useEffect(() => {
-    const simDay = getSimDayFromDate(matchDate, 2026);
+    const dateStr = `${matchDate.getFullYear()}-${String(matchDate.getMonth() + 1).padStart(2, '0')}-${String(matchDate.getDate()).padStart(2, '0')}`;
     setIsLoading(true);
-    getMatches({ sim_day: simDay })
+    getMatches({ date: dateStr })
       .then(res => {
         setMatches(res);
         setIsLoading(false);

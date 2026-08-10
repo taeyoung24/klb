@@ -27,6 +27,16 @@ class RosterStatus(StrEnum):
     INJURED  = "INJURED" # 부상 (출전 불가)
     OTHER    = "OTHER" # 기타 사유 (징계, 휴식 등 출전 불가)
 
+class PlayerTransactionType(StrEnum):
+    """선수 계약, 지명 및 이적 트랜잭션 종류"""
+    DRAFT          = "DRAFT"          # 공식 신인 드래프트 지명
+    UNDRAFTED_SIGN = "UNDRAFTED_SIGN" # 드래프트 미지명 육성선수 입단
+    TRADE          = "TRADE"          # 구단 간 트레이드
+    FA             = "FA"             # 자유계약선수(FA) 계약
+    RELEASE        = "RELEASE"        # 방출 / 계약 해지
+    WAIVER         = "WAIVER"         # 웨이버 공시 및 영입
+    RETIRE         = "RETIRE"         # 선수 은퇴
+
 class IngameRole(StrEnum):
     """게임 내 역할"""
     PITCHER            = "PITCHER" # 투수

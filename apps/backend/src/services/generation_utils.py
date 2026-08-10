@@ -82,9 +82,9 @@ def generate_stats(height: float, weight: float, general: bool = False) -> dict:
     }
 
 def generate_player(
-    club_id: int, 
     region_id: int,
     high_school_id: int,
+    club_id: Optional[int] = None, 
     position: Optional[IngameRole] = None, 
     general: bool = False,
     current_year: int = 2024

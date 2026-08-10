@@ -134,7 +134,7 @@ export default function AppSeasonStandingSection({
       .then(data => setPlaceholders(data))
       .catch(e => console.error("Failed to load match placeholders", e));
 
-    getMatches()
+    getMatches({ year: seasonYear || 2026 })
       .then(matches => {
         const ko = matches.filter(m => m.stage === 'KNOCKOUT');
         const elite = matches.filter(m => m.stage === 'ELITE');

@@ -4,8 +4,8 @@ from sqlmodel import Session, SQLModel, create_engine
 import yaml
 
 from settings import DATABASE_URL, CONFIG
-from src.enums import IngameRole
-from src.models import League, Club, Player, Stadium, WorldState, Region, HighSchool
+from src.enums import IngameRole, PlayerTransactionType
+from src.models import League, Club, Player, Stadium, WorldState, Region, HighSchool, PlayerTransactionHistory
 from src.services.generation_utils import generate_player, generate_stadium, generate_high_school
 from src.utils.logger import logger
 
@@ -143,6 +143,17 @@ def main():
                     current_year=CONFIG.base_datetime.year
                 )
                 session.add(player)
+                session.commit()
+                session.refresh(player)
+
+                history = PlayerTransactionHistory(
+                    player_id=player.id,
+                    sim_day=1,
+                    transaction_type=PlayerTransactionType.UNDRAFTED_SIGN,
+                    to_club_id=c.id,
+                    details=f"2026시즌 {c.name_ko} 초기 로스터 등록"
+                )
+                session.add(history)
 
             session.commit()
             logger.info(f"구단 '{c.name_ko}' 선수 로스터({CONFIG.roster_player_count}명, 고교 출신 비율 8:2 적용) 적재 완료")

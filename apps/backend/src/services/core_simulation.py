@@ -26,6 +26,17 @@ from src.services.standing import (
     update_elite_daily_standings,
     get_playoff_host_league,
 )
+from src.utils.date_utils import (
+    sim_day_to_date,
+    is_third_monday_of_february,
+    get_first_monday_of_october,
+)
+from src.services.draft import run_all_rookie_drafts
+from src.services.roster_management import (
+    process_season_end_retirements,
+    process_season_end_releases,
+    process_pre_draft_releases,
+)
 from src.utils.logger import logger
 
 
@@ -50,23 +61,7 @@ ADMIN_EVENT_SEASON_SCHEDULE_GEN = AdminTaskRule("정규시즌 일정 생성 및 
 ADMIN_EVENT_TIEBREAKER_CHECK = AdminTaskRule("타이브레이크 매치 판정 및 생성", TIME_ADMIN_TASK, 2)
 ADMIN_EVENT_ELITE_SCHEDULE_GEN = AdminTaskRule("크라운 정예리그 대진 생성", TIME_ADMIN_TASK, 3)
 ADMIN_EVENT_KNOCKOUT_SCHEDULE_GEN = AdminTaskRule("녹아웃 토너먼트 대진표 생성 및 관리", TIME_ADMIN_TASK, 4)
-
-
-def sim_day_to_date(sim_day: int, base_year: int = 2026) -> datetime.date:
-    """sim_day(1-indexed)를 실제 가상 날짜(datetime.date)로 변환합니다."""
-    start_date = datetime.date(base_year, 1, 1)
-    return start_date + datetime.timedelta(days=sim_day - 1)
-
-
-def is_third_monday_of_february(target_date: datetime.date) -> bool:
-    """해당 날짜가 2월 셋째 주 월요일인지 판별합니다."""
-    if target_date.month != 2 or target_date.weekday() != 0:
-        return False
-    feb_first = datetime.date(target_date.year, 2, 1)
-    days_to_monday = (0 - feb_first.weekday() + 7) % 7
-    first_monday_day = 1 + days_to_monday
-    third_monday_day = first_monday_day + 14
-    return target_date.day == third_monday_day
+ADMIN_EVENT_ROOKIE_DRAFT = AdminTaskRule("KLB 리그별 신인 드래프트 개최 (매년 10월 1주차 월요일)", TIME_ADMIN_TASK, 5)
 
 
 def get_higher_seed(top_8_clubs: list[Club], c1_id: int, c2_id: int) -> tuple[int, int]:
@@ -409,6 +404,24 @@ def _check_and_run_admin_tasks(session: Session, sim_day: int) -> None:
             )
             session.add(m)
             session.commit()
+
+    # 5. 매년 10월 첫째 주차 월요일: 2차 방출(드래프트 대비 정원 확보) 및 신인 드래프트 개최
+    draft_date = get_first_monday_of_october(current_date.year)
+    draft_sim_day = (draft_date - datetime.date(2026, 1, 1)).days + 1
+    if sim_day == draft_sim_day:
+        # 5-1. 드래프트 직전 로스터 공간 확보를 위한 2차 방출
+        process_pre_draft_releases(session, year=current_date.year, sim_day=sim_day)
+
+        # 5-2. 신인 드래프트 개최
+        logger.info(f"[{ADMIN_EVENT_ROOKIE_DRAFT.name}] 실행: {current_date.year}시즌 KLB 신인 드래프트 개최 (Sim Day: {sim_day})")
+        run_all_rookie_drafts(session, year=current_date.year, sim_day=sim_day)
+        logger.success(f"[{ADMIN_EVENT_ROOKIE_DRAFT.name}] 완주: 신인 드래프트 완주 및 장부 적재 완료")
+
+    # 6. 결승전(KS) 종료 직후 / 시즌 종료 마감일: 은퇴(Retire) 및 1차 방출(Release) 행정 처리
+    if f_node and f_node.sim_day == sim_day:
+        logger.info(f"[{current_date.year}시즌 종료 행정] 은퇴 및 1차 방출 처리 진행")
+        process_season_end_retirements(session, year=current_date.year, sim_day=sim_day)
+        process_season_end_releases(session, year=current_date.year, sim_day=sim_day)
 
 
 def _run_scheduled_matches(session: Session, sim_day: int) -> None:
