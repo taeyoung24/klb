@@ -4,8 +4,11 @@ from datetime import datetime
 from typing import Optional
 
 from src.enums import RosterStatus, IngameRole, TurfType
-from src.models import Player, Stadium
+from src.models import Player, Stadium, HighSchool
 from src.utils.str_ext import generate_name
+
+# 고등학교 인덱스 카운터
+_high_school_counter = 1
 
 # 주 포지션 9종 정의
 PRIMARY_POSITIONS = [
@@ -80,12 +83,14 @@ def generate_stats(height: float, weight: float, general: bool = False) -> dict:
 
 def generate_player(
     club_id: int, 
+    region_id: int,
+    high_school_id: int,
     position: Optional[IngameRole] = None, 
     general: bool = False,
     current_year: int = 2024
 ) -> Player:
     """
-    지정된 클럽 ID 및 포지션, 그리고 general 조건에 따라 무작위 선수 데이터를 생성합니다.
+    지정된 클럽 ID, 출신 지역 ID, 출신 고등학교 ID 및 포지션, general 조건에 따라 무작위 선수 데이터를 생성합니다.
     """
     # 1. 나이 설정
     if not general:
@@ -132,6 +137,8 @@ def generate_player(
     return Player(
         name=generate_name(),
         club_id=club_id,
+        region_id=region_id,
+        high_school_id=high_school_id,
         uniform_number=uniform_number,
         speed=stats["speed"],
         control=stats["control"],
@@ -168,9 +175,9 @@ def generate_fence_profile(
         {"angle": 45.0, "dist": round(right_dist, 1), "height": round(right_height, 1)},
     ]
 
-def generate_stadium(name: str, name_ko: str) -> Stadium:
+def generate_stadium(name: str, name_ko: str, region_id: int) -> Stadium:
     """
-    구장 이름(영어, 한글)을 기반으로 코어 시뮬레이터 물리 엔진용 구장 객체를 생성합니다.
+    구장 이름(영어, 한글) 및 지역 ID를 기반으로 코어 시뮬레이터 물리 엔진용 구장 객체를 생성합니다.
     """
     is_dome = random.random() < 0.15
     capacity = random.randint(15, 45) * 1000
@@ -201,10 +208,33 @@ def generate_stadium(name: str, name_ko: str) -> Stadium:
     return Stadium(
         name=name,
         name_ko=name_ko,
+        region_id=region_id,
         is_dome=is_dome,
         capacity=capacity,
         turf_type=turf_type,
         altitude=altitude,
         fence_profile=fence_profile,
         curvature=curvature
+    )
+
+
+def generate_high_school(region_id: int) -> HighSchool:
+    """
+    고등학교 모델 객체를 생성합니다.
+    이름은 전역 카운터(_high_school_counter)를 사용하여 '고등학교#1', '고등학교#2' 형태로 부여되며,
+    야구 전문고 여부 및 학생 수용량이 무작위로 할당됩니다.
+    """
+    global _high_school_counter
+    hs_index = _high_school_counter
+    _high_school_counter += 1
+
+    is_specialized = random.random() < 0.04
+    capacity = random.randint(30, 150) * 10
+
+    return HighSchool(
+        name=f"HighSchool #{hs_index}",
+        name_ko=f"고등학교#{hs_index}",
+        is_specialized=is_specialized,
+        capacity=capacity,
+        region_id=region_id
     )

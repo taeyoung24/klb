@@ -6,6 +6,8 @@ base.py (독립 기본 엔티티) -> ingame.py (시뮬레이션 DTO/Context) -> 
 from .base import (
     WorldState,
     League,
+    Region,
+    HighSchool,
     Stadium,
     Club,
     Player,
@@ -44,6 +46,8 @@ __all__ = [
     # Base
     "WorldState",
     "League",
+    "Region",
+    "HighSchool",
     "Stadium",
     "Club",
     "Player",

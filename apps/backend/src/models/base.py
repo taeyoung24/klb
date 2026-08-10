@@ -26,6 +26,38 @@ class League(SQLModel, table=True):
     league_code: str
 
 
+class Region(SQLModel, table=True):
+    """
+    지역/연고지 메타데이터 테이블.
+    고등학교, 구장, 구단, 선수(출신지)와 1:N 관계를 가짐.
+    """
+    id: int = Field(default=None, primary_key=True)
+    name: str
+    name_ko: str
+
+    high_schools: list["HighSchool"] = Relationship(back_populates="region")
+    stadiums: list["Stadium"] = Relationship(back_populates="region")
+    clubs: list["Club"] = Relationship(back_populates="region")
+    players: list["Player"] = Relationship(back_populates="region")
+
+
+class HighSchool(SQLModel, table=True):
+    """
+    고등학교 메타데이터 테이블.
+    지역(Region)과 1:N 관계를 가짐.
+    """
+    id: int = Field(default=None, primary_key=True)
+    name: str
+    name_ko: str
+
+    is_specialized: bool = Field(default=False) # 야구 전문고 여부 (True: 야구전문고, False: 일반고)
+    capacity: int = Field(ge=0) # 최대 학생 수용량
+
+    region_id: int = Field(foreign_key="region.id")
+    region: Optional[Region] = Relationship(back_populates="high_schools")
+    players: list["Player"] = Relationship(back_populates="high_school")
+
+
 class Stadium(SQLModel, table=True):
     """
     KLB 유니버스의 구장 메타데이터.
@@ -50,6 +82,10 @@ class Stadium(SQLModel, table=True):
     # 1:N 역참조 (이 구장을 홈으로 쓰는 구단들)
     home_clubs: list["Club"] = Relationship(back_populates="home_stadium")
 
+    # 1:N 역참조 (구장이 위치한 지역)
+    region_id: int = Field(foreign_key="region.id")
+    region: Optional[Region] = Relationship(back_populates="stadiums")
+
 
 class Club(SQLModel, table=True):
     id: int = Field(default=None, primary_key=True)
@@ -66,6 +102,10 @@ class Club(SQLModel, table=True):
     home_stadium_id: Optional[int] = Field(default=None, foreign_key="stadium.id")
     home_stadium: Optional[Stadium] = Relationship(back_populates="home_clubs")
     players: list["Player"] = Relationship(back_populates="club")
+
+    # 1:N 역참조 (구단의 연고지 지역)
+    region_id: int = Field(foreign_key="region.id")
+    region: Optional[Region] = Relationship(back_populates="clubs")
 
 
 class Player(SQLModel, table=True):
@@ -89,3 +129,10 @@ class Player(SQLModel, table=True):
     birthday: datetime
     height: float = Field(ge=0)
     weight: float = Field(ge=0)
+
+    # 1:N 역참조 (선수의 출신 지역 및 출신 고등학교)
+    region_id: int = Field(foreign_key="region.id") # 출생지
+    region: Optional[Region] = Relationship(back_populates="players")
+
+    high_school_id: int = Field(foreign_key="highschool.id") # 졸업 기준
+    high_school: Optional[HighSchool] = Relationship(back_populates="players")

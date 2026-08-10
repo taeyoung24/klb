@@ -1,5 +1,6 @@
 import client from './client';
 import type { Stadium } from './stadiums';
+import type { Region } from './regions';
 
 export interface Club {
   id: number;
@@ -14,6 +15,8 @@ export interface Club {
   league_id: number;
   home_stadium_id?: number | null;
   home_stadium?: Stadium | null;
+  region_id?: number;
+  region?: Region | null;
 }
 
 export const getClubs = async (leagueId?: number): Promise<Club[]> => {
