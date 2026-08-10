@@ -103,7 +103,10 @@ def main():
 
                 all_clubs.append(club)
 
-            logger.info(f"리그 '{league.name}'과 소속 지역/고등학교/구장/구단 데이터 적재 완료")
+            logger.info(
+                f"리그 '{league.name}' 데이터 적재 완료 "
+                f"(소속 구단: {len(league_rawdata['clubs'])}개, 고등학교: {len(league_high_schools_map[league.id])}개)"
+            )
 
         # Step 2: 구단별 규격 선수단 시딩 (CONFIG.roster_player_count 명)
         # 선수 출신 고등학교 할당 비율: 80% 단일 리그 내 고등학교, 20% 타 리그/외부 고등학교
@@ -144,7 +147,12 @@ def main():
             session.commit()
             logger.info(f"구단 '{c.name_ko}' 선수 로스터({CONFIG.roster_player_count}명, 고교 출신 비율 8:2 적용) 적재 완료")
 
-        logger.success("모든 초기 시딩 데이터(Region, HighSchool 포함) 적재 완료")
+        total_players_count = len(all_clubs) * CONFIG.roster_player_count
+        logger.success(
+            f"모든 초기 시딩 데이터 적재 완료 "
+            f"(리그 {len(initial_leagues_rawdata)}개, 지역 {len(regions_by_name)}개, "
+            f"구단 {len(all_clubs)}개, 고등학교 {len(all_high_schools)}개, 선수 {total_players_count}명)"
+        )
 
 
 if __name__ == "__main__":
