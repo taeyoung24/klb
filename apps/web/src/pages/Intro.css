@@ -395,13 +395,10 @@
   transition: opacity 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-/* 바다 호버(state-sea-hover) 시에만 라벨 유도선 스무스 페이드인 (지역 호버 시에는 사라짐) */
-.intro-legacy__map-container.state-sea-hover .map-callout-svg {
-  opacity: 1;
-}
-
+/* 바다 호버 및 육지 호버 시 라벨 유도선 스무스 페이드인 표출 */
+.intro-legacy__map-container.state-sea-hover .map-callout-svg,
 .intro-legacy__map-container.state-region-hover .map-callout-svg {
-  opacity: 0;
+  opacity: 1;
 }
 
 .map-callout__dot {

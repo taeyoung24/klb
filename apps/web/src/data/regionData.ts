@@ -492,3 +492,64 @@ export function getRegionDataById(regionId: string | null): RegionData | null {
 
   return null;
 }
+
+// ==========================================================================
+// 세부 지역(region-p4 ~ region-p43) 유도선 시작점 및 방향 설정 구조체
+// (점 좌표 cx, cy 및 방향 dirX, dirY를 수정하여 유도선과 라벨 위치 편집 가능)
+// ==========================================================================
+export interface RegionCalloutConfig {
+  cx: number;
+  cy: number;
+  dirX: number; // 1: 오른쪽, -1: 왼쪽
+  dirY: number; // 1: 아래쪽, -1: 위쪽
+}
+
+export const REGION_CALLOUT_CONFIGS: Record<string, RegionCalloutConfig> = {
+  // 매그놀리아 리그 (ML) 세부 지역 (4 ~ 13)
+  'region-p4': { cx: 600, cy: 860, dirX: -1, dirY: 1 },
+  'region-p5': { cx: 545, cy: 780, dirX: -1, dirY: 1 },
+  'region-p6': { cx: 586, cy: 676, dirX: -1, dirY: -1 },
+  'region-p7': { cx: 500, cy: 655, dirX: -1, dirY: -1 },
+  'region-p8': { cx: 550, cy: 580, dirX: -1, dirY: -1 },
+  'region-p9': { cx: 720, cy: 770, dirX: 1, dirY: 1 },
+  'region-p10': { cx: 650, cy: 610, dirX: -1, dirY: -1 },
+  'region-p11': { cx: 746, cy: 550, dirX: -1, dirY: -1 },
+  'region-p12': { cx: 830, cy: 690, dirX: 1, dirY: 1 },
+  'region-p13': { cx: 730, cy: 680, dirX: 1, dirY: 1 },
+
+  // 카멜리아 리그 (CL) 세부 지역 (14 ~ 23)
+  'region-p14': { cx: 1050, cy: 630, dirX: 1, dirY: 1 },
+  'region-p15': { cx: 990, cy: 650, dirX: 1, dirY: 1 },
+  'region-p16': { cx: 930, cy: 650, dirX: 1, dirY: 1 },
+  'region-p17': { cx: 860, cy: 630, dirX: 1, dirY: 1 },
+  'region-p18': { cx: 790, cy: 610, dirX: -1, dirY: -1 },
+  'region-p19': { cx: 996, cy: 600, dirX: 1, dirY: 1 },
+  'region-p20': { cx: 960, cy: 586, dirX: 1, dirY: 1 },
+  'region-p21': { cx: 900, cy: 570, dirX: -1, dirY: -1 },
+  'region-p22': { cx: 826, cy: 565, dirX: -1, dirY: -1 },
+  'region-p23': { cx: 1003, cy: 523, dirX: -1, dirY: -1 },
+
+  // 젠티아나 리그 (GL) 세부 지역 (24 ~ 33)
+  'region-p24': { cx: 1017, cy: 510, dirX: 1, dirY: 1 },
+  'region-p25': { cx: 960, cy: 420, dirX: -1, dirY: -1 },
+  'region-p26': { cx: 1350, cy: 300, dirX: 1, dirY: 1 },
+  'region-p27': { cx: 1106, cy: 500, dirX: 1, dirY: 1 },
+  'region-p28': { cx: 1075, cy: 465, dirX: -1, dirY: -1 },
+  'region-p29': { cx: 1140, cy: 450, dirX: -1, dirY: -1 },
+  'region-p30': { cx: 1180, cy: 390, dirX: -1, dirY: -1 },
+  'region-p31': { cx: 1215, cy: 390, dirX: 1, dirY: 1 },
+  'region-p32': { cx: 1240, cy: 320, dirX: -1, dirY: -1 },
+  'region-p33': { cx: 1305, cy: 330, dirX: -1, dirY: -1 },
+
+  // 아젤리아 리그 (AL) 세부 지역 (34 ~ 43)
+  'region-p34': { cx: 1410, cy: 205, dirX: 1, dirY: -1 },
+  'region-p35': { cx: 1222, cy: 290, dirX: -1, dirY: -1 },
+  'region-p36': { cx: 1235, cy: 245, dirX: -1, dirY: -1 },
+  'region-p37': { cx: 1280, cy: 290, dirX: 1, dirY: 1 },
+  'region-p38': { cx: 1310, cy: 264, dirX: -1, dirY: -1 },
+  'region-p39': { cx: 1376, cy: 272, dirX: 1, dirY: 1 },
+  'region-p40': { cx: 1388, cy: 248, dirX: 1, dirY: -1 },
+  'region-p41': { cx: 1340, cy: 204, dirX: -1, dirY: -1 },
+  'region-p42': { cx: 1362, cy: 256, dirX: 1, dirY: 1 },
+  'region-p43': { cx: 1368, cy: 210, dirX: 1, dirY: -1 },
+};

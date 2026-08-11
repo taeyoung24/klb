@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import worldMapSvgText from '/assets/map/world-map.svg?raw';
+import { REGION_DATA_MAP, REGION_CALLOUT_CONFIGS } from '../data/regionData';
 
 interface WorldMapProps {
   isMapHovered: boolean;
@@ -119,14 +120,31 @@ export const WorldMap: React.FC<WorldMapProps> = ({
         dangerouslySetInnerHTML={{ __html: worldMapSvgText }}
       />
 
-      {/* 4대 리그 오버레이 유도선 (시작점 cx, cy 기준 유도선/텍스트 위치 자동 계산) */}
+      {/* 오버레이 유도선 (바다 호버: 4대 리그 유도선 4개, 육지 호버: 세부 지역 유도선 1개 표출) */}
       <svg
         className="map-callout-svg"
         viewBox="0 0 1920 1080"
         preserveAspectRatio="xMidYMid meet"
         xmlns="http://www.w3.org/2000/svg"
       >
-        {CALLOUT_DATA.map((item) => {
+        {(() => {
+          // 육지(세부 지역) 호버 중인 경우 해당 지역의 유도선 1개 동적 계산
+          if (activeRegion && REGION_DATA_MAP[activeRegion]) {
+            const regionData = REGION_DATA_MAP[activeRegion];
+            const config = REGION_CALLOUT_CONFIGS[activeRegion] || { cx: 960, cy: 540, dirX: 1, dirY: -1 };
+            return [{
+              id: activeRegion,
+              title: regionData.name,
+              sub: regionData.mainTeam || '-',
+              cx: config.cx,
+              cy: config.cy,
+              dirX: config.dirX,
+              dirY: config.dirY,
+            }];
+          }
+          // 바다 호버 시 4대 리그 유도선 4개 표출
+          return CALLOUT_DATA;
+        })().map((item) => {
           const { id, title, sub, cx, cy, dirX, dirY } = item;
           const diagLen = 70; // 45도 대각선 길이
           const horizLen = 160; // 수평선 길이
