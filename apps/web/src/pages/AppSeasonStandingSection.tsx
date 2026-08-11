@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react'
+import { getCalendarEvents, type CalendarEvent } from '../api/calendar'
 import { getMatches, getMatchPlaceholders, type Match, type MatchPlaceholder } from '../api/matches'
 import { getStandings, type DailyClubStanding } from '../api/standings'
-import { useSystemContext } from '../context/SystemContext'
 import MatchSeries from '../components/MatchSeries/MatchSeries'
 import TeamLogo from '../components/TeamLogo/TeamLogo'
+import { useSystemContext } from '../context/SystemContext'
+import { simDayToDateStr } from '../utils/date'
 import './AppSeasonStandingSection.css'
 
 const LEAGUES = [
@@ -12,14 +14,6 @@ const LEAGUES = [
   { code: 'GL' as const, id: 3, name: '젠티아나' },
   { code: 'ML' as const, id: 4, name: '매그놀리아' },
 ];
-
-const getSimDayFromDate = (date: Date, year: number): number => {
-  const target = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-  const baseDate = new Date(year, 0, 1);
-  const diffTime = target.getTime() - baseDate.getTime();
-  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-  return diffDays + 1;
-};
 
 const formatPct = (pct: number) => {
   if (pct === 1) return "1.000";
@@ -68,14 +62,14 @@ export default function AppSeasonStandingSection({
   const [knockoutMatches, setKnockoutMatches] = useState<Match[]>([]);
   const [placeholders, setPlaceholders] = useState<MatchPlaceholder[]>([]);
   const [eliteStandings, setEliteStandings] = useState<DailyClubStanding[]>([]);
+  const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([]);
 
   useEffect(() => {
-    const rawSimDay = getSimDayFromDate(matchDate, seasonYear || 2026);
-    const regSimDay = Math.min(rawSimDay, 228);
+    const dateStr = `${matchDate.getFullYear()}-${String(matchDate.getMonth() + 1).padStart(2, '0')}-${String(matchDate.getDate()).padStart(2, '0')}`;
     setIsStandingsLoaded(false);
 
     Promise.all(
-      LEAGUES.map(league => getStandings(league.id, regSimDay, false))
+      LEAGUES.map(league => getStandings(league.id, undefined, false, dateStr))
     )
       .then(([alData, clData, glData, mlData]) => {
         setAllStandings({
@@ -99,9 +93,11 @@ export default function AppSeasonStandingSection({
   }, [matchDate, seasonYear]);
 
   useEffect(() => {
-    const simDay = getSimDayFromDate(matchDate, seasonYear || 2026);
-    if (simDay >= 229) {
-      getStandings(hostLeagueId, simDay, true)
+    const dateStr = `${matchDate.getFullYear()}-${String(matchDate.getMonth() + 1).padStart(2, '0')}-${String(matchDate.getDate()).padStart(2, '0')}`;
+    const year = seasonYear || 2026;
+    const isPostseasonDate = matchDate >= new Date(year, 7, 17); // 8월 17일 이후 (sim_day >= 229)
+    if (isPostseasonDate) {
+      getStandings(hostLeagueId, undefined, true, dateStr)
         .then(data => setEliteStandings(data))
         .catch(e => {
           console.error("Failed to fetch elite standings snapshot", e);
@@ -130,11 +126,11 @@ export default function AppSeasonStandingSection({
       })
       .catch(e => console.error("Failed to load final standings for seeds", e));
 
-    getMatchPlaceholders()
+    getMatchPlaceholders(seasonYear || undefined)
       .then(data => setPlaceholders(data))
       .catch(e => console.error("Failed to load match placeholders", e));
 
-    getMatches()
+    getMatches({ year: seasonYear || 2026 })
       .then(matches => {
         const ko = matches.filter(m => m.stage === 'KNOCKOUT');
         const elite = matches.filter(m => m.stage === 'ELITE');
@@ -143,22 +139,40 @@ export default function AppSeasonStandingSection({
         setKnockoutMatches(ko);
       })
       .catch(e => console.error("Failed to load post-season matches", e));
+
+    getCalendarEvents(seasonYear || undefined)
+      .then(events => setCalendarEvents(events))
+      .catch(e => console.error("Failed to load calendar events for standings step", e));
   }, [seasonYear, matchDate]);
 
   const isSectionLoaded = isSeasonYearLoaded && isStandingsLoaded && Object.keys(clubsMap).length > 0;
 
-  const simDay = getSimDayFromDate(matchDate, seasonYear || 2026);
-  const isOpening = simDay >= 62;
-  const isSecondHalf = simDay >= 146;
-  const isPostSeason = simDay >= 229;
-  const isKnockout = simDay >= 229 && (knockoutMatches.length > 0 || simDay >= 275);
+  const year = seasonYear || 2026;
+  const matchDateStr = `${matchDate.getFullYear()}-${String(matchDate.getMonth() + 1).padStart(2, '0')}-${String(matchDate.getDate()).padStart(2, '0')}`;
+
+  // 백엔드 달력 주요 이벤트 기반 마일스톤 날짜 동적 추출
+  const openingEv = calendarEvents.find(e => e.label.includes('정규시즌 개막') || e.label.includes('개막'));
+  const secondHalfEv = calendarEvents.find(e => e.label.includes('RS 후반기 시작') || e.label.includes('후반기'));
+  const eliteEv = calendarEvents.find(e => e.label.includes('크라운 정예리그 개막') || e.event_type === 'ELITE');
+  const knockoutEv = calendarEvents.find(e => e.label.includes('PS 8강') || e.label.includes('포스트시즌 8강'));
+
+  const openingDateStr = openingEv?.date || `${year}-03-03`;
+  const secondHalfDateStr = secondHalfEv?.date || `${year}-05-26`;
+  const eliteDateStr = eliteEv?.date || `${year}-08-17`;
+  const knockoutDateStr = knockoutEv?.date || `${year}-10-02`;
+
+  const isOpening = matchDateStr >= openingDateStr;
+  const isSecondHalf = matchDateStr >= secondHalfDateStr;
+  const isPostSeason = matchDateStr >= eliteDateStr;
+  const isKnockout = matchDateStr >= knockoutDateStr ||
+    knockoutMatches.some(m => simDayToDateStr(m.sim_day) <= matchDateStr);
 
   let currentStep = 1;
-  if (simDay < 146) {
+  if (!isSecondHalf) {
     currentStep = 1;
-  } else if (simDay >= 146 && simDay <= 228) {
+  } else if (!isPostSeason) {
     currentStep = 3;
-  } else if (simDay >= 229 && simDay <= 283) {
+  } else if (!isKnockout) {
     currentStep = 4;
   } else {
     currentStep = 5;

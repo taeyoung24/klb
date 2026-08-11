@@ -88,7 +88,7 @@
 
 .intro-legacy {
   width: 100%;
-  padding: 100px 24px;
+  padding: 100px 32px;
   box-sizing: border-box;
   background-color: #0b0c10;
   /* 블랙 테마 */
@@ -98,7 +98,7 @@
 }
 
 .intro-legacy__container {
-  max-width: 1000px;
+  max-width: 1500px;
   margin: 0 auto;
   display: flex;
   flex-direction: column;
@@ -136,39 +136,333 @@
   max-width: 600px;
 }
 
-.intro-legacy__map-placeholder {
-  width: 100%;
-  max-width: 800px;
-  height: 450px;
-  margin-top: 48px;
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px dashed rgba(255, 255, 255, 0.15);
-  border-radius: 8px;
+/* ==========================================================================
+   Interactive World Map & Info Panel Layout (Flat / Plain Design)
+   - 지도 원본 비율 및 최소 너비 최우선 보장
+   ========================================================================== */
+.intro-legacy__map-layout {
   display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  justify-content: center;
+  gap: 32px;
+  width: 100%;
+  max-width: 1400px;
+  margin-top: 48px;
+  box-sizing: border-box;
+}
+
+.intro-legacy__map-container {
+  flex: 1.5;
+  min-width: 650px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 24px;
+  box-sizing: border-box;
+  box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.8), 0 10px 30px rgba(0, 0, 0, 0.5);
+  position: relative;
+  overflow: hidden;
+  transition: border-color 0.3s ease;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* 우측 담백한 플랫 정보 패널 (카드 박스/배경/패딩 제거, 생으로 노출) */
+.intro-legacy__info-panel {
+  flex: 1;
+  max-width: 480px;
+  background: none;
+  border: none;
+  border-radius: 0;
+  padding: 0;
+  box-sizing: border-box;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  gap: 22px;
+}
+
+/* 선택된 지역 없을 때의 엠프티 안내 */
+.intro-legacy__info-empty {
+  height: 100%;
+  min-height: 250px;
+  display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  box-shadow: inset 0 0 30px rgba(0, 0, 0, 0.5);
-  transition: all 0.3s ease;
-  text-decoration: none;
+  color: rgba(255, 255, 255, 0.4);
+  font-family: var(--sans);
+  font-size: var(--fs-sm);
+  text-align: center;
+  padding: 40px 20px;
+}
+
+/* 정보 패널 내부 섹션 타이포그래피 (담백/플랫) */
+.intro-legacy__info-header {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding-bottom: 16px;
+}
+
+.intro-legacy__info-tag {
+  font-family: var(--heading);
+  font-size: 11px;
+  font-weight: var(--fw-bold);
+  letter-spacing: 1px;
+  color: rgba(255, 255, 255, 0.5);
+  text-transform: uppercase;
+  display: block;
+  margin-bottom: 6px;
+}
+
+.intro-legacy__info-title {
+  font-family: var(--heading);
+  font-size: var(--fs-2xl);
+  font-weight: var(--fw-bold);
+  color: #ffffff;
+  margin: 0;
+  line-height: 1.2;
+}
+
+.intro-legacy__info-group {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.intro-legacy__info-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.intro-legacy__info-label {
+  font-family: var(--sans);
+  font-size: 12px;
+  font-weight: var(--fw-bold);
+  color: rgba(255, 255, 255, 0.45);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.intro-legacy__info-value {
+  font-family: var(--sans);
+  font-size: var(--fs-sm);
+  color: rgba(255, 255, 255, 0.9);
+  line-height: 1.5;
+  margin: 0;
+}
+
+.intro-legacy__info-value--story {
+  color: rgba(255, 255, 255, 0.75);
+  line-height: 1.65;
+  white-space: pre-line;
+}
+
+/* 지도의 크기/비율 최우선 보장: 1280px 미만 화면에서는 정보 패널을 지도 하단으로 세로 재배치 */
+@media (max-width: 1280px) {
+  .intro-legacy__map-layout {
+    flex-direction: column;
+    align-items: center;
+    margin-top: 36px;
+  }
+
+  .intro-legacy__map-container {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .intro-legacy__info-panel {
+    width: 100%;
+    max-width: 100%;
+  }
+}
+
+.intro-legacy__map-svg-wrapper {
+  width: 100%;
+  height: auto;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.intro-legacy__map-svg-wrapper svg {
+  width: 100% !important;
+  height: auto !important;
+  max-width: 100%;
+  max-height: 100%;
+  display: block;
+}
+
+/* ==========================================================================
+   Interactive World Map - 4대 리그 / 대륙 커스텀 색상 변수
+   (추후 용이하게 색상 변경 가능)
+   ========================================================================== */
+.intro-legacy {
+  --map-bg-stroke: #0b0c10;
+  --map-color-azalea: #F8369A;
+  --map-color-camellia: #D22828;
+  --map-color-gentiana: #5C71FB;
+  --map-color-magnolia: #f59e0b;
+}
+
+/* 모든 지형 패스 기본 트랜지션 설정 */
+.map-path {
+  transition: fill 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+    stroke 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+    stroke-width 0.2s ease,
+    filter 0.3s ease;
   cursor: pointer;
 }
 
-.intro-legacy__map-placeholder:hover {
-  background: rgba(255, 255, 255, 0.03);
-  border-color: rgba(255, 255, 255, 0.3);
+/* --------------------------------------------------------------------------
+   상태 1: Default (아무 선택/호버도 없을 때)
+   - 칠(fill): 흰색 (#ffffff)
+   - 테두리(stroke): 배경칠색 (#0b0c10)
+   -------------------------------------------------------------------------- */
+.intro-legacy__map-container.state-default .map-path {
+  fill: #ffffff;
+  stroke: var(--map-bg-stroke);
+  stroke-width: 1px;
+  opacity: 1;
 }
 
-.intro-legacy__map-placeholder-text {
-  font-family: var(--sans);
-  color: rgba(255, 255, 255, 0.3);
-  font-size: var(--fs-sm);
+/* --------------------------------------------------------------------------
+   상태 2: Sea Hover (맵 영역 호버됨 + 바다 영역에 마우스 위치)
+   - 각 지역별 지정 색상으로 칠해짐
+   -------------------------------------------------------------------------- */
+.intro-legacy__map-container.state-sea-hover .map-path,
+.intro-legacy__map-container.state-region-hover .map-path {
+  stroke: rgba(0, 0, 0, 0.4);
+  stroke-width: 1px;
+  opacity: 1;
+}
+
+/* 4대 리그별 칠 색상 지정 */
+.intro-legacy__map-container.state-sea-hover .map-path.league-azalea,
+.intro-legacy__map-container.state-region-hover .map-path.league-azalea {
+  fill: var(--map-color-azalea);
+}
+
+.intro-legacy__map-container.state-sea-hover .map-path.league-camellia,
+.intro-legacy__map-container.state-region-hover .map-path.league-camellia {
+  fill: var(--map-color-camellia);
+}
+
+.intro-legacy__map-container.state-sea-hover .map-path.league-gentiana,
+.intro-legacy__map-container.state-region-hover .map-path.league-gentiana {
+  fill: var(--map-color-gentiana);
+}
+
+.intro-legacy__map-container.state-sea-hover .map-path.league-magnolia,
+.intro-legacy__map-container.state-region-hover .map-path.league-magnolia {
+  fill: var(--map-color-magnolia);
+}
+
+/* --------------------------------------------------------------------------
+   상태 3: Region Hover (특정 대륙/지역 지형에 마우스 호버됨)
+   - 모든 유색 색상 유지
+   - 호버되지 않은 지역은 opacity: 0.35로 투명화
+   - 호버된 지역만 opacity: 1 및 테두리/글로우 하이라이트
+   -------------------------------------------------------------------------- */
+.intro-legacy__map-container.state-region-hover .map-path {
+  opacity: 0.35;
+}
+
+.intro-legacy__map-container.state-region-hover .map-path:hover,
+.intro-legacy__map-container.state-region-hover .map-path.is-active {
+  opacity: 1 !important;
+  stroke: rgba(0, 0, 0, 0.4);
+  stroke-width: 1px;
+  filter: none;
+}
+
+/* ==========================================================================
+   Interactive Map - Callout Lines & League Labels
+   ========================================================================== */
+.map-callout-svg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 10;
+  opacity: 0;
+  transition: opacity 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* 바다 호버 및 육지 호버 시 라벨 유도선 스무스 페이드인 표출 */
+.intro-legacy__map-container.state-sea-hover .map-callout-svg,
+.intro-legacy__map-container.state-region-hover .map-callout-svg {
+  opacity: 1;
+}
+
+.map-callout__dot {
+  fill: #ffffff;
+  filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.8));
+}
+
+.map-callout__line {
+  stroke: #ffffff;
+  stroke-width: 2px;
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  filter: drop-shadow(0 0 4px rgba(0, 0, 0, 0.5));
+}
+
+.map-callout__title {
+  fill: #ffffff;
+  font-family: var(--heading);
+  font-size: 24px;
   font-weight: var(--fw-bold);
-  letter-spacing: 1px;
-  transition: color 0.3s ease;
+  letter-spacing: 0.5px;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.8));
 }
 
-.intro-legacy__map-placeholder:hover .intro-legacy__map-placeholder-text {
-  color: rgba(255, 255, 255, 0.8);
+.map-callout__sub {
+  fill: rgba(255, 255, 255, 0.85);
+  font-family: var(--sans);
+  font-size: 16px;
+  font-weight: var(--fw-bold);
+  letter-spacing: 0.5px;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.8));
+}
+
+/* ==========================================================================
+   Interactive Map - Scale Bar (지도 척도 100km)
+   ========================================================================== */
+.map-scale {
+  position: absolute;
+  bottom: 24px;
+  right: 28px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  pointer-events: none;
+  z-index: 15;
+}
+
+.map-scale__bar {
+  width: 60px;
+  height: 6px;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.5);
+  border-left: 2px solid rgba(255, 255, 255, 0.5);
+  border-right: 2px solid rgba(255, 255, 255, 0.5);
+  position: relative;
+}
+
+.map-scale__label {
+  font-family: var(--sans);
+  font-size: 11px;
+  font-weight: var(--fw-bold);
+  color: rgba(255, 255, 255, 0.5);
+  letter-spacing: 1px;
 }
 
 /* ==========================================================================

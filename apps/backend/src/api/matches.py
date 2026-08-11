@@ -1,46 +1,119 @@
+import datetime
 import json
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session, select, asc, SQLModel
 from sqlalchemy.orm import defer
-from src.models import Match, Club, Player, IngameInstructionLog, IngameScoreboard, MatchPlaceholder, MatchLineup
+from src.enums import MatchStatus, MatchStage
+from src.models import Match, Club, Player, IngameInstructionLog, IngameScoreboard, MatchPlaceholder, MatchLineup, Stadium, WorldState
 from src.services.common import get_session
 from src.services.ingame.main import get_scoreboard
 
+from src.utils.date_utils import date_to_sim_day, sim_day_to_date
+from src.services.season_calendar import CalendarEvent, get_season_calendar_events
+
 router = APIRouter(prefix="/matches", tags=["Matches"])
+
+
+class MatchSummaryResponse(SQLModel):
+    """경기 목록 및 일정/결과 요약 조회용 Pydantic 모델 (DB 관계 객체 및 대용량 로그 제외로 0.001초 최적화)"""
+    id: int
+    away_club_id: int
+    home_club_id: int
+    stadium_id: Optional[int] = None
+    sim_day: int
+    status: MatchStatus
+    stage: MatchStage
+    limit_extra_innings: bool
+    home_score: Optional[int] = None
+    away_score: Optional[int] = None
+    away_starting_pitcher_id: Optional[int] = None
+    home_starting_pitcher_id: Optional[int] = None
+    winning_pitcher_id: Optional[int] = None
+    losing_pitcher_id: Optional[int] = None
+    save_pitcher_id: Optional[int] = None
+
+
+@router.get("/calendar-events", response_model=list[CalendarEvent])
+def get_calendar_events(
+    year: Optional[int] = None,
+    session: Session = Depends(get_session)
+):
+    target_year = year if year is not None else 2026
+    return get_season_calendar_events(session, target_year)
 
 @router.get("/placeholders", response_model=list[MatchPlaceholder])
 def get_match_placeholders(
+    year: Optional[int] = None,
     session: Session = Depends(get_session)
 ):
-    query = select(MatchPlaceholder).order_by(asc(MatchPlaceholder.id))
+    target_year = year
+    if target_year is None:
+        world_state = session.exec(select(WorldState)).first()
+        current_sim_day = world_state.current_sim_day if world_state else 1
+        target_year = sim_day_to_date(current_sim_day).year
+
+    jan_1_sim_day = date_to_sim_day(f"{target_year}-01-01")
+    dec_31_sim_day = date_to_sim_day(f"{target_year}-12-31")
+
+    query = (
+        select(MatchPlaceholder)
+        .where(MatchPlaceholder.sim_day >= jan_1_sim_day)
+        .where(MatchPlaceholder.sim_day <= dec_31_sim_day)
+        .order_by(asc(MatchPlaceholder.id))
+    )
     return session.exec(query).all()
 
-@router.get("", response_model=list[Match])
+@router.get("", response_model=list[MatchSummaryResponse])
 def get_matches(
     league_id: Optional[int] = None,
     club_id: Optional[int] = None,
     sim_day: Optional[int] = None,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    date: Optional[str] = None,
+    year: Optional[int] = None,
     status: Optional[str] = None,
+    stage: Optional[str] = None,
     session: Session = Depends(get_session)
 ):
     query = select(Match).options(
         defer(Match.match_log),  # type: ignore
         defer(Match.match_log_json)  # type: ignore
     )
-    
+
     if club_id is not None:
         query = query.where((Match.home_club_id == club_id) | (Match.away_club_id == club_id))
-        
+
     if league_id is not None:
         query = query.join(Club, onclause=(Match.home_club_id == Club.id)).where(Club.league_id == league_id) # type: ignore
-        
+
     if sim_day is not None:
         query = query.where(Match.sim_day == sim_day)
-        
+
+    if date is not None:
+        target_sim_day = date_to_sim_day(date)
+        query = query.where(Match.sim_day == target_sim_day)
+
+    if start_date is not None:
+        start_sim_day = date_to_sim_day(start_date)
+        query = query.where(Match.sim_day >= start_sim_day)
+
+    if end_date is not None:
+        end_sim_day = date_to_sim_day(end_date)
+        query = query.where(Match.sim_day <= end_sim_day)
+
+    if year is not None:
+        y_start_sim_day = date_to_sim_day(f"{year}-01-01")
+        y_end_sim_day = date_to_sim_day(f"{year}-12-31")
+        query = query.where(Match.sim_day >= y_start_sim_day).where(Match.sim_day <= y_end_sim_day)
+
     if status is not None:
         query = query.where(Match.status == status)
-        
+
+    if stage is not None:
+        query = query.where(Match.stage == stage)
+
     query = query.order_by(asc(Match.sim_day), asc(Match.home_club_id))
     return session.exec(query).all()
 

@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect } from 'react';
 import './Intro.css';
 import mainBannerImg from '../assets/main_banner.jpeg';
+import WorldMap from '../components/WorldMap';
+import { getRegionDataById } from '../data/regionData';
 
 export default function Intro() {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -8,6 +10,21 @@ export default function Intro() {
   const [videoOpacity, setVideoOpacity] = useState(0);
   const [scrollProgress, setScrollProgress] = useState(0);
   const [isTextVisible, setIsTextVisible] = useState(false);
+
+  // 세계관 지도 3가지 인터랙티브 상태 관리 (1: Default, 2: Sea Hover, 3: Region Hover / Select)
+  const [isMapHovered, setIsMapHovered] = useState(false);
+  const [hoveredRegion, setHoveredRegion] = useState<string | null>(null);
+  const [selectedRegion, setSelectedRegion] = useState<string | null>(null);
+
+  // 지역 클릭 토글 핸들러 (동일 지역 재클릭 시 해제, 타 지역 클릭 시 전환)
+  const handleRegionClick = (regionId: string) => {
+    setSelectedRegion((prev) => (prev === regionId ? null : regionId));
+  };
+
+  // 바다 영역 클릭 시 선택 해제
+  const handleSeaClick = () => {
+    setSelectedRegion(null);
+  };
 
   useEffect(() => {
     const handleScroll = () => {
@@ -204,9 +221,107 @@ export default function Intro() {
           <p className="intro-legacy__desc">
             수많은 지역, 대륙 간 얽히고 얽힌 이야기가 있습니다.
           </p>
-          <a href="#world-map" className="intro-legacy__map-placeholder">
-            <span className="intro-legacy__map-placeholder-text">인터랙티브 세계관 지도 바로가기 →</span>
-          </a>
+
+          {/* 지도 & 서사 정보 패널 반응형 2컬럼 레이아웃 */}
+          <div className="intro-legacy__map-layout">
+            <WorldMap
+              isMapHovered={isMapHovered}
+              hoveredRegion={hoveredRegion}
+              selectedRegion={selectedRegion}
+              onMapMouseEnter={() => setIsMapHovered(true)}
+              onMapMouseLeave={() => {
+                setIsMapHovered(false);
+                setHoveredRegion(null);
+              }}
+              onRegionHover={(regionId) => setHoveredRegion(regionId)}
+              onRegionLeave={() => setHoveredRegion(null)}
+              onRegionClick={handleRegionClick}
+              onSeaClick={handleSeaClick}
+            />
+
+            {/* 담백/플랫 서사 정보 패널 (조건부 필드 노출) */}
+            <div className="intro-legacy__info-panel">
+              {(() => {
+                const activeData = getRegionDataById(hoveredRegion || selectedRegion);
+                if (activeData) {
+                  const isLeague = activeData.type === 'league';
+
+                  return (
+                    <>
+                      <div className="intro-legacy__info-header">
+                        <span className="intro-legacy__info-tag">{activeData.leagueTag}</span>
+                        <h3 className="intro-legacy__info-title">{activeData.name}</h3>
+                      </div>
+
+                      <div className="intro-legacy__info-group">
+                        {/* 1. 리그(league) 선택 시: 포함 지역 목록 및 리그 개요 노출 */}
+                        {isLeague ? (
+                          <>
+                            {activeData.includedRegions && (
+                              <div className="intro-legacy__info-item">
+                                <span className="intro-legacy__info-label">포함 지역 목록</span>
+                                <p className="intro-legacy__info-value">{activeData.includedRegions}</p>
+                              </div>
+                            )}
+
+                            {activeData.description && (
+                              <div className="intro-legacy__info-item">
+                                <span className="intro-legacy__info-label">리그 개요</span>
+                                <p className="intro-legacy__info-value intro-legacy__info-value--story">
+                                  {activeData.description}
+                                </p>
+                              </div>
+                            )}
+                          </>
+                        ) : (
+                          /* 2. 세부 지역(region) 선택 시: 주구단, 2/3군, 홈구장, 배경 이야기 노출 */
+                          <>
+                            {activeData.mainTeam && (
+                              <div className="intro-legacy__info-item">
+                                <span className="intro-legacy__info-label">주 구단</span>
+                                <p className="intro-legacy__info-value">{activeData.mainTeam}</p>
+                              </div>
+                            )}
+
+                            {activeData.minorTeams && (
+                              <div className="intro-legacy__info-item">
+                                <span className="intro-legacy__info-label">2, 3군 구단</span>
+                                <p className="intro-legacy__info-value">{activeData.minorTeams}</p>
+                              </div>
+                            )}
+
+                            {activeData.stadium && (
+                              <div className="intro-legacy__info-item">
+                                <span className="intro-legacy__info-label">홈 구장</span>
+                                <p className="intro-legacy__info-value">{activeData.stadium}</p>
+                              </div>
+                            )}
+
+                            {activeData.story && (
+                              <div className="intro-legacy__info-item">
+                                <span className="intro-legacy__info-label">배경 이야기</span>
+                                <p className="intro-legacy__info-value intro-legacy__info-value--story">
+                                  {activeData.story}
+                                </p>
+                              </div>
+                            )}
+                          </>
+                        )}
+                      </div>
+                    </>
+                  );
+                }
+                return (
+                  <div className="intro-legacy__info-empty">
+                    <p>
+                      지도의 지역을 선택하거나 마우스를 올리면<br />
+                      상세 서사와 구단 정보가 표시됩니다.
+                    </p>
+                  </div>
+                );
+              })()}
+            </div>
+          </div>
         </div>
       </section>
 

@@ -8,6 +8,7 @@ from src.enums import (
     MatchStatus,
     MatchStage,
     IngameRole,
+    PlayerTransactionType,
 )
 from .base import Stadium, Club, Player
 from .ingame import IngameInstructionLog
@@ -183,3 +184,22 @@ class ArticleComment(SQLModel, table=True):
     dislikes: int = Field(default=0)
 
     article: Article = Relationship(back_populates="comments")
+
+
+class PlayerTransactionHistory(SQLModel, table=True):
+    """
+    사무국 선수 계약, 지명, 이적 행정 일지 장부
+    """
+    id: int = Field(default=None, primary_key=True)
+    player_id: int = Field(foreign_key="player.id", index=True)
+    sim_day: int = Field(index=True)
+
+    transaction_type: PlayerTransactionType = Field(index=True)
+
+    from_club_id: Optional[int] = Field(default=None, foreign_key="club.id")
+    to_club_id: Optional[int] = Field(default=None, foreign_key="club.id")
+
+    draft_round: Optional[int] = Field(default=None)
+    draft_overall_pick: Optional[int] = Field(default=None)
+
+    details: Optional[str] = Field(default=None)

@@ -1,4 +1,5 @@
 import client from './client';
+import type { Region } from './regions';
 
 export interface FenceProfileItem {
   angle: number;
@@ -16,6 +17,8 @@ export interface Stadium {
   altitude: number;
   fence_profile: FenceProfileItem[];
   curvature: number;
+  region_id?: number;
+  region?: Region | null;
 }
 
 export const getStadiums = async (): Promise<Stadium[]> => {

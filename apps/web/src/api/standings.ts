@@ -21,13 +21,15 @@ export interface DailyClubStanding {
 export const getStandings = async (
   leagueId: number,
   simDay?: number,
-  isPostseason?: boolean
+  isPostseason?: boolean,
+  date?: string
 ): Promise<DailyClubStanding[]> => {
   const response = await client.get<DailyClubStanding[]>('/standings', {
     params: {
       league_id: leagueId,
       ...(simDay !== undefined ? { sim_day: simDay } : {}),
       ...(isPostseason !== undefined ? { is_postseason: isPostseason } : {}),
+      ...(date ? { date } : {}),
     },
   });
   return response.data;

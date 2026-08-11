@@ -1,4 +1,6 @@
 import client from './client';
+import type { Region } from './regions';
+import type { HighSchool } from './highSchools';
 
 export interface Player {
   id: number;
@@ -13,6 +15,10 @@ export interface Player {
   focus?: number;
   height?: number;
   weight?: number;
+  region_id?: number;
+  region?: Region | null;
+  high_school_id?: number;
+  high_school?: HighSchool | null;
 }
 
 export interface GetPlayersParams {

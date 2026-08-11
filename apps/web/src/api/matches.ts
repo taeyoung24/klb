@@ -25,6 +25,10 @@ export interface GetMatchesParams {
   league_id?: number;
   club_id?: number;
   sim_day?: number;
+  start_date?: string;
+  end_date?: string;
+  date?: string;
+  year?: number;
   status?: MatchStatus | string;
   stage?: MatchStage | string;
 }
@@ -74,8 +78,10 @@ export const getMatches = async (params: GetMatchesParams = {}): Promise<Match[]
   return response.data;
 };
 
-export const getMatchPlaceholders = async (): Promise<MatchPlaceholder[]> => {
-  const response = await client.get<MatchPlaceholder[]>('/matches/placeholders');
+export const getMatchPlaceholders = async (year?: number): Promise<MatchPlaceholder[]> => {
+  const response = await client.get<MatchPlaceholder[]>('/matches/placeholders', {
+    params: year ? { year } : undefined,
+  });
   return response.data;
 };
 

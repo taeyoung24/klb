@@ -1,5 +1,6 @@
 import datetime
 from typing import Optional, Union
+from sqlmodel import Session, select
 from src.enums import MatchStatus, MatchStage
 from src.models import Match, Club, MatchPlaceholder
 
@@ -295,3 +296,95 @@ def generate_tiebreaker_schedule(
         stage=MatchStage.TIEBREAKER,
         limit_extra_innings=False,
     )
+
+
+def update_knockout_placeholders_realtime(session: Session) -> bool:
+    """
+    매 경기 시뮬레이션 직후 실행되어, 녹아웃(8강/4강/결승)의 승자가 조기 확정된 부모 매치가 있을 때
+    연관된 자식 MatchPlaceholder의 home_club_id / away_club_id를 매일 실시간 갱신합니다.
+    """
+    placeholders = session.exec(select(MatchPlaceholder)).all()
+    if not placeholders:
+        return False
+
+    q_nodes = sorted([p for p in placeholders if p.round == "ROUND_OF_8"], key=lambda x: x.id)
+    s_nodes = sorted([p for p in placeholders if p.round == "SEMI_FINAL"], key=lambda x: x.id)
+    f_nodes = [p for p in placeholders if p.round == "FINAL"]
+    f_node = f_nodes[0] if f_nodes else None
+
+    # 모든 녹아웃 완료 매치 기록 가져오기
+    ko_matches = session.exec(
+        select(Match)
+        .where(Match.stage == MatchStage.KNOCKOUT)
+        .where(Match.status == MatchStatus.COMPLETED)
+    ).all()
+
+    updated = False
+
+    # 승자 판정 헬퍼
+    def get_series_winner(c1_id: Optional[int], c2_id: Optional[int], required_wins: int, is_bo3_advantage: bool = False) -> Optional[int]:
+        if not c1_id or not c2_id:
+            return None
+        c1_wins = 1 if is_bo3_advantage else 0
+        c2_wins = 0
+        for m in ko_matches:
+            h = m.home_club_id
+            a = m.away_club_id
+            if (h == c1_id and a == c2_id) or (h == c2_id and a == c1_id):
+                h_score = m.home_score if m.home_score is not None else 0
+                a_score = m.away_score if m.away_score is not None else 0
+                if h_score != a_score:
+                    winner = h if h_score > a_score else a
+                    if winner == c1_id:
+                        c1_wins += 1
+                    else:
+                        c2_wins += 1
+        if c1_wins >= required_wins:
+            return c1_id
+        if c2_wins >= required_wins:
+            return c2_id
+        return None
+
+    # 1. 8강 ➔ 4강 Placeholder 실시간 갱신 (Bo3, 2승 선취)
+    if len(q_nodes) >= 4 and len(s_nodes) >= 2:
+        q1_winner = get_series_winner(q_nodes[0].home_club_id, q_nodes[0].away_club_id, required_wins=2, is_bo3_advantage=True)
+        q2_winner = get_series_winner(q_nodes[1].home_club_id, q_nodes[1].away_club_id, required_wins=2, is_bo3_advantage=True)
+        q3_winner = get_series_winner(q_nodes[2].home_club_id, q_nodes[2].away_club_id, required_wins=2, is_bo3_advantage=True)
+        q4_winner = get_series_winner(q_nodes[3].home_club_id, q_nodes[3].away_club_id, required_wins=2, is_bo3_advantage=True)
+
+        if q1_winner and s_nodes[0].home_club_id != q1_winner:
+            s_nodes[0].home_club_id = q1_winner
+            session.add(s_nodes[0])
+            updated = True
+        if q2_winner and s_nodes[0].away_club_id != q2_winner:
+            s_nodes[0].away_club_id = q2_winner
+            session.add(s_nodes[0])
+            updated = True
+        if q3_winner and s_nodes[1].home_club_id != q3_winner:
+            s_nodes[1].home_club_id = q3_winner
+            session.add(s_nodes[1])
+            updated = True
+        if q4_winner and s_nodes[1].away_club_id != q4_winner:
+            s_nodes[1].away_club_id = q4_winner
+            session.add(s_nodes[1])
+            updated = True
+
+    # 2. 4강 ➔ 결승 Placeholder 실시간 갱신 (Bo5, 3승 선취)
+    if len(s_nodes) >= 2 and f_node:
+        s1_winner = get_series_winner(s_nodes[0].home_club_id, s_nodes[0].away_club_id, required_wins=3, is_bo3_advantage=False)
+        s2_winner = get_series_winner(s_nodes[1].home_club_id, s_nodes[1].away_club_id, required_wins=3, is_bo3_advantage=False)
+
+        if s1_winner and f_node.home_club_id != s1_winner:
+            f_node.home_club_id = s1_winner
+            session.add(f_node)
+            updated = True
+        if s2_winner and f_node.away_club_id != s2_winner:
+            f_node.away_club_id = s2_winner
+            session.add(f_node)
+            updated = True
+
+    if updated:
+        session.commit()
+
+    return updated
+
