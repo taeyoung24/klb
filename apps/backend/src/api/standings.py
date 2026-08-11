@@ -3,6 +3,7 @@ from fastapi import APIRouter, Depends
 from sqlmodel import Session, select, desc, asc
 from src.models import DailyClubStanding, WorldState
 from src.services.common import get_session
+from src.utils.date_utils import date_to_sim_day
 
 router = APIRouter(prefix="/standings", tags=["Standings"])
 
@@ -10,10 +11,13 @@ router = APIRouter(prefix="/standings", tags=["Standings"])
 def get_standings(
     league_id: int,
     sim_day: Optional[int] = None,
+    date: Optional[str] = None,
     is_postseason: bool = False,
     session: Session = Depends(get_session)
 ):
-    if sim_day is None:
+    if date is not None:
+        sim_day = date_to_sim_day(date)
+    elif sim_day is None:
         world_state = session.get(WorldState, 1)
         if world_state:
             sim_day = max(1, world_state.current_sim_day - 1)

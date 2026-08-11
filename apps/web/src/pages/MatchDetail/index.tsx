@@ -20,6 +20,7 @@ import { getPlayers, type Player } from '../../api/players';
 import { getSystemInfo } from '../../api/system';
 import LoadingSpinner from '../../components/LoadingSpinner/LoadingSpinner';
 import TeamLogo from '../../components/TeamLogo/TeamLogo';
+import { simDayToDate } from '../../utils/date';
 import './index.css';
 
 import AnalysisTab from './AnalysisTab';
@@ -58,48 +59,39 @@ const getMatchTitle = (
 ): string => {
   if (!match) return `${seasonYear || 2026} KLB 정규리그`;
 
-  const simDay = match.sim_day;
-  const isPostSeason = simDay >= 229;
+  const isKnockout = match.stage === 'KNOCKOUT';
+  const isElite = match.stage === 'ELITE';
 
-  // 1. 포스트시즌 경기 (sim_day >= 229)
-  if (isPostSeason) {
-    const isKnockout = match.stage === 'KNOCKOUT';
-    if (isKnockout) {
-      // DB MatchPlaceholder에서 해당 경기 ID(actual_match_id) 매핑 검색
-      const ph = placeholders.find(p => p.actual_match_id === match.id);
-      if (ph) {
-        if (ph.round === 'ROUND_OF_8') return `${seasonYear} 포스트시즌 8강전`;
-        if (ph.round === 'SEMI_FINAL') return `${seasonYear} 포스트시즌 준결승전`;
-        if (ph.round === 'FINAL') return `${seasonYear} 포스트시즌 결승전 (KROWN SERIES)`;
-      }
+  // 1. 녹아웃 토너먼트 경기 (8강전 / 준결승전 / 결승전)
+  if (isKnockout) {
+    const ph = placeholders.find(p => p.actual_match_id === match.id);
+    if (ph) {
+      if (ph.round === 'ROUND_OF_8') return `${seasonYear} 포스트시즌 8강전`;
+      if (ph.round === 'SEMI_FINAL') return `${seasonYear} 포스트시즌 준결승전`;
+      if (ph.round === 'FINAL') return `${seasonYear} 포스트시즌 결승전 (KROWN SERIES)`;
+    }
 
-      // fallback: 녹아웃 시작일 기준 상대적 일자 계산
-      const knockoutPlaceholders = placeholders.filter(p => p.limit_extra_innings === false);
-      const minKoDay = knockoutPlaceholders.length > 0 ? Math.min(...knockoutPlaceholders.map(p => p.sim_day)) : 261;
+    const knockoutPlaceholders = placeholders.filter(p => p.limit_extra_innings === false);
+    const minKoDay = knockoutPlaceholders.length > 0 ? Math.min(...knockoutPlaceholders.map(p => p.sim_day)) : 261;
 
-      if (simDay >= minKoDay + 8) {
-        return `${seasonYear} 포스트시즌 결승전 (KROWN SERIES)`;
-      } else if (simDay >= minKoDay + 3) {
-        return `${seasonYear} 포스트시즌 준결승전`;
-      } else {
-        return `${seasonYear} 포스트시즌 8강전`;
-      }
+    if (match.sim_day >= minKoDay + 8) {
+      return `${seasonYear} 포스트시즌 결승전 (KROWN SERIES)`;
+    } else if (match.sim_day >= minKoDay + 3) {
+      return `${seasonYear} 포스트시즌 준결승전`;
     } else {
-      return `${seasonYear} 포스트시즌 정예리그`;
+      return `${seasonYear} 포스트시즌 8강전`;
     }
   }
 
-  // 2. 정규시즌 경기 (sim_day <= 228)
+  // 2. 크라운 정예리그 경기
+  if (isElite) {
+    return `${seasonYear} 포스트시즌 정예리그`;
+  }
+
+  // 3. 정규시즌 및 기타 경기
   const leagueId = homeClub?.league_id || 1;
   const league = LEAGUE_INFO[leagueId] || { name: '아젤리아', code: 'AL' };
   return `${league.name} 정규리그 | ${league.code}`;
-};
-
-const getSimDayFromDate = (year: number, date: Date): number => {
-  const baseDate = new Date(year, 0, 1);
-  const targetDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-  const diffTime = targetDate.getTime() - baseDate.getTime();
-  return Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
 };
 
 const formatNavDate = (date: Date | null) => {
@@ -173,16 +165,16 @@ export default function MatchDetail() {
           try {
             const m = await getMatch(targetMatchId);
             setSelectedMatchId(m.id);
-            const matchDate = new Date(sysYear, 0, m.sim_day);
+            const matchDate = simDayToDate(m.sim_day);
             setNavDate(matchDate);
           } catch (e) {
             console.error("Failed to fetch target match", e);
             const currentSimDay = sysInfo?.current_sim_day || 1;
-            setNavDate(new Date(sysYear, 0, currentSimDay));
+            setNavDate(simDayToDate(currentSimDay));
           }
         } else if (sysInfo) {
           const currentSimDay = sysInfo.current_sim_day || 1;
-          setNavDate(new Date(sysYear, 0, currentSimDay));
+          setNavDate(simDayToDate(currentSimDay));
         }
         setIsLoading(false);
       })
@@ -304,7 +296,7 @@ export default function MatchDetail() {
   const matchTitle = getMatchTitle(currentMatch, homeClub, seasonYear, placeholders);
 
   // 경기 일자 및 구장
-  const matchDateObj = currentMatch ? new Date(seasonYear || 2026, 0, currentMatch.sim_day) : navDate;
+  const matchDateObj = currentMatch ? simDayToDate(currentMatch.sim_day) : navDate;
   const matchDateText = formatFullDateStr(matchDateObj);
   const matchStadiumText = currentMatch?.stadium?.name || (homeClub ? homeClub.stadium_name_ko || `${homeClub.hometown_ko} 야구장` : '서울 잠실야구장');
 

@@ -17,6 +17,7 @@ from src.services.schedule_utils import (
     generate_knockout_schedule,
     save_knockout_placeholders,
     generate_tiebreaker_schedule,
+    update_knockout_placeholders_realtime,
 )
 from src.services.ingame import run_match
 from src.services.standing import (
@@ -82,10 +83,10 @@ def _check_and_run_admin_tasks(session: Session, sim_day: int) -> None:
     """
     logger.debug(f"[{TIME_ADMIN_TASK}] [Sim Day {sim_day}] 행정 일정(Administrative Task) 검토 중...")
     current_date = sim_day_to_date(sim_day)
+    current_year = current_date.year
 
     # 1. 매년 2월 셋째 주 월요일: 해당 연도 정규시즌 경기 일정 자동 생성 및 적재
     if is_third_monday_of_february(current_date):
-        current_year = current_date.year
         jan_1_date = datetime.date(current_year, 1, 1)
         year_base_sim_day = (jan_1_date - datetime.date(2026, 1, 1)).days + 1
 
@@ -113,7 +114,15 @@ def _check_and_run_admin_tasks(session: Session, sim_day: int) -> None:
                 logger.info(f"[{ADMIN_EVENT_SEASON_SCHEDULE_GEN.name}] 실행: {current_year}시즌 전체 리그 정규시즌 일정({total_matches_count}경기) 적재 (Sim Day: {sim_day})")
 
     # 2. 정규시즌 마감 후 타이브레이크 판정 검토
-    all_regular_days = session.exec(select(Match.sim_day).where(Match.stage == MatchStage.REGULAR)).all()
+    jan_1_sim_day = (datetime.date(current_year, 1, 1) - datetime.date(2026, 1, 1)).days + 1
+    dec_31_sim_day = (datetime.date(current_year, 12, 31) - datetime.date(2026, 1, 1)).days + 1
+
+    all_regular_days = session.exec(
+        select(Match.sim_day)
+        .where(Match.stage == MatchStage.REGULAR)
+        .where(Match.sim_day >= jan_1_sim_day)
+        .where(Match.sim_day <= dec_31_sim_day)
+    ).all()
     if not all_regular_days:
         return
     max_regular_day = max(all_regular_days)
@@ -137,9 +146,14 @@ def _check_and_run_admin_tasks(session: Session, sim_day: int) -> None:
     # 3. 정예리그 일정 생성 검토 (정규시즌 마감 + 4일 휴식 후 시작)
     elite_start_day = max_regular_day + 5
     if sim_day == max_regular_day + 4:
-        existing_elite = session.exec(select(Match).where(Match.stage == MatchStage.ELITE)).all()
+        existing_elite = session.exec(
+            select(Match)
+            .where(Match.stage == MatchStage.ELITE)
+            .where(Match.sim_day >= jan_1_sim_day)
+            .where(Match.sim_day <= dec_31_sim_day)
+        ).all()
         if not existing_elite:
-            logger.info(f"[{ADMIN_EVENT_ELITE_SCHEDULE_GEN.name}] 실행: 크라운 정예리그 대진 편성")
+            logger.info(f"[{ADMIN_EVENT_ELITE_SCHEDULE_GEN.name}] 실행: {current_year}시즌 크라운 정예리그 대진 편성")
             leagues = session.exec(select(League)).all()
             playoff_clubs = []
             for league in leagues:
@@ -164,6 +178,8 @@ def _check_and_run_admin_tasks(session: Session, sim_day: int) -> None:
     elite_matches = session.exec(
         select(Match.sim_day)
         .where(Match.stage == MatchStage.ELITE)
+        .where(Match.sim_day >= jan_1_sim_day)
+        .where(Match.sim_day <= dec_31_sim_day)
     ).all()
     if not elite_matches:
         return
@@ -171,13 +187,19 @@ def _check_and_run_admin_tasks(session: Session, sim_day: int) -> None:
 
     # 4-1. elite_end_day + 1 (휴식일): 8강 대진표 플레이스홀더 생성
     if sim_day == elite_end_day + 1:
-        existing_placeholders = session.exec(select(MatchPlaceholder)).all()
+        existing_placeholders = session.exec(
+            select(MatchPlaceholder)
+            .where(MatchPlaceholder.sim_day >= jan_1_sim_day)
+            .where(MatchPlaceholder.sim_day <= dec_31_sim_day)
+        ).all()
         if not existing_placeholders:
             logger.info(f"[{ADMIN_EVENT_KNOCKOUT_SCHEDULE_GEN.name}] 정예리그 마감 ➔ 상위 8개 팀 시드 확정 및 8강 대진표 등록")
             playoff_club_ids = list(set([
                 m.home_club_id for m in session.exec(
                     select(Match)
                     .where(Match.stage == MatchStage.ELITE)
+                    .where(Match.sim_day >= jan_1_sim_day)
+                    .where(Match.sim_day <= dec_31_sim_day)
                 ).all()
             ]))
             playoff_clubs = [session.get(Club, cid) for cid in playoff_club_ids if session.get(Club, cid) is not None]
@@ -186,6 +208,8 @@ def _check_and_run_admin_tasks(session: Session, sim_day: int) -> None:
             for m in session.exec(
                 select(Match)
                 .where(Match.stage == MatchStage.ELITE)
+                .where(Match.sim_day >= jan_1_sim_day)
+                .where(Match.sim_day <= dec_31_sim_day)
             ).all():
                 h_score = m.home_score if m.home_score is not None else 0
                 a_score = m.away_score if m.away_score is not None else 0
@@ -213,7 +237,11 @@ def _check_and_run_admin_tasks(session: Session, sim_day: int) -> None:
             session.commit()
 
     # 4-2. 녹아웃 경기 동적 편성
-    placeholders = session.exec(select(MatchPlaceholder)).all()
+    placeholders = session.exec(
+        select(MatchPlaceholder)
+        .where(MatchPlaceholder.sim_day >= jan_1_sim_day)
+        .where(MatchPlaceholder.sim_day <= dec_31_sim_day)
+    ).all()
     if not placeholders:
         return
 
@@ -441,6 +469,7 @@ def _run_scheduled_matches(session: Session, sim_day: int) -> None:
             session.add(match)
         session.commit()
         logger.debug(f"  ➔ [Sim Day {sim_day}] {len(matches)}경기 시뮬레이션 완료")
+        update_knockout_placeholders_realtime(session)
 
 
 def _update_standings_and_rankings(session: Session, sim_day: int) -> None:

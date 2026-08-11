@@ -5,6 +5,8 @@ import { getClubs, type Club } from '../api/clubs';
 import { getMatches, type Match } from '../api/matches';
 import { getSystemInfo } from '../api/system';
 import TeamLogo from '../components/TeamLogo/TeamLogo';
+import { BASE_YEAR } from '../constants/config';
+import { simDayToDate, simDayToDateStr } from '../utils/date';
 import './Schedule.css';
 
 const MONTHS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
@@ -26,42 +28,35 @@ const getMatchTimeByDayOfWeek = (dayOfWeek: number) => {
 };
 
 export default function Schedule() {
-  const [year, setYear] = useState<number>(2026);
-  const [month, setMonth] = useState<number>(7);
-  const [selectedDay, setSelectedDay] = useState<number>(1);
+  const [year, setYear] = useState<number | null>(null);
+  const [month, setMonth] = useState<number | null>(null);
+  const [selectedDay, setSelectedDay] = useState<number | null>(null);
   const [clubsMap, setClubsMap] = useState<Record<number, Club>>({});
   const [allMatches, setAllMatches] = useState<Match[]>([]);
   const [calendarEventsMap, setCalendarEventsMap] = useState<Record<string, CalendarEvent[]>>({});
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
-  const daysInMonth = new Date(year, month, 0).getDate();
-  const firstDayOfWeek = new Date(year, month - 1, 1).getDay();
+  const daysInMonth = (year && month) ? new Date(year, month, 0).getDate() : 0;
+  const firstDayOfWeek = (year && month) ? new Date(year, month - 1, 1).getDay() : 0;
   const emptyDays = Array.from({ length: firstDayOfWeek });
   const daysArray = Array.from({ length: daysInMonth }, (_, i) => i + 1);
 
-  // 1. 초기 시스템 정보 및 구단 정보, 캘린더 이벤트 로드
+  // 1-1. 초기 마운트 시 전체 구단 정보 및 현재 시스템 연도/월/일 로드
   useEffect(() => {
-    Promise.all([getClubs(), getSystemInfo(), getCalendarEvents(year)])
-      .then(([clubsList, sysInfo, eventsList]) => {
+    Promise.all([getClubs(), getSystemInfo()])
+      .then(([clubsList, sysInfo]) => {
         const cMap: Record<number, Club> = {};
         clubsList.forEach((c) => {
           cMap[c.id] = c;
         });
         setClubsMap(cMap);
 
-        const evMap: Record<string, CalendarEvent[]> = {};
-        eventsList.forEach((ev) => {
-          if (!evMap[ev.date]) evMap[ev.date] = [];
-          evMap[ev.date].push(ev);
-        });
-        setCalendarEventsMap(evMap);
-
         if (sysInfo) {
-          const sysYear = sysInfo.season_year || 2026;
+          const sysYear = sysInfo.season_year || BASE_YEAR;
           setYear(sysYear);
 
           const currentSimDay = sysInfo.current_sim_day || 1;
-          const currentDate = new Date(sysYear, 0, currentSimDay);
+          const currentDate = simDayToDate(currentSimDay);
           setMonth(currentDate.getMonth() + 1);
           setSelectedDay(currentDate.getDate());
         }
@@ -69,10 +64,30 @@ export default function Schedule() {
       .catch((e) => {
         console.error('Failed to load initial schedule metadata', e);
       });
+  }, []);
+
+  // 1-2. 선택된 연도(year) 변경 시 달력 주요 이벤트 조회
+  useEffect(() => {
+    if (!year) return;
+
+    getCalendarEvents(year)
+      .then((eventsList) => {
+        const evMap: Record<string, CalendarEvent[]> = {};
+        eventsList.forEach((ev) => {
+          if (!evMap[ev.date]) evMap[ev.date] = [];
+          evMap[ev.date].push(ev);
+        });
+        setCalendarEventsMap(evMap);
+      })
+      .catch((e) => {
+        console.error('Failed to load calendar events for year', e);
+      });
   }, [year]);
 
   // 2. 선택된 연도/월(year, month)에 해당하는 시작일~종료일 범위 매치 쿼리
   useEffect(() => {
+    if (!year || !month) return;
+
     setIsLoading(true);
     const startDateStr = `${year}-${String(month).padStart(2, '0')}-01`;
     const lastDay = new Date(year, month, 0).getDate();
@@ -90,19 +105,19 @@ export default function Schedule() {
       });
   }, [year, month]);
 
-  const matchesBySimDay = allMatches.reduce<Record<number, Match[]>>((acc, m) => {
-    if (!acc[m.sim_day]) acc[m.sim_day] = [];
-    acc[m.sim_day].push(m);
+  // ISO 날짜 문자열(YYYY-MM-DD)을 키로 한 매치 맵핑 (BASE_YEAR 2026 기준 정확한 날짜 변환)
+  const matchesByDateStr = allMatches.reduce<Record<string, Match[]>>((acc, m) => {
+    const dStr = simDayToDateStr(m.sim_day);
+    if (!acc[dStr]) acc[dStr] = [];
+    acc[dStr].push(m);
     return acc;
   }, {});
 
-  const getMatchItemsForDay = (dayNum: number): MatchItem[] => {
-    // 해당 연/월/일의 1월 1일 기준 simDay 계산 대신, 수신된 경기들 중 해당하는 simDay 맵핑 사용
+  const getMatchItemsForDay = (dayNum: number | null): MatchItem[] => {
+    if (!year || !month || !dayNum) return [];
     const targetDate = new Date(year, month - 1, dayNum);
-    const jan1 = new Date(year, 0, 1);
-    const simDay = Math.floor((targetDate.getTime() - jan1.getTime()) / (1000 * 60 * 60 * 24)) + 1;
-
-    const rawMatches = matchesBySimDay[simDay] || [];
+    const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
+    const rawMatches = matchesByDateStr[dateStr] || [];
     const dayOfWeek = targetDate.getDay();
     const timeStr = getMatchTimeByDayOfWeek(dayOfWeek);
 
@@ -157,9 +172,10 @@ export default function Schedule() {
     });
   };
 
-  const selectedMatchItems = getMatchItemsForDay(selectedDay);
+  const selectedMatchItems = selectedDay ? getMatchItemsForDay(selectedDay) : [];
 
-  const visibleYears = Array.from({ length: 9 }, (_, i) => year - 4 + i);
+  const activeYear = year || BASE_YEAR;
+  const visibleYears = Array.from({ length: 9 }, (_, i) => activeYear - 4 + i);
 
   return (
     <div className="schedule">
@@ -171,7 +187,7 @@ export default function Schedule() {
             <h3 className="schedule__col-title">시즌</h3>
             <div className="schedule__season-list">
               {visibleYears.map((y) => {
-                const distance = Math.abs(y - year);
+                const distance = Math.abs(y - activeYear);
                 const isSelected = y === year;
                 return (
                   <button
@@ -229,15 +245,12 @@ export default function Schedule() {
               ))}
 
               {daysArray.map((day) => {
-                const targetDate = new Date(year, month - 1, day);
-                const jan1 = new Date(year, 0, 1);
-                const daySimDay = Math.floor((targetDate.getTime() - jan1.getTime()) / (1000 * 60 * 60 * 24)) + 1;
-                const dayMatches = matchesBySimDay[daySimDay] || [];
+                const dateStr = (year && month) ? `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}` : '';
+                const dayMatches = matchesByDateStr[dateStr] || [];
                 const hasMatches = dayMatches.length > 0;
-                const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
                 const dayEvents = calendarEventsMap[dateStr] || [];
                 const isSelected = day === selectedDay;
-                const dayOfWeek = new Date(year, month - 1, day).getDay();
+                const dayOfWeek = (year && month) ? new Date(year, month - 1, day).getDay() : 0;
 
                 return (
                   <div

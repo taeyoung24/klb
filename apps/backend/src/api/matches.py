@@ -5,11 +5,11 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session, select, asc, SQLModel
 from sqlalchemy.orm import defer
 from src.enums import MatchStatus, MatchStage
-from src.models import Match, Club, Player, IngameInstructionLog, IngameScoreboard, MatchPlaceholder, MatchLineup, Stadium
+from src.models import Match, Club, Player, IngameInstructionLog, IngameScoreboard, MatchPlaceholder, MatchLineup, Stadium, WorldState
 from src.services.common import get_session
 from src.services.ingame.main import get_scoreboard
 
-from src.utils.date_utils import date_to_sim_day
+from src.utils.date_utils import date_to_sim_day, sim_day_to_date
 from src.services.season_calendar import CalendarEvent, get_season_calendar_events
 
 router = APIRouter(prefix="/matches", tags=["Matches"])
@@ -44,9 +44,24 @@ def get_calendar_events(
 
 @router.get("/placeholders", response_model=list[MatchPlaceholder])
 def get_match_placeholders(
+    year: Optional[int] = None,
     session: Session = Depends(get_session)
 ):
-    query = select(MatchPlaceholder).order_by(asc(MatchPlaceholder.id))
+    target_year = year
+    if target_year is None:
+        world_state = session.exec(select(WorldState)).first()
+        current_sim_day = world_state.current_sim_day if world_state else 1
+        target_year = sim_day_to_date(current_sim_day).year
+
+    jan_1_sim_day = date_to_sim_day(f"{target_year}-01-01")
+    dec_31_sim_day = date_to_sim_day(f"{target_year}-12-31")
+
+    query = (
+        select(MatchPlaceholder)
+        .where(MatchPlaceholder.sim_day >= jan_1_sim_day)
+        .where(MatchPlaceholder.sim_day <= dec_31_sim_day)
+        .order_by(asc(MatchPlaceholder.id))
+    )
     return session.exec(query).all()
 
 @router.get("", response_model=list[MatchSummaryResponse])
@@ -89,8 +104,8 @@ def get_matches(
         query = query.where(Match.sim_day <= end_sim_day)
 
     if year is not None:
-        y_start_sim_day = (datetime.date(year, 1, 1) - datetime.date(2026, 1, 1)).days + 1
-        y_end_sim_day = (datetime.date(year, 12, 31) - datetime.date(2026, 1, 1)).days + 1
+        y_start_sim_day = date_to_sim_day(f"{year}-01-01")
+        y_end_sim_day = date_to_sim_day(f"{year}-12-31")
         query = query.where(Match.sim_day >= y_start_sim_day).where(Match.sim_day <= y_end_sim_day)
 
     if status is not None:

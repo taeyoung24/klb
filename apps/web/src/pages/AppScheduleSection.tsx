@@ -5,14 +5,6 @@ import { getMatches, type Match } from '../api/matches'
 import TeamLogo from '../components/TeamLogo/TeamLogo'
 import './AppScheduleSection.css'
 
-const getSimDayFromDate = (date: Date, year: number): number => {
-  const target = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-  const baseDate = new Date(year, 0, 1);
-  const diffTime = target.getTime() - baseDate.getTime();
-  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-  return diffDays + 1;
-};
-
 const getDisplayMatchDate = (date: Date) => {
   const year = date.getFullYear();
   const month = date.getMonth() + 1;

@@ -78,8 +78,10 @@ export const getMatches = async (params: GetMatchesParams = {}): Promise<Match[]
   return response.data;
 };
 
-export const getMatchPlaceholders = async (): Promise<MatchPlaceholder[]> => {
-  const response = await client.get<MatchPlaceholder[]>('/matches/placeholders');
+export const getMatchPlaceholders = async (year?: number): Promise<MatchPlaceholder[]> => {
+  const response = await client.get<MatchPlaceholder[]>('/matches/placeholders', {
+    params: year ? { year } : undefined,
+  });
   return response.data;
 };
 

@@ -43,8 +43,7 @@ def main():
                 league_code=league_rawdata["league_code"],
             )
             session.add(league)
-            session.commit()
-            session.refresh(league)
+            session.flush()
 
             league_high_schools_map[league.id] = []
 
@@ -56,8 +55,7 @@ def main():
                 if ht_name not in regions_by_name:
                     region = Region(name=ht_name, name_ko=ht_name_ko)
                     session.add(region)
-                    session.commit()
-                    session.refresh(region)
+                    session.flush()
                     regions_by_name[ht_name] = region
                 else:
                     region = regions_by_name[ht_name]
@@ -67,8 +65,7 @@ def main():
                 for _ in range(hs_count):
                     high_school = generate_high_school(region_id=region.id)
                     session.add(high_school)
-                    session.commit()
-                    session.refresh(high_school)
+                    session.flush()
 
                     all_high_schools.append(high_school)
                     league_high_schools_map[league.id].append(high_school)
@@ -80,8 +77,7 @@ def main():
                     region_id=region.id
                 )
                 session.add(stadium)
-                session.commit()
-                session.refresh(stadium)
+                session.flush()
 
                 # 구단(Club) 생성 및 region_id, home_stadium_id 연결
                 club = Club(
@@ -98,8 +94,7 @@ def main():
                     region_id=region.id
                 )
                 session.add(club)
-                session.commit()
-                session.refresh(club)
+                session.flush()
 
                 all_clubs.append(club)
 
@@ -107,6 +102,9 @@ def main():
                 f"리그 '{league.name}' 데이터 적재 완료 "
                 f"(소속 구단: {len(league_rawdata['clubs'])}개, 고등학교: {len(league_high_schools_map[league.id])}개)"
             )
+
+        session.commit()
+        logger.info("Step 1 (리그, 연고지, 고등학교, 구장, 구단) 배치 커밋 완료")
 
         # Step 2: 구단별 규격 선수단 시딩 (CONFIG.roster_player_count 명)
         # 선수 출신 고등학교 할당 비율: 80% 단일 리그 내 고등학교, 20% 타 리그/외부 고등학교
@@ -143,8 +141,7 @@ def main():
                     current_year=CONFIG.base_datetime.year
                 )
                 session.add(player)
-                session.commit()
-                session.refresh(player)
+                session.flush()
 
                 history = PlayerTransactionHistory(
                     player_id=player.id,
@@ -155,8 +152,10 @@ def main():
                 )
                 session.add(history)
 
-            session.commit()
-            logger.info(f"구단 '{c.name_ko}' 선수 로스터({CONFIG.roster_player_count}명, 고교 출신 비율 8:2 적용) 적재 완료")
+            logger.info(f"구단 '{c.name_ko}' 선수 로스터({CONFIG.roster_player_count}명, 고교 출신 비율 8:2 적용) 준비 완료")
+
+        session.commit()
+        logger.info("Step 2 (선수 로스터 및 히스토리) 배치 커밋 완료")
 
         total_players_count = len(all_clubs) * CONFIG.roster_player_count
         logger.success(
