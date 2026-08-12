@@ -27,11 +27,8 @@ from src.services.standing import (
     update_elite_daily_standings,
     get_playoff_host_league,
 )
-from src.utils.date_utils import (
-    sim_day_to_date,
-    is_third_monday_of_february,
-    get_first_monday_of_october,
-)
+from src.services.date_utils import sim_day_to_date, date_obj_to_sim_day
+from src.utils.date_ext import get_first_monday_of_october
 from src.services.draft import run_all_rookie_drafts
 from src.services.roster_management import (
     process_season_end_retirements,
@@ -39,6 +36,18 @@ from src.services.roster_management import (
     process_pre_draft_releases,
 )
 from src.utils.logger import logger
+
+
+def is_third_monday_of_february(target_date: datetime.date) -> bool:
+    """해당 날짜가 2월 셋째 주 월요일인지 판별합니다."""
+    if target_date.month != 2 or target_date.weekday() != 0:
+        return False
+    feb_first = datetime.date(target_date.year, 2, 1)
+    days_to_monday = (0 - feb_first.weekday() + 7) % 7
+    first_monday_day = 1 + days_to_monday
+    third_monday_day = first_monday_day + 14
+    return target_date.day == third_monday_day
+
 
 
 # ==============================================================================
@@ -88,7 +97,7 @@ def _check_and_run_admin_tasks(session: Session, sim_day: int) -> None:
     # 1. 매년 2월 셋째 주 월요일: 해당 연도 정규시즌 경기 일정 자동 생성 및 적재
     if is_third_monday_of_february(current_date):
         jan_1_date = datetime.date(current_year, 1, 1)
-        year_base_sim_day = (jan_1_date - datetime.date(2026, 1, 1)).days + 1
+        year_base_sim_day = date_obj_to_sim_day(jan_1_date)
 
         jan_1_sim_day = year_base_sim_day
         dec_31_sim_day = year_base_sim_day + 365
@@ -114,8 +123,8 @@ def _check_and_run_admin_tasks(session: Session, sim_day: int) -> None:
                 logger.info(f"[{ADMIN_EVENT_SEASON_SCHEDULE_GEN.name}] 실행: {current_year}시즌 전체 리그 정규시즌 일정({total_matches_count}경기) 적재 (Sim Day: {sim_day})")
 
     # 2. 정규시즌 마감 후 타이브레이크 판정 검토
-    jan_1_sim_day = (datetime.date(current_year, 1, 1) - datetime.date(2026, 1, 1)).days + 1
-    dec_31_sim_day = (datetime.date(current_year, 12, 31) - datetime.date(2026, 1, 1)).days + 1
+    jan_1_sim_day = date_obj_to_sim_day(datetime.date(current_year, 1, 1))
+    dec_31_sim_day = date_obj_to_sim_day(datetime.date(current_year, 12, 31))
 
     all_regular_days = session.exec(
         select(Match.sim_day)
@@ -344,12 +353,16 @@ def _check_and_run_admin_tasks(session: Session, sim_day: int) -> None:
             semi_start_day = elite_end_day + 5
             essential_semi_games = [(0, 1), (1, 2), (3, 3)]  # (offset, game_num)
             for s in s_nodes:
+                if not s.home_club_id or not s.away_club_id:
+                    continue
                 for offset, g_num in essential_semi_games:
                     target_sim_day = semi_start_day + offset
                     is_home = g_num in [1, 2, 5]
                     actual_home = s.home_club_id if is_home else s.away_club_id
                     actual_away = s.away_club_id if is_home else s.home_club_id
-                    h_club = session.get(Club, actual_home) if actual_home else None
+                    if not actual_home or not actual_away:
+                        continue
+                    h_club = session.get(Club, actual_home)
                     m = Match(
                         home_club_id=actual_home,
                         away_club_id=actual_away,
@@ -454,7 +467,9 @@ def _check_and_run_admin_tasks(session: Session, sim_day: int) -> None:
                 is_home = g_num in [1, 2, 3, 7]
                 actual_home = f_node.home_club_id if is_home else f_node.away_club_id
                 actual_away = f_node.away_club_id if is_home else f_node.home_club_id
-                h_club = session.get(Club, actual_home) if actual_home else None
+                if not actual_home or not actual_away:
+                    continue
+                h_club = session.get(Club, actual_home)
                 m = Match(
                     home_club_id=actual_home,
                     away_club_id=actual_away,
@@ -522,7 +537,7 @@ def _check_and_run_admin_tasks(session: Session, sim_day: int) -> None:
 
     # 5. 매년 10월 첫째 주차 월요일: 2차 방출(드래프트 대비 정원 확보) 및 신인 드래프트 개최
     draft_date = get_first_monday_of_october(current_date.year)
-    draft_sim_day = (draft_date - datetime.date(2026, 1, 1)).days + 1
+    draft_sim_day = date_obj_to_sim_day(draft_date)
     if sim_day == draft_sim_day:
         # 5-1. 드래프트 직전 로스터 공간 확보를 위한 2차 방출
         process_pre_draft_releases(session, year=current_date.year, sim_day=sim_day)

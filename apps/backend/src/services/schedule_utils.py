@@ -3,6 +3,7 @@ from typing import Optional, Union
 from sqlmodel import Session, select
 from src.enums import MatchStatus, MatchStage
 from src.models import Match, Club, MatchPlaceholder
+from settings import CONFIG
 
 
 def generate_regular_schedule(clubs: list[Club], year: int, base_sim_day: int) -> list[Match]:
@@ -123,10 +124,11 @@ def generate_krown_elite_schedule(clubs: list[Club], base_sim_day: int) -> list[
     base_round_robin = get_round_robin_matchings()
     
     # 2. 날짜 탐색 헬퍼 함수 정의
+    base_start_weekday = CONFIG.base_datetime.weekday()
+
     def is_valid_day(day: int) -> bool:
-        # 2026-01-01 (sim_day=1)은 목요일(3)이므로
-        # weekday: 0=월, 1=화, 2=수, 3=목, 4=금, 5=토, 6=일
-        weekday = (3 + (day - 1)) % 7
+        # base_datetime (sim_day=1) 기준 요일 계산 (0=월, 1=화, 2=수, 3=목, 4=금, 5=토, 6=일)
+        weekday = (base_start_weekday + (day - 1)) % 7
         return weekday in [2, 3, 5, 6]
 
     def get_next_valid_day(current_day: int) -> int:

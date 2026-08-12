@@ -3,9 +3,10 @@ from typing import Optional
 from pydantic import BaseModel
 from sqlmodel import Session, select, asc
 
-from src.models import Match, MatchPlaceholder, WorldState
 from src.enums import MatchStage
-from src.utils.date_utils import sim_day_to_date, get_first_monday_of_october
+from src.models import Match, MatchPlaceholder, WorldState
+from src.services.date_utils import sim_day_to_date, date_obj_to_sim_day
+from src.utils.date_ext import get_first_monday_of_october
 
 
 class CalendarEvent(BaseModel):
@@ -32,7 +33,7 @@ def get_season_calendar_events(session: Session, year: int) -> list[CalendarEven
     world_state = session.get(WorldState, 1)
     current_sim_day = world_state.current_sim_day if world_state else 1
 
-    cache_key = (year, current_sim_day)
+    cache_key = (year, id(session))
     if cache_key in CALENDAR_EVENTS_CACHE:
         return CALENDAR_EVENTS_CACHE[cache_key]
 
@@ -42,12 +43,12 @@ def get_season_calendar_events(session: Session, year: int) -> list[CalendarEven
     end_date = datetime.date(year, 12, 31)
     
     # 1. 해당 연도의 sim_day 범위를 구함 (2026년 기준 1-indexed)
-    jan_1_sim_day = (start_date - datetime.date(2026, 1, 1)).days + 1
-    dec_31_sim_day = (end_date - datetime.date(2026, 1, 1)).days + 1
+    jan_1_sim_day = date_obj_to_sim_day(start_date)
+    dec_31_sim_day = date_obj_to_sim_day(end_date)
 
     # 2. 10월 첫째 주차 월요일 -> 신인 드래프트
     draft_date = get_first_monday_of_october(year)
-    draft_sim_day = (draft_date - datetime.date(2026, 1, 1)).days + 1
+    draft_sim_day = date_obj_to_sim_day(draft_date)
     events.append(CalendarEvent(
         date=draft_date.strftime("%Y-%m-%d"),
         sim_day=draft_sim_day,
@@ -69,7 +70,7 @@ def get_season_calendar_events(session: Session, year: int) -> list[CalendarEven
         
         # 3-1. 정규시즌 개막
         opening_day = reg_days[0]
-        opening_date = sim_day_to_date(opening_day, base_year=2026)
+        opening_date = sim_day_to_date(opening_day)
         events.append(CalendarEvent(
             date=opening_date.strftime("%Y-%m-%d"),
             sim_day=opening_day,
@@ -79,7 +80,7 @@ def get_season_calendar_events(session: Session, year: int) -> list[CalendarEven
 
         # 3-2. 정규시즌 종료
         reg_end_day = reg_days[-1]
-        reg_end_date = sim_day_to_date(reg_end_day, base_year=2026)
+        reg_end_date = sim_day_to_date(reg_end_day)
         events.append(CalendarEvent(
             date=reg_end_date.strftime("%Y-%m-%d"),
             sim_day=reg_end_day,
@@ -93,8 +94,8 @@ def get_season_calendar_events(session: Session, year: int) -> list[CalendarEven
             first_half_end_day = reg_days[71]  # 24시리즈 마감일 (72번째 경기일)
             second_half_start_day = reg_days[72]  # 25시리즈 시작일 (73번째 경기일)
 
-            fh_end_date = sim_day_to_date(first_half_end_day, base_year=2026)
-            sh_start_date = sim_day_to_date(second_half_start_day, base_year=2026)
+            fh_end_date = sim_day_to_date(first_half_end_day)
+            sh_start_date = sim_day_to_date(second_half_start_day)
 
             events.append(CalendarEvent(
                 date=fh_end_date.strftime("%Y-%m-%d"),
@@ -124,7 +125,7 @@ def get_season_calendar_events(session: Session, year: int) -> list[CalendarEven
         
         # PS 개막 (EL 첫째 날)
         el_start_day = elite_days[0]
-        el_start_date = sim_day_to_date(el_start_day, base_year=2026)
+        el_start_date = sim_day_to_date(el_start_day)
         events.append(CalendarEvent(
             date=el_start_date.strftime("%Y-%m-%d"),
             sim_day=el_start_day,
@@ -134,7 +135,7 @@ def get_season_calendar_events(session: Session, year: int) -> list[CalendarEven
 
         # EL {n}일차
         for idx, day in enumerate(elite_days, start=1):
-            d_date = sim_day_to_date(day, base_year=2026)
+            d_date = sim_day_to_date(day)
             events.append(CalendarEvent(
                 date=d_date.strftime("%Y-%m-%d"),
                 sim_day=day,
@@ -144,7 +145,7 @@ def get_season_calendar_events(session: Session, year: int) -> list[CalendarEven
 
         # EL 종료 (EL 마지막 날)
         el_end_day = elite_days[-1]
-        el_end_date = sim_day_to_date(el_end_day, base_year=2026)
+        el_end_date = sim_day_to_date(el_end_day)
         events.append(CalendarEvent(
             date=el_end_date.strftime("%Y-%m-%d"),
             sim_day=el_end_day,
@@ -188,7 +189,7 @@ def get_season_calendar_events(session: Session, year: int) -> list[CalendarEven
 
         q_days = sorted(list(q_days_set))
         for idx, day in enumerate(q_days, start=1):
-            d_date = sim_day_to_date(day, base_year=2026)
+            d_date = sim_day_to_date(day)
             events.append(CalendarEvent(
                 date=d_date.strftime("%Y-%m-%d"),
                 sim_day=day,
@@ -211,7 +212,7 @@ def get_season_calendar_events(session: Session, year: int) -> list[CalendarEven
 
         s_days = sorted(list(s_days_set))
         for idx, day in enumerate(s_days, start=1):
-            d_date = sim_day_to_date(day, base_year=2026)
+            d_date = sim_day_to_date(day)
             events.append(CalendarEvent(
                 date=d_date.strftime("%Y-%m-%d"),
                 sim_day=day,
@@ -233,7 +234,7 @@ def get_season_calendar_events(session: Session, year: int) -> list[CalendarEven
 
         f_days = sorted(list(f_days_set))
         for idx, day in enumerate(f_days, start=1):
-            d_date = sim_day_to_date(day, base_year=2026)
+            d_date = sim_day_to_date(day)
             events.append(CalendarEvent(
                 date=d_date.strftime("%Y-%m-%d"),
                 sim_day=day,
@@ -257,7 +258,7 @@ def get_season_calendar_events(session: Session, year: int) -> list[CalendarEven
     last_season_day: Optional[int] = max(all_season_sim_days) if all_season_sim_days else None
 
     if last_season_day:
-        season_end_date = sim_day_to_date(last_season_day, base_year=2026)
+        season_end_date = sim_day_to_date(last_season_day)
         events.append(CalendarEvent(
             date=season_end_date.strftime("%Y-%m-%d"),
             sim_day=last_season_day,
@@ -281,7 +282,7 @@ def get_season_calendar_events(session: Session, year: int) -> list[CalendarEven
         season_first_day = reg_days[0]
         for s_day in range(season_first_day, last_season_day + 1):
             if s_day not in all_busy_days:
-                s_date = sim_day_to_date(s_day, base_year=2026)
+                s_date = sim_day_to_date(s_day)
                 events.append(CalendarEvent(
                     date=s_date.strftime("%Y-%m-%d"),
                     sim_day=s_day,

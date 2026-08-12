@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends
 from sqlmodel import Session, select, desc, asc
 from src.models import DailyClubStanding, WorldState
 from src.services.common import get_session
-from src.utils.date_utils import date_to_sim_day
+from src.services.date_utils import date_to_sim_day
 
 router = APIRouter(prefix="/standings", tags=["Standings"])
 
