@@ -15,7 +15,7 @@ OPENROUTER_API_KEY     = os.environ['OPENROUTER_API_KEY']
 
 class CONFIG:
     version = "1.0.0"
-    base_datetime = datetime(2026, 1, 1, 0, 0, 0)
+    base_datetime = datetime(1953, 1, 1, 0, 0, 0)
     simulation_version = "0.1.0"
     
     # 구단별 기본 규격 선수단 인원 수 (긴 시즌 경기 수를 고려하여 32명으로 지정)

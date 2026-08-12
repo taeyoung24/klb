@@ -166,7 +166,7 @@ export default function Wiki() {
 
   // 4. manifest.json 로드
   useEffect(() => {
-    fetch('/wiki/manifest.json')
+    fetch('/out/wiki/manifest.json')
       .then((res) => {
         if (!res.ok) throw new Error('Manifest fetch failed');
         return res.json();
@@ -184,7 +184,7 @@ export default function Wiki() {
     setIsLoading(true);
     setErrorMsg(null);
 
-    const docUrl = `/wiki/${activeDocPath}`;
+    const docUrl = `/out/wiki/${activeDocPath}`;
     fetch(docUrl)
       .then((res) => {
         if (!res.ok) throw new Error(`문서를 불러올 수 없습니다. (${res.status})`);
@@ -361,7 +361,7 @@ export default function Wiki() {
                     let imgSrc = src;
                     if (!src.startsWith('http://') && !src.startsWith('https://') && !src.startsWith('/')) {
                       const resolvedImgPath = resolveDocPath(src, activeDocPath);
-                      imgSrc = `/wiki/${resolvedImgPath}`;
+                      imgSrc = `/out/wiki/${resolvedImgPath}`;
                     }
                     return <img src={imgSrc} alt={alt || ''} {...props} />;
                   },

@@ -75,7 +75,7 @@ const getMatchTitle = (
     const minKoDay = knockoutPlaceholders.length > 0 ? Math.min(...knockoutPlaceholders.map(p => p.sim_day)) : 261;
 
     if (match.sim_day >= minKoDay + 8) {
-      return `${seasonYear} 포스트시즌 결승전 (KROWN SERIES)`;
+      return `${seasonYear} KROWN SERIES`;
     } else if (match.sim_day >= minKoDay + 3) {
       return `${seasonYear} 포스트시즌 준결승전`;
     } else {

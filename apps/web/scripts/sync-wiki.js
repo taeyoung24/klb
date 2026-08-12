@@ -6,9 +6,9 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // 소스: 프로젝트 루트 docs/wiki
-// 대상: apps/web/public/wiki
+// 대상: apps/web/public/out/wiki
 const sourceDir = path.resolve(__dirname, '../../../docs/wiki');
-const targetDir = path.resolve(__dirname, '../public/wiki');
+const targetDir = path.resolve(__dirname, '../public/out/wiki');
 
 const IGNORE_PATTERNS = ['.obsidian', '.DS_Store'];
 
@@ -77,7 +77,7 @@ function buildTreeAndCopy(currentSource, currentTarget, relativePath = '') {
 }
 
 function syncWiki() {
-  console.log('[sync-wiki] Syncing docs/wiki to apps/web/public/wiki...');
+  console.log('[sync-wiki] Syncing docs/wiki to apps/web/public/out/wiki...');
   
   if (!fs.existsSync(sourceDir)) {
     console.error(`[sync-wiki] Error: Source directory does not exist at ${sourceDir}`);

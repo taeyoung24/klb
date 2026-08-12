@@ -234,6 +234,23 @@ def _check_and_run_admin_tasks(session: Session, sim_day: int) -> None:
 
             placeholders = generate_knockout_schedule(top_8_clubs, elite_end_day + 1)
             save_knockout_placeholders(session, placeholders)
+
+            # 8강 1차전 (elite_end_day + 2) 사전 Match 생성
+            q_nodes = sorted([p for p in placeholders if p.round == "ROUND_OF_8"], key=lambda x: x.id)
+            for q in q_nodes:
+                if q.home_club_id and q.away_club_id:
+                    h_club = session.get(Club, q.home_club_id)
+                    m = Match(
+                        home_club_id=q.home_club_id,
+                        away_club_id=q.away_club_id,
+                        stadium_id=h_club.home_stadium_id if h_club else None,
+                        sim_day=elite_end_day + 2,
+                        status=MatchStatus.SCHEDULED,
+                        stage=MatchStage.KNOCKOUT,
+                        limit_extra_innings=False
+                    )
+                    session.add(m)
+
             session.commit()
 
     # 4-2. 녹아웃 경기 동적 편성
@@ -251,21 +268,23 @@ def _check_and_run_admin_tasks(session: Session, sim_day: int) -> None:
 
     # 8강 1차전: elite_end_day + 2
     if sim_day == elite_end_day + 2:
-        logger.info(">>> 녹아웃 8강 1차전 매치 편성")
-        for q in q_nodes:
-            if q.home_club_id and q.away_club_id:
-                h_club = session.get(Club, q.home_club_id)
-                m = Match(
-                    home_club_id=q.home_club_id,
-                    away_club_id=q.away_club_id,
-                    stadium_id=h_club.home_stadium_id if h_club else None,
-                    sim_day=sim_day,
-                    status=MatchStatus.SCHEDULED,
-                    stage=MatchStage.KNOCKOUT,
-                    limit_extra_innings=False
-                )
-                session.add(m)
-        session.commit()
+        existing_day1 = session.exec(select(Match).where(Match.sim_day == sim_day).where(Match.stage == MatchStage.KNOCKOUT)).all()
+        if not existing_day1:
+            logger.info(">>> 녹아웃 8강 1차전 매치 편성")
+            for q in q_nodes:
+                if q.home_club_id and q.away_club_id:
+                    h_club = session.get(Club, q.home_club_id)
+                    m = Match(
+                        home_club_id=q.home_club_id,
+                        away_club_id=q.away_club_id,
+                        stadium_id=h_club.home_stadium_id if h_club else None,
+                        sim_day=sim_day,
+                        status=MatchStatus.SCHEDULED,
+                        stage=MatchStage.KNOCKOUT,
+                        limit_extra_innings=False
+                    )
+                    session.add(m)
+            session.commit()
 
     # 8강 2차전: elite_end_day + 3 (1차전 결과 1승 1패인 타이 매치 진행)
     elif sim_day == elite_end_day + 3:
@@ -320,8 +339,30 @@ def _check_and_run_admin_tasks(session: Session, sim_day: int) -> None:
             s_nodes[1].away_club_id = s2_away
             session.add(s_nodes[0])
             session.add(s_nodes[1])
+
+            # 4강전 (Semi-Finals Bo5) 필수 1, 2, 3차전 Match 사전 생성
+            semi_start_day = elite_end_day + 5
+            essential_semi_games = [(0, 1), (1, 2), (3, 3)]  # (offset, game_num)
+            for s in s_nodes:
+                for offset, g_num in essential_semi_games:
+                    target_sim_day = semi_start_day + offset
+                    is_home = g_num in [1, 2, 5]
+                    actual_home = s.home_club_id if is_home else s.away_club_id
+                    actual_away = s.away_club_id if is_home else s.home_club_id
+                    h_club = session.get(Club, actual_home) if actual_home else None
+                    m = Match(
+                        home_club_id=actual_home,
+                        away_club_id=actual_away,
+                        stadium_id=h_club.home_stadium_id if h_club else None,
+                        sim_day=target_sim_day,
+                        status=MatchStatus.SCHEDULED,
+                        stage=MatchStage.KNOCKOUT,
+                        limit_extra_innings=False
+                    )
+                    session.add(m)
+
             session.commit()
-            logger.info(">>> 녹아웃 8강전 완주 ➔ 4강 대진표 확정")
+            logger.info(">>> 녹아웃 8강전 완주 ➔ 4강 대진표 확정 및 1~3차전 사전 매치 등록")
 
     # 4강전 (Semi-Finals Bo5): semi_start_day = elite_end_day + 5
     # offsets: 1차전: Day 0 (+5), 2차전: Day 1 (+6), 3차전: Day 3 (+8), 4차전: Day 4 (+9), 5차전: Day 6 (+11)
@@ -334,6 +375,19 @@ def _check_and_run_admin_tasks(session: Session, sim_day: int) -> None:
         for s in s_nodes:
             if not s.home_club_id or not s.away_club_id:
                 continue
+
+            # 해당 sim_day에 이미 생성된 Match가 존재하는지 확인 (사전 생성된 1~3차전 등)
+            existing_match = session.exec(
+                select(Match)
+                .where(Match.sim_day == sim_day)
+                .where(
+                    ((Match.home_club_id == s.home_club_id) & (Match.away_club_id == s.away_club_id)) |
+                    ((Match.home_club_id == s.away_club_id) & (Match.away_club_id == s.home_club_id))
+                )
+            ).first()
+            if existing_match:
+                continue
+
             # 기존 승수 확인
             s_matches = session.exec(
                 select(Match)
@@ -391,8 +445,29 @@ def _check_and_run_admin_tasks(session: Session, sim_day: int) -> None:
             f_node.home_club_id = s1_winner
             f_node.away_club_id = s2_winner
             session.add(f_node)
+
+            # 결승전 (Final Bo7) 필수 1, 2, 3차전 Match 사전 생성
+            final_start_day = semi_start_day + 8
+            essential_final_games = [(0, 1), (1, 2), (2, 3)]  # (offset, game_num)
+            for offset, g_num in essential_final_games:
+                target_sim_day = final_start_day + offset
+                is_home = g_num in [1, 2, 3, 7]
+                actual_home = f_node.home_club_id if is_home else f_node.away_club_id
+                actual_away = f_node.away_club_id if is_home else f_node.home_club_id
+                h_club = session.get(Club, actual_home) if actual_home else None
+                m = Match(
+                    home_club_id=actual_home,
+                    away_club_id=actual_away,
+                    stadium_id=h_club.home_stadium_id if h_club else None,
+                    sim_day=target_sim_day,
+                    status=MatchStatus.SCHEDULED,
+                    stage=MatchStage.KNOCKOUT,
+                    limit_extra_innings=False
+                )
+                session.add(m)
+
             session.commit()
-            logger.info(">>> 녹아웃 4강전 완주 ➔ 결승전(Krown Series) 대진표 확정")
+            logger.info(">>> 녹아웃 4강전 완주 ➔ 결승전(Krown Series) 대진표 확정 및 1~3차전 사전 매치 등록")
 
     # 결승전 (Final Bo7): final_start_day = semi_start_day + 8 (elite_end_day + 13)
     # offsets: 1,2,3차전: Day 0,1,2 (+13, +14, +15), 4,5,6차전: Day 4,5,6 (+17, +18, +19), 7차전: Day 8 (+21)
@@ -402,36 +477,48 @@ def _check_and_run_admin_tasks(session: Session, sim_day: int) -> None:
 
     if day_offset_from_final in final_offsets and f_node and f_node.home_club_id and f_node.away_club_id:
         game_num = final_offsets[day_offset_from_final]
-        f_matches = session.exec(
+
+        # 해당 sim_day에 이미 생성된 Match가 존재하는지 확인 (사전 생성된 1~3차전 등)
+        existing_match = session.exec(
             select(Match)
-            .where(Match.sim_day >= final_start_day)
-            .where(Match.sim_day < sim_day)
+            .where(Match.sim_day == sim_day)
             .where(
                 ((Match.home_club_id == f_node.home_club_id) & (Match.away_club_id == f_node.away_club_id)) |
                 ((Match.home_club_id == f_node.away_club_id) & (Match.away_club_id == f_node.home_club_id))
             )
-        ).all()
+        ).first()
 
-        h_wins = sum(1 for m in f_matches if (m.home_score or 0) > (m.away_score or 0) and m.home_club_id == f_node.home_club_id) + \
-                 sum(1 for m in f_matches if (m.away_score or 0) > (m.home_score or 0) and m.away_club_id == f_node.home_club_id)
-        a_wins = len(f_matches) - h_wins
+        if not existing_match:
+            f_matches = session.exec(
+                select(Match)
+                .where(Match.sim_day >= final_start_day)
+                .where(Match.sim_day < sim_day)
+                .where(
+                    ((Match.home_club_id == f_node.home_club_id) & (Match.away_club_id == f_node.away_club_id)) |
+                    ((Match.home_club_id == f_node.away_club_id) & (Match.away_club_id == f_node.home_club_id))
+                )
+            ).all()
 
-        if h_wins < 4 and a_wins < 4:
-            is_home = game_num in [1, 2, 3, 7]
-            actual_home = f_node.home_club_id if is_home else f_node.away_club_id
-            actual_away = f_node.away_club_id if is_home else f_node.home_club_id
-            h_club = session.get(Club, actual_home)
-            m = Match(
-                home_club_id=actual_home,
-                away_club_id=actual_away,
-                stadium_id=h_club.home_stadium_id if h_club else None,
-                sim_day=sim_day,
-                status=MatchStatus.SCHEDULED,
-                stage=MatchStage.KNOCKOUT,
-                limit_extra_innings=False
-            )
-            session.add(m)
-            session.commit()
+            h_wins = sum(1 for m in f_matches if (m.home_score or 0) > (m.away_score or 0) and m.home_club_id == f_node.home_club_id) + \
+                     sum(1 for m in f_matches if (m.away_score or 0) > (m.home_score or 0) and m.away_club_id == f_node.home_club_id)
+            a_wins = len(f_matches) - h_wins
+
+            if h_wins < 4 and a_wins < 4:
+                is_home = game_num in [1, 2, 3, 7]
+                actual_home = f_node.home_club_id if is_home else f_node.away_club_id
+                actual_away = f_node.away_club_id if is_home else f_node.home_club_id
+                h_club = session.get(Club, actual_home)
+                m = Match(
+                    home_club_id=actual_home,
+                    away_club_id=actual_away,
+                    stadium_id=h_club.home_stadium_id if h_club else None,
+                    sim_day=sim_day,
+                    status=MatchStatus.SCHEDULED,
+                    stage=MatchStage.KNOCKOUT,
+                    limit_extra_innings=False
+                )
+                session.add(m)
+                session.commit()
 
     # 5. 매년 10월 첫째 주차 월요일: 2차 방출(드래프트 대비 정원 확보) 및 신인 드래프트 개최
     draft_date = get_first_monday_of_october(current_date.year)
