@@ -2,7 +2,7 @@ import client from './client';
 import type { Region } from './regions';
 import type { HighSchool } from './highSchools';
 
-export interface Player {
+export interface PlayerInfo {
   id: number;
   name: string;
   club_id: number;
@@ -21,11 +21,7 @@ export interface Player {
   high_school?: HighSchool | null;
 }
 
-export interface GetPlayersParams {
-  club_id?: number;
-}
-
-export interface SearchPlayersParams {
+export interface InfoQueryPlayersParams {
   club_id?: number;
   position?: string;
   name?: string;
@@ -33,22 +29,17 @@ export interface SearchPlayersParams {
   limit?: number;
 }
 
-export interface PaginatedPlayersResponse {
-  items: Player[];
+export interface InfoQueryPlayersResponse {
+  items: PlayerInfo[];
   total: number;
   page: number;
   limit: number;
   total_pages: number;
 }
 
-export const getPlayers = async (params: GetPlayersParams = {}): Promise<Player[]> => {
-  const response = await client.get<Player[]>('/players', { params });
-  return response.data;
-};
-
-export const searchPlayers = async (
-  params: SearchPlayersParams = {}
-): Promise<PaginatedPlayersResponse> => {
-  const response = await client.get<PaginatedPlayersResponse>('/players/search', { params });
+export const fetchInfoQueryPlayers = async (
+  params: InfoQueryPlayersParams = {}
+): Promise<InfoQueryPlayersResponse> => {
+  const response = await client.get<InfoQueryPlayersResponse>('/info-query/players', { params });
   return response.data;
 };

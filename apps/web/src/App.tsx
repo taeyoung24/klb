@@ -9,6 +9,7 @@ import Live from './pages/Live'
 import MatchDetail from './pages/MatchDetail'
 import Schedule from './pages/Schedule'
 import Wiki from './pages/Wiki'
+import InfoQuery from './pages/InfoQuery'
 import AzaleaLeagueApp from './pages/league-al/App'
 import CamelliaLeagueApp from './pages/league-cl/App'
 import GentianaLeagueApp from './pages/league-gl/App'
@@ -93,6 +94,9 @@ function App() {
               <a className={`header__nav-link ${currentHash.startsWith('#wiki') ? 'header__nav-link--active' : ''}`} href="#wiki">위키</a>
             </li>
             <li className="header__nav-item">
+              <a className={`header__nav-link ${currentHash.startsWith('#info') ? 'header__nav-link--active' : ''}`} href="#info">정보 조회</a>
+            </li>
+            <li className="header__nav-item">
               <a className={`header__nav-link header__nav-link--live ${currentHash === '#live' ? 'header__nav-link--active' : ''}`} href="#live">LIVE</a>
             </li>
           </ul>
@@ -107,6 +111,8 @@ function App() {
         <MatchDetail />
       ) : currentHash.startsWith('#wiki') ? (
         <Wiki />
+      ) : currentHash.startsWith('#info') ? (
+        <InfoQuery />
       ) : currentHash === '#schedule' ? (
         <Schedule />
       ) : currentHash === '#live' ? (
@@ -147,6 +153,7 @@ function App() {
             <div className="footer__link-group">
               <h4 className="footer__link-title">Support</h4>
               <a href="#wiki" className="footer__link">위키</a>
+              <a href="#info" className="footer__link">정보 조회</a>
               <a href="#live" className="footer__link">LIVE</a>
               <a href="#terms" className="footer__link">이용약관</a>
             </div>

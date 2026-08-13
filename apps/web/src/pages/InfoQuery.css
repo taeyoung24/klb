@@ -1,0 +1,285 @@
+/* ==========================================================================
+   InfoQuery Page Style (BEM Convention - Flat White Theme)
+   - Strict rule: White-based flat light theme
+   - Strict rule: BEM naming convention
+   - Strict rule: NO hover effects, NO shadows, NO card design
+   ========================================================================== */
+
+.info-query {
+  width: 100%;
+  min-height: 100vh;
+  background-color: #ffffff;
+  color: #0f172a;
+  padding: 100px 20px 80px 20px;
+  box-sizing: border-box;
+  font-family: var(--sans, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif);
+}
+
+.info-query__container {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* --------------------------------------------------------------------------
+   Header Section
+   -------------------------------------------------------------------------- */
+.info-query__header {
+  border-bottom: 2px solid #0f172a;
+  padding-bottom: 16px;
+}
+
+.info-query__title {
+  font-size: 28px;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0 0 8px 0;
+  letter-spacing: -0.5px;
+}
+
+.info-query__description {
+  font-size: 14px;
+  color: #64748b;
+  margin: 0;
+}
+
+/* --------------------------------------------------------------------------
+   Filter & Search Form (Flat Bar Style)
+   -------------------------------------------------------------------------- */
+.info-query__filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px;
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+}
+
+.info-query__filter-group {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.info-query__label {
+  font-size: 13px;
+  font-weight: 700;
+  color: #334155;
+}
+
+.info-query__select,
+.info-query__input {
+  height: 38px;
+  padding: 0 12px;
+  font-size: 14px;
+  color: #0f172a;
+  background-color: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 0;
+  box-sizing: border-box;
+  outline: none;
+}
+
+.info-query__select:focus,
+.info-query__input:focus {
+  border-color: #0f172a;
+}
+
+.info-query__search-form {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.info-query__button {
+  height: 38px;
+  padding: 0 16px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #ffffff;
+  background-color: #0f172a;
+  border: 1px solid #0f172a;
+  border-radius: 0;
+  cursor: pointer;
+  box-sizing: border-box;
+}
+
+.info-query__count {
+  font-size: 13px;
+  font-weight: 600;
+  color: #64748b;
+}
+
+/* --------------------------------------------------------------------------
+   Flat Data Table
+   -------------------------------------------------------------------------- */
+.info-query__table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  border: 1px solid #e2e8f0;
+}
+
+.info-query__table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 13px;
+}
+
+.info-query__table-head {
+  background-color: #f1f5f9;
+  border-bottom: 2px solid #cbd5e1;
+}
+
+.info-query__table-header {
+  padding: 6px 10px;
+  font-weight: 700;
+  color: #1e293b;
+  white-space: nowrap;
+  border-right: 1px solid #e2e8f0;
+}
+
+.info-query__table-header:last-child {
+  border-right: none;
+}
+
+.info-query__table-header--center {
+  text-align: center;
+}
+
+.info-query__table-body {
+  background-color: #ffffff;
+}
+
+.info-query__table-row {
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.info-query__table-cell {
+  padding: 6px 10px;
+  color: #334155;
+  white-space: nowrap;
+  border-right: 1px solid #f1f5f9;
+}
+
+.info-query__table-cell:last-child {
+  border-right: none;
+}
+
+.info-query__table-cell--bold {
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.info-query__table-cell--center {
+  text-align: center;
+}
+
+.info-query__badge {
+  display: inline-block;
+  padding: 0 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #475569;
+  background-color: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  border-radius: 0;
+}
+
+/* --------------------------------------------------------------------------
+   Status States (Loading / Empty / Error)
+   -------------------------------------------------------------------------- */
+.info-query__status {
+  padding: 48px 16px;
+  text-align: center;
+  color: #64748b;
+  font-size: 14px;
+  border: 1px solid #e2e8f0;
+  background-color: #ffffff;
+}
+
+.info-query__status--error {
+  color: #dc2626;
+  border-color: #fecaca;
+  background-color: #fef2f2;
+}
+
+/* --------------------------------------------------------------------------
+   Pagination (Flat White Style - No Hover, No Shadow, No Cards)
+   -------------------------------------------------------------------------- */
+.info-query__pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 20px 0;
+}
+
+.info-query__pagination-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 34px;
+  min-width: 34px;
+  padding: 0 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #334155;
+  background-color: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 0;
+  cursor: pointer;
+  box-sizing: border-box;
+}
+
+.info-query__pagination-button:disabled {
+  color: #cbd5e1;
+  border-color: #e2e8f0;
+  background-color: #f8fafc;
+  cursor: not-allowed;
+}
+
+.info-query__pagination-button--active {
+  color: #ffffff;
+  background-color: #0f172a;
+  border-color: #0f172a;
+  font-weight: 700;
+}
+
+.info-query__pagination-ellipsis {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 34px;
+  min-width: 24px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #94a3b8;
+  user-select: none;
+}
+
+@media (max-width: 768px) {
+  .info-query {
+    padding: 80px 16px 40px 16px;
+  }
+
+  .info-query__filter-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .info-query__filter-group {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .info-query__pagination {
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+}

@@ -20,6 +20,7 @@ import { getPlayers, type Player } from '../../api/players';
 import { getSystemInfo } from '../../api/system';
 import LoadingSpinner from '../../components/LoadingSpinner/LoadingSpinner';
 import TeamLogo from '../../components/TeamLogo/TeamLogo';
+import { POSITION_CODE_MAP } from '../../constants/positions';
 import { simDayToDate } from '../../utils/date';
 import './index.css';
 
@@ -28,19 +29,6 @@ import BoxscoreTab from './BoxscoreTab';
 import BroadcastTab from './BroadcastTab';
 import LineupTab from './LineupTab';
 import NewsTab from './NewsTab';
-
-const POSITION_CODE_MAP: Record<string, string> = {
-  PITCHER: 'P',
-  CATCHER: 'C',
-  FIRST_BASE: '1B',
-  SECOND_BASE: '2B',
-  THIRD_BASE: '3B',
-  SHORT_STOP: 'SS',
-  LEFT_FIELD: 'LF',
-  CENTER_FIELD: 'CF',
-  RIGHT_FIELD: 'RF',
-  DESIGNATED_HITTER: 'DH',
-};
 
 const DAY_NAMES = ['일', '월', '화', '수', '목', '금', '토'];
 
