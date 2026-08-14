@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { FaFolder, FaFolderOpen, FaFileAlt, FaBookOpen, FaChevronRight, FaChevronDown, FaExternalLinkAlt } from 'react-icons/fa';
+import { FaExternalLinkAlt } from 'react-icons/fa';
 import './Wiki.css';
 
 interface TreeItem {
@@ -240,12 +240,6 @@ export default function Wiki() {
               className="wiki__tree-node wiki__tree-node--folder"
               onClick={(e) => toggleFolder(node.path, e)}
             >
-              <span className="wiki__tree-icon">
-                {isExpanded ? <FaChevronDown size={10} /> : <FaChevronRight size={10} />}
-              </span>
-              <span className="wiki__tree-icon" style={{ color: '#0284c7' }}>
-                {isExpanded ? <FaFolderOpen /> : <FaFolder />}
-              </span>
               <span>{displayName}</span>
             </div>
             {isExpanded && node.children && (
@@ -261,9 +255,6 @@ export default function Wiki() {
             className={`wiki__tree-node ${isActive ? 'wiki__tree-node--active' : ''}`}
             onClick={() => handleSelectDoc(node.path)}
           >
-            <span className="wiki__tree-icon">
-              <FaFileAlt />
-            </span>
             <span>{displayName}</span>
           </div>
         </li>
@@ -279,7 +270,6 @@ export default function Wiki() {
         {/* 좌측 사이드바 (디렉토리 트리) */}
         <aside className="wiki__sidebar">
           <h2 className="wiki__sidebar-title">
-            <FaBookOpen style={{ color: '#0284c7' }} />
             KLB 위키 목차
           </h2>
           {manifest ? (

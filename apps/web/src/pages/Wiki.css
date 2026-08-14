@@ -5,7 +5,7 @@
 .wiki {
   width: 100%;
   min-height: 100vh;
-  background-color: #f8fafc;
+  background-color: #ffffff;
   color: #0f172a;
   padding: 100px 20px 80px 20px;
   box-sizing: border-box;
@@ -27,10 +27,8 @@
   width: 280px;
   flex-shrink: 0;
   background-color: #ffffff;
-  border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  padding: 20px 16px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  border-right: 1px solid #e2e8f0;
+  padding: 0 24px 0 0;
   position: sticky;
   top: 100px;
   max-height: calc(100vh - 140px);
@@ -66,8 +64,7 @@
 .wiki__tree-node {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 10px;
+  padding: 6px 10px;
   border-radius: 6px;
   font-size: 13px;
   font-weight: 500;
@@ -78,13 +75,13 @@
 }
 
 .wiki__tree-node:hover {
-  background-color: #f1f5f9;
+  background-color: #f8fafc;
   color: #0f172a;
 }
 
 .wiki__tree-node--active {
-  background-color: #e0f2fe;
-  color: #0284c7;
+  background-color: #f1f5f9;
+  color: #0f172a;
   font-weight: 700;
 }
 
@@ -93,18 +90,10 @@
   color: #1e293b;
 }
 
-.wiki__tree-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 12px;
-  color: #64748b;
-}
-
 .wiki__tree-children {
   list-style: none;
-  padding-left: 16px;
-  margin: 2px 0 0 0;
+  padding-left: 10px;
+  margin: 2px 0 2px 14px;
   border-left: 1px dashed #cbd5e1;
   display: flex;
   flex-direction: column;
@@ -118,10 +107,7 @@
   flex: 1;
   min-width: 0;
   background-color: #ffffff;
-  border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  padding: 40px 48px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  padding: 0;
 }
 
 .wiki__breadcrumb {
@@ -140,8 +126,8 @@
 }
 
 .wiki__breadcrumb-item--active {
-  color: #0284c7;
-  font-weight: 600;
+  color: #0f172a;
+  font-weight: 700;
 }
 
 /* --------------------------------------------------------------------------
@@ -192,15 +178,14 @@
 }
 
 .wiki__article a {
-  color: #0284c7;
-  text-decoration: none;
+  color: #0f172a;
+  text-decoration: underline;
   font-weight: 600;
-  border-bottom: 1px solid transparent;
-  transition: border-color 0.15s ease;
+  transition: opacity 0.15s ease;
 }
 
 .wiki__article a:hover {
-  border-bottom-color: #0284c7;
+  opacity: 0.7;
 }
 
 .wiki__article ul,
@@ -217,8 +202,8 @@
   margin: 20px 0;
   padding: 14px 20px;
   background-color: #f8fafc;
-  border-left: 4px solid #0284c7;
-  border-radius: 0 8px 8px 0;
+  border-left: 4px solid #0f172a;
+  border-radius: 0;
   color: #475569;
   font-style: italic;
 }
