@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "worldview/geography.md",
+                "file": "clubs/구단 목록.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "geography"
+              "title": "구단 목록"
             },
             "group": "e30a70b2365f25bc"
           }
@@ -34,7 +34,7 @@
             "state": {
               "type": "localgraph",
               "state": {
-                "file": "worldview/geography.md",
+                "file": "clubs/구단 목록.md",
                 "options": {
                   "collapse-filter": true,
                   "search": "",
@@ -57,12 +57,12 @@
                   "repelStrength": 10,
                   "linkStrength": 1,
                   "linkDistance": 250,
-                  "scale": 1,
-                  "close": false
+                  "scale": 1.4019828977760982,
+                  "close": true
                 }
               },
               "icon": "lucide-git-fork",
-              "title": "Graph of geography"
+              "title": "Graph of 구단 목록"
             },
             "group": "e30a70b2365f25bc"
           }
@@ -235,6 +235,16 @@
   },
   "active": "9344743eb7cf11c0",
   "lastOpenFiles": [
+    "rules/경기 및 시즌 규정.md",
+    "대문.md",
+    "worldview/지리 및 도시.md",
+    "worldview/역사 및 연혁.md",
+    "worldview/세계관 개요.md",
+    "clubs/구단 목록.md",
+    "leagues/리그 체계 개요.md",
+    "clubs/메디할스 태일즈.md",
+    "clubs/로시 글리터즈.md",
+    "clubs/azalea/도르미르 코메츠.md",
     "clubs/README.md",
     "README.md",
     "worldview/history.md",

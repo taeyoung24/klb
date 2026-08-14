@@ -34,3 +34,23 @@ export const getStandings = async (
   });
   return response.data;
 };
+
+export const getLatestStandings = async (params?: {
+  year?: number;
+  leagueId?: number;
+  isPostseason?: boolean;
+}): Promise<DailyClubStanding[]> => {
+  const response = await client.get<DailyClubStanding[]>('/standings/latest', {
+    params: {
+      ...(params?.year !== undefined ? { year: params.year } : {}),
+      ...(params?.leagueId !== undefined ? { league_id: params.leagueId } : {}),
+      ...(params?.isPostseason !== undefined ? { is_postseason: params.isPostseason } : {}),
+    },
+  });
+  return response.data;
+};
+
+export const getStandingSeasons = async (): Promise<number[]> => {
+  const response = await client.get<number[]>('/standings/seasons');
+  return response.data;
+};

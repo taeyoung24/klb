@@ -148,7 +148,7 @@ def main():
                     sim_day=1,
                     transaction_type=PlayerTransactionType.UNDRAFTED_SIGN,
                     to_club_id=c.id,
-                    details=f"2026시즌 {c.name_ko} 초기 로스터 등록"
+                    details=f"{CONFIG.base_datetime.year}시즌 {c.name_ko} 초기 로스터 등록"
                 )
                 session.add(history)
 

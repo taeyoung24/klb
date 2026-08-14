@@ -71,7 +71,7 @@ def determine_draft_order(session: Session, league_id: int, year: int) -> list[i
     """
     해당 리그 10개 구단의 지명 순서를 결정합니다.
     - 2년 차부터: 전년도 정규시즌 최종 순위/승률 역순 (하위 팀이 1순위)
-    - 최초 시즌(2026년 또는 기록 없음): 무작위 추첨(random.shuffle)
+    - 최초 시즌 기록 없음 - 무작위 추첨(random.shuffle)
     """
     clubs = list(session.exec(select(Club).where(Club.league_id == league_id)).all())
     if not clubs:

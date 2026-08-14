@@ -16,10 +16,11 @@ import {
   type MatchLineupResponse,
   type MatchPlaceholder,
 } from '../../api/matches';
-import { getPlayers, type Player } from '../../api/players';
+import { getClubPlayers, type PlayerInfo } from '../../api/infoQuery';
 import { getSystemInfo } from '../../api/system';
 import LoadingSpinner from '../../components/LoadingSpinner/LoadingSpinner';
 import TeamLogo from '../../components/TeamLogo/TeamLogo';
+import { POSITION_CODE_MAP } from '../../constants/positions';
 import { simDayToDate } from '../../utils/date';
 import './index.css';
 
@@ -28,19 +29,6 @@ import BoxscoreTab from './BoxscoreTab';
 import BroadcastTab from './BroadcastTab';
 import LineupTab from './LineupTab';
 import NewsTab from './NewsTab';
-
-const POSITION_CODE_MAP: Record<string, string> = {
-  PITCHER: 'P',
-  CATCHER: 'C',
-  FIRST_BASE: '1B',
-  SECOND_BASE: '2B',
-  THIRD_BASE: '3B',
-  SHORT_STOP: 'SS',
-  LEFT_FIELD: 'LF',
-  CENTER_FIELD: 'CF',
-  RIGHT_FIELD: 'RF',
-  DESIGNATED_HITTER: 'DH',
-};
 
 const DAY_NAMES = ['일', '월', '화', '수', '목', '금', '토'];
 
@@ -75,7 +63,7 @@ const getMatchTitle = (
     const minKoDay = knockoutPlaceholders.length > 0 ? Math.min(...knockoutPlaceholders.map(p => p.sim_day)) : 261;
 
     if (match.sim_day >= minKoDay + 8) {
-      return `${seasonYear} 포스트시즌 결승전 (KROWN SERIES)`;
+      return `${seasonYear} KROWN SERIES`;
     } else if (match.sim_day >= minKoDay + 3) {
       return `${seasonYear} 포스트시즌 준결승전`;
     } else {
@@ -135,7 +123,7 @@ export default function MatchDetail() {
   const [matchDetailData, setMatchDetailData] = useState<MatchDetailData | null>(null);
   const [lineupData, setLineupData] = useState<MatchLineupResponse | null>(null);
   const [analysisApiData, setAnalysisApiData] = useState<MatchAnalysisData | null>(null);
-  const [playersMap, setPlayersMap] = useState<Record<number, Player>>({});
+  const [playersMap, setPlayersMap] = useState<Record<number, PlayerInfo>>({});
   const [placeholders, setPlaceholders] = useState<MatchPlaceholder[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isDetailLoading, setIsDetailLoading] = useState<boolean>(false);
@@ -245,12 +233,12 @@ export default function MatchDetail() {
 
   useEffect(() => {
     if (awayClub?.id || homeClub?.id) {
-      const promises: Promise<Player[]>[] = [];
-      if (awayClub?.id) promises.push(getPlayers({ club_id: awayClub.id }).catch(() => []));
-      if (homeClub?.id) promises.push(getPlayers({ club_id: homeClub.id }).catch(() => []));
+      const promises: Promise<PlayerInfo[]>[] = [];
+      if (awayClub?.id) promises.push(getClubPlayers(awayClub.id).catch(() => []));
+      if (homeClub?.id) promises.push(getClubPlayers(homeClub.id).catch(() => []));
 
       Promise.all(promises).then((results) => {
-        const pMap: Record<number, Player> = {};
+        const pMap: Record<number, PlayerInfo> = {};
         results.flat().forEach((p) => {
           pMap[p.id] = p;
         });

@@ -1,8 +1,11 @@
 import random
-from sqlmodel import Session, select, asc, desc
-from typing import Optional
+import datetime
+from sqlmodel import Session, select, asc, desc, col, func
+from sqlalchemy import and_
+from typing import Optional, Sequence
 from src.models import League, Club, Match, DailyClubStanding
-from src.enums import MatchStatus
+from src.enums import MatchStatus, MatchStage
+from src.services.date_utils import sim_day_to_date, date_obj_to_sim_day
 
 
 def get_h2h_stats(session: Session, club_ids: list[int], max_sim_day: int) -> dict[int, dict[str, int]]:
@@ -214,26 +217,52 @@ def apply_tiebreaker_rules_to_standings(
 def update_daily_standings(session: Session, sim_day: int):
     """
     지정된 sim_day의 경기 결과를 반영하여 리그별 클럽들의 누적 성적과 순위 스냅샷(DailyClubStanding)을 계산해 저장합니다.
-    이전 날(sim_day - 1)의 성적을 기반으로 오늘 있었던 경기를 누적 반영합니다.
+    전일 스탠딩을 클럽별 개별 쿼리(N+1) 없이 1회 배치 조회로 최적화합니다.
     """
+    curr_date = sim_day_to_date(sim_day)
+    season_start_sim_day = date_obj_to_sim_day(datetime.date(curr_date.year, 1, 1))
+
     # 1. 모든 리그 조회
     leagues = session.exec(select(League)).all()
 
+    # 2. 전일 스탠딩을 전 클럽 대상 1회 배치 쿼리로 로드 (N+1 → 1회)
+    #    각 club_id별 최신(max) sim_day를 구하는 서브쿼리
+    prev_max_subq = (
+        select(
+            DailyClubStanding.club_id,
+            func.max(DailyClubStanding.sim_day).label("max_day"),
+        )
+        .where(col(DailyClubStanding.is_postseason) == False)
+        .where(col(DailyClubStanding.sim_day) >= season_start_sim_day)
+        .where(col(DailyClubStanding.sim_day) < sim_day)
+        .group_by(col(DailyClubStanding.club_id))
+        .subquery()
+    )
+    prev_rows = session.exec(
+        select(DailyClubStanding).join(
+            prev_max_subq,
+            and_(
+                col(DailyClubStanding.club_id) == prev_max_subq.c.club_id,
+                col(DailyClubStanding.sim_day) == prev_max_subq.c.max_day,
+            ),
+        )
+    ).all()
+    prev_map: dict[int, DailyClubStanding] = {s.club_id: s for s in prev_rows}
+
     for league in leagues:
-        # 2. 해당 리그 소속 클럽 조회
+        # 3. 해당 리그 소속 클럽 조회
         clubs = session.exec(select(Club).where(Club.league_id == league.id)).all()
 
-        # 오늘 날짜에 완료된 해당 리그 경기 목록 조회
+        # 오늘 날짜에 완료된 해당 리그 정규/타이브레이커 경기 목록 조회
         matches = session.exec(
             select(Match)
             .where(Match.sim_day == sim_day)
             .where(Match.status == MatchStatus.COMPLETED)
+            .where(col(Match.stage).in_((MatchStage.REGULAR, MatchStage.TIEBREAKER)))
         ).all()
 
         # 클럽별 당일 경기 결과 정리용 매핑
-        match_results = {}
-        for c in clubs:
-            match_results[c.id] = None
+        match_results: dict[int, Optional[str]] = {c.id: None for c in clubs}
 
         for match in matches:
             if match.home_club_id in match_results:
@@ -253,11 +282,8 @@ def update_daily_standings(session: Session, sim_day: int):
         today_standings_data = []
 
         for club in clubs:
-            yesterday_standing = session.exec(
-                select(DailyClubStanding)
-                .where(DailyClubStanding.club_id == club.id)
-                .where(DailyClubStanding.sim_day == sim_day - 1)
-            ).first()
+            # 배치 로드된 맵에서 O(1) 접근 (DB 쿼리 없음)
+            yesterday_standing = prev_map.get(club.id)
 
             if yesterday_standing:
                 wins = yesterday_standing.wins
@@ -396,10 +422,17 @@ def resolve_elite_league_ties(
     elite_start_day: int,
     elite_end_day: int,
     regular_max_day: int = 168,
+    *,
+    reg_map: Optional[dict[int, DailyClubStanding]] = None,
+    elite_matches: Optional[Sequence[Match]] = None,
+    prev_rank_map: Optional[dict[int, int]] = None,
 ) -> list[dict]:
     """
     크라운 정예리그 최종 순위표(ranking_list)에서 동률 승률 팀들에 대해
     추가 경기 생성 없이 6단계 순위 결정 기준을 적용하여 1~16위 단일 순위를 확정하여 반환합니다.
+
+    reg_map, elite_matches, prev_rank_map은 호출측에서 미리 로드하여 전달합니다.
+    미전달 시 내부에서 자체 쿼리합니다. (하위 호환성 유지)
 
     [6단계 동률 해소 기준]
     1. 1순위: 정예리그 상대 전적(H2H) 승률 (H2H Win Rate)
@@ -412,20 +445,29 @@ def resolve_elite_league_ties(
     if not ranking_list:
         return []
 
-    # 정규시즌 최종 standing 스냅샷 사전 획득 (club_id -> DailyClubStanding)
-    reg_standings = session.exec(
-        select(DailyClubStanding)
-        .where(DailyClubStanding.sim_day == regular_max_day)
-    ).all()
-    reg_map = {s.club_id: s for s in reg_standings}
+    # 정규시즌 최종 standing 스냅샷 (미전달 시 내부 쿼리 — 하위 호환)
+    if reg_map is None:
+        reg_standings = session.exec(
+            select(DailyClubStanding)
+            .where(col(DailyClubStanding.sim_day) == regular_max_day)
+        ).all()
+        reg_map = {s.club_id: s for s in reg_standings}
 
-    # 정예리그 내 전체 완료된 경기 획득 (H2H 및 다득점 계산용)
-    elite_matches = session.exec(
-        select(Match)
-        .where(Match.sim_day >= elite_start_day)
-        .where(Match.sim_day <= elite_end_day)
-        .where(Match.status == MatchStatus.COMPLETED)
-    ).all()
+    # 정예리그 완료 경기 (미전달 시 내부 쿼리 — 하위 호환)
+    actual_elite_matches: Sequence[Match] = (
+        elite_matches
+        if elite_matches is not None
+        else session.exec(
+            select(Match)
+            .where(col(Match.sim_day) >= elite_start_day)
+            .where(col(Match.sim_day) <= elite_end_day)
+            .where(col(Match.status) == MatchStatus.COMPLETED)
+        ).all()
+    )
+
+    # 전년도 순위맵 (미전달 시 빈 맵 — 동률 5순위 기준에서 전원 999)
+    if prev_rank_map is None:
+        prev_rank_map = {}
 
     # 승률 및 승수 기준 1차 그룹핑
     groups: list[list[dict]] = []
@@ -452,7 +494,7 @@ def resolve_elite_league_ties(
 
             # 동률 그룹 내 H2H 통계 계산
             h2h_stats = {cid: {"wins": 0, "losses": 0, "runs_scored": 0} for cid in tied_club_ids}
-            for m in elite_matches:
+            for m in actual_elite_matches:
                 if m.home_club_id in h2h_stats and m.away_club_id in h2h_stats:
                     h_score = m.home_score if m.home_score is not None else 0
                     a_score = m.away_score if m.away_score is not None else 0
@@ -482,9 +524,8 @@ def resolve_elite_league_ties(
                 # 4순위: 정예리그 H2H 다득점
                 h2h_runs = h2h_stats[cid]["runs_scored"]
 
-                # 5순위: 전년도 정예리그 순위
-                prev_rank = get_previous_elite_season_rank(session, cid, elite_start_day)
-                prev_rank_score = prev_rank if prev_rank is not None else 999
+                # 5순위: 전년도 정예리그 순위 (호출측에서 미리 로드된 맵 사용)
+                prev_rank_score = prev_rank_map.get(cid, 999)
 
                 # 6순위: 무작위 (랜덤)
                 rand_val = random.random()
@@ -505,6 +546,39 @@ def resolve_elite_league_ties(
     return final_ranking_list
 
 
+def _batch_load_prev_elite_season_ranks(
+    session: Session, club_ids: list[int], elite_start_day: int
+) -> dict[int, int]:
+    """
+    전년도 정예리그 최종 순위를 전 참가 구단 대상 1회 배치 쿼리로 로드합니다.
+    반환: {club_id: rank} (기록 없는 구단은 포함되지 않음 → 호출측에서 .get(cid, 999))
+    """
+    # 전년도 = elite_start_day 보다 100일 이상 앞선 스탠딩의 최신 스냅샷
+    cutoff_sim_day = elite_start_day - 100
+
+    prev_max_subq = (
+        select(
+            DailyClubStanding.club_id,
+            func.max(DailyClubStanding.sim_day).label("max_day"),
+        )
+        .where(col(DailyClubStanding.is_postseason) == True)
+        .where(col(DailyClubStanding.sim_day) < cutoff_sim_day)
+        .where(col(DailyClubStanding.club_id).in_(club_ids))
+        .group_by(col(DailyClubStanding.club_id))
+        .subquery()
+    )
+    prev_rows = session.exec(
+        select(DailyClubStanding).join(
+            prev_max_subq,
+            and_(
+                col(DailyClubStanding.club_id) == prev_max_subq.c.club_id,
+                col(DailyClubStanding.sim_day) == prev_max_subq.c.max_day,
+            ),
+        )
+    ).all()
+    return {s.club_id: s.rank for s in prev_rows}
+
+
 def update_elite_daily_standings(
     session: Session,
     sim_day: int,
@@ -517,13 +591,26 @@ def update_elite_daily_standings(
     지정된 sim_day(정예리그 기간)까지 완료된 정예리그 매치 결과를 바탕으로
     16개 참가 구단의 성적, streak, games_back을 계산하고 6단계 타이브레이크를 적용하여
     DailyClubStanding 스냅샷 (is_postseason=True, league_id=host_league_id)을 DB에 저장합니다.
+
+    최적화:
+    - 구단 배치 조회: session.get × 16 → IN 쿼리 1회
+    - streak 계산: 16 × N 루프 → 클럽별 경기 인덱스 사전 구축
+    - reg_map: resolve_elite_league_ties 내부 매번 재쿼리 → 1회 선로드 후 주입
+    - prev_rank_map: 구단별 개별 쿼리 → 배치 1회 로드 후 주입
     """
+    # [최적화 1] 정예리그 경기 1회 조회
     elite_matches = session.exec(
         select(Match)
-        .where(Match.sim_day >= elite_start_day)
-        .where(Match.sim_day <= sim_day)
-        .where(Match.status == MatchStatus.COMPLETED)
+        .where(col(Match.sim_day) >= elite_start_day)
+        .where(col(Match.sim_day) <= sim_day)
+        .where(col(Match.status) == MatchStatus.COMPLETED)
     ).all()
+
+    # [최적화 2] 클럽 배치 조회 (session.get × N → IN 1회)
+    club_rows = session.exec(
+        select(Club).where(col(Club.id).in_(playoff_club_ids))  # type: ignore
+    ).all()
+    club_map: dict[int, Club] = {c.id: c for c in club_rows}
 
     stats: dict[int, dict] = {
         cid: {
@@ -537,6 +624,9 @@ def update_elite_daily_standings(
         }
         for cid in playoff_club_ids
     }
+
+    # [최적화 3] 클럽별 경기 인덱스 사전 구축 (streak 계산용 O(N) → O(1) 접근)
+    club_matches_index: dict[int, list] = {cid: [] for cid in playoff_club_ids}
 
     for m in elite_matches:
         if m.home_club_id in stats and m.away_club_id in stats:
@@ -555,13 +645,19 @@ def update_elite_daily_standings(
                 stats[m.home_club_id]["draws"] += 1
                 stats[m.away_club_id]["draws"] += 1
 
+        if m.home_club_id in club_matches_index:
+            club_matches_index[m.home_club_id].append(m)
+        if m.away_club_id in club_matches_index:
+            club_matches_index[m.away_club_id].append(m)
+
     for cid, s in stats.items():
         w_l = s["wins"] + s["losses"]
         s["win_rate"] = s["wins"] / w_l if w_l > 0 else 0.0
 
+    # streak 계산: 사전 인덱스 사용으로 16 × N 루프 제거
     for cid in playoff_club_ids:
         club_matches = sorted(
-            [m for m in elite_matches if m.home_club_id == cid or m.away_club_id == cid],
+            club_matches_index[cid],
             key=lambda x: x.sim_day,
             reverse=True,
         )
@@ -593,18 +689,36 @@ def update_elite_daily_standings(
                         break
         stats[cid]["streak"] = streak
 
+    # [최적화 4] reg_map 선로드 (resolve 내부 반복 쿼리 제거)
+    reg_standings = session.exec(
+        select(DailyClubStanding)
+        .where(col(DailyClubStanding.sim_day) == regular_max_day)
+    ).all()
+    reg_map = {s.club_id: s for s in reg_standings}
+
+    # [최적화 5] prev_rank_map 배치 로드 (구단별 개별 쿼리 제거)
+    prev_rank_map = _batch_load_prev_elite_season_ranks(session, playoff_club_ids, elite_start_day)
+
     ranking_list = [
         {
-            "club": session.get(Club, cid),
+            "club": club_map.get(cid),
             "wins": s["wins"],
             "losses": s["losses"],
             "draws": s["draws"],
             "win_rate": s["win_rate"],
         }
         for cid, s in stats.items()
+        if club_map.get(cid) is not None
     ]
     resolved_ranking = resolve_elite_league_ties(
-        session, ranking_list, elite_start_day, sim_day, regular_max_day
+        session,
+        ranking_list,
+        elite_start_day,
+        sim_day,
+        regular_max_day,
+        reg_map=reg_map,
+        elite_matches=elite_matches,
+        prev_rank_map=prev_rank_map,
     )
 
     ordered_cids = [item["club"].id for item in resolved_ranking if item["club"] is not None]
@@ -635,5 +749,3 @@ def update_elite_daily_standings(
         session.add(rec)
 
     session.commit()
-
-

@@ -4,12 +4,14 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session, select, asc, SQLModel
 from sqlalchemy.orm import defer
+
+from settings import CONFIG
 from src.enums import MatchStatus, MatchStage
 from src.models import Match, Club, Player, IngameInstructionLog, IngameScoreboard, MatchPlaceholder, MatchLineup, Stadium, WorldState
 from src.services.common import get_session
 from src.services.ingame.main import get_scoreboard
 
-from src.utils.date_utils import date_to_sim_day, sim_day_to_date
+from src.services.date_utils import date_to_sim_day, sim_day_to_date
 from src.services.season_calendar import CalendarEvent, get_season_calendar_events
 
 router = APIRouter(prefix="/matches", tags=["Matches"])
@@ -39,7 +41,7 @@ def get_calendar_events(
     year: Optional[int] = None,
     session: Session = Depends(get_session)
 ):
-    target_year = year if year is not None else 2026
+    target_year = year if year is not None else CONFIG.base_datetime.year
     return get_season_calendar_events(session, target_year)
 
 @router.get("/placeholders", response_model=list[MatchPlaceholder])

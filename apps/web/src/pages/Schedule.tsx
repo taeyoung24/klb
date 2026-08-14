@@ -105,7 +105,7 @@ export default function Schedule() {
       });
   }, [year, month]);
 
-  // ISO 날짜 문자열(YYYY-MM-DD)을 키로 한 매치 맵핑 (BASE_YEAR 2026 기준 정확한 날짜 변환)
+  // ISO 날짜 문자열(YYYY-MM-DD)을 키로 한 매치 맵핑 (BASE_YEAR 기준 정확한 날짜 변환)
   const matchesByDateStr = allMatches.reduce<Record<string, Match[]>>((acc, m) => {
     const dStr = simDayToDateStr(m.sim_day);
     if (!acc[dStr]) acc[dStr] = [];
@@ -255,15 +255,13 @@ export default function Schedule() {
                 return (
                   <div
                     key={day}
-                    className={`schedule__day-cell ${isSelected ? 'schedule__day-cell--selected' : ''} ${
-                      hasMatches ? 'schedule__day-cell--has-matches' : ''
-                    }`}
+                    className={`schedule__day-cell ${isSelected ? 'schedule__day-cell--selected' : ''} ${hasMatches ? 'schedule__day-cell--has-matches' : ''
+                      }`}
                     onClick={() => setSelectedDay(day)}
                   >
                     <span
-                      className={`schedule__day-num ${
-                        dayOfWeek === 0 ? 'schedule__day-num--sun' : dayOfWeek === 6 ? 'schedule__day-num--sat' : ''
-                      }`}
+                      className={`schedule__day-num ${dayOfWeek === 0 ? 'schedule__day-num--sun' : dayOfWeek === 6 ? 'schedule__day-num--sat' : ''
+                        }`}
                     >
                       {day}
                     </span>

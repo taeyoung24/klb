@@ -87,8 +87,8 @@ def main():
         logger.info("   [DRAFT] KLB 신인 드래프트 (Rookie Draft) 시뮬레이션 데모 시작")
         logger.info("========================================================\n")
 
-        # 2026년 신인 드래프트 실행 (sim_day=270)
-        run_all_rookie_drafts(session, year=2026, sim_day=270)
+        # 신인 드래프트 실행 (sim_day=270)
+        run_all_rookie_drafts(session, year=CONFIG.base_datetime.year, sim_day=270)
 
         # DB 장부 적재 검증 및 결과 확인
         total_histories = list(session.exec(select(PlayerTransactionHistory)).all())

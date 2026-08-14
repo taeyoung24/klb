@@ -1,8 +1,10 @@
 import datetime
 from typing import Optional, Union
-from sqlmodel import Session, select
+from sqlmodel import Session, select, col
 from src.enums import MatchStatus, MatchStage
-from src.models import Match, Club, MatchPlaceholder
+from src.models import Match, Club, MatchPlaceholder, WorldState
+from src.services.date_utils import sim_day_to_date, date_obj_to_sim_day
+from settings import CONFIG
 
 
 def generate_regular_schedule(clubs: list[Club], year: int, base_sim_day: int) -> list[Match]:
@@ -123,10 +125,11 @@ def generate_krown_elite_schedule(clubs: list[Club], base_sim_day: int) -> list[
     base_round_robin = get_round_robin_matchings()
     
     # 2. 날짜 탐색 헬퍼 함수 정의
+    base_start_weekday = CONFIG.base_datetime.weekday()
+
     def is_valid_day(day: int) -> bool:
-        # 2026-01-01 (sim_day=1)은 목요일(3)이므로
-        # weekday: 0=월, 1=화, 2=수, 3=목, 4=금, 5=토, 6=일
-        weekday = (3 + (day - 1)) % 7
+        # base_datetime (sim_day=1) 기준 요일 계산 (0=월, 1=화, 2=수, 3=목, 4=금, 5=토, 6=일)
+        weekday = (base_start_weekday + (day - 1)) % 7
         return weekday in [2, 3, 5, 6]
 
     def get_next_valid_day(current_day: int) -> int:
@@ -298,12 +301,25 @@ def generate_tiebreaker_schedule(
     )
 
 
-def update_knockout_placeholders_realtime(session: Session) -> bool:
+def update_knockout_placeholders_realtime(session: Session, sim_day: Optional[int] = None) -> bool:
     """
     매 경기 시뮬레이션 직후 실행되어, 녹아웃(8강/4강/결승)의 승자가 조기 확정된 부모 매치가 있을 때
     연관된 자식 MatchPlaceholder의 home_club_id / away_club_id를 매일 실시간 갱신합니다.
+    시즌 연도 경계(sim_day 기준)를 적용하여 과거/현재 시즌의 데이터가 혼합되지 않도록 합니다.
     """
-    placeholders = session.exec(select(MatchPlaceholder)).all()
+    if sim_day is None:
+        world_state = session.get(WorldState, 1)
+        sim_day = world_state.current_sim_day if world_state else 1
+
+    curr_date = sim_day_to_date(sim_day)
+    jan_1_sim_day = date_obj_to_sim_day(datetime.date(curr_date.year, 1, 1))
+    dec_31_sim_day = date_obj_to_sim_day(datetime.date(curr_date.year, 12, 31))
+
+    placeholders = session.exec(
+        select(MatchPlaceholder)
+        .where(col(MatchPlaceholder.sim_day) >= jan_1_sim_day)
+        .where(col(MatchPlaceholder.sim_day) <= dec_31_sim_day)
+    ).all()
     if not placeholders:
         return False
 
@@ -312,11 +328,13 @@ def update_knockout_placeholders_realtime(session: Session) -> bool:
     f_nodes = [p for p in placeholders if p.round == "FINAL"]
     f_node = f_nodes[0] if f_nodes else None
 
-    # 모든 녹아웃 완료 매치 기록 가져오기
+    # 해당 시즌의 모든 녹아웃 완료 매치 기록 가져오기
     ko_matches = session.exec(
         select(Match)
-        .where(Match.stage == MatchStage.KNOCKOUT)
-        .where(Match.status == MatchStatus.COMPLETED)
+        .where(col(Match.stage) == MatchStage.KNOCKOUT)
+        .where(col(Match.status) == MatchStatus.COMPLETED)
+        .where(col(Match.sim_day) >= jan_1_sim_day)
+        .where(col(Match.sim_day) <= dec_31_sim_day)
     ).all()
 
     updated = False
