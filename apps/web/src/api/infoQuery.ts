@@ -37,9 +37,18 @@ export interface InfoQueryPlayersResponse {
   total_pages: number;
 }
 
+export type Player = PlayerInfo;
+
 export const fetchInfoQueryPlayers = async (
   params: InfoQueryPlayersParams = {}
 ): Promise<InfoQueryPlayersResponse> => {
   const response = await client.get<InfoQueryPlayersResponse>('/info-query/players', { params });
   return response.data;
+};
+
+export const getClubPlayers = async (clubId: number): Promise<PlayerInfo[]> => {
+  const response = await client.get<InfoQueryPlayersResponse>('/info-query/players', {
+    params: { club_id: clubId, limit: 100 },
+  });
+  return response.data.items;
 };

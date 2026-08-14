@@ -1,11 +1,10 @@
 import { useEffect, useState } from 'react'
 import { getCalendarEvents, type CalendarEvent } from '../api/calendar'
 import { getMatches, getMatchPlaceholders, type Match, type MatchPlaceholder } from '../api/matches'
-import { getStandings, type DailyClubStanding } from '../api/standings'
+import { getStandings, getLatestStandings, type DailyClubStanding } from '../api/standings'
 import MatchSeries from '../components/MatchSeries/MatchSeries'
 import TeamLogo from '../components/TeamLogo/TeamLogo'
 import { useSystemContext } from '../context/SystemContext'
-import { simDayToDateStr } from '../utils/date'
 import './AppSeasonStandingSection.css'
 
 const LEAGUES = [
@@ -58,69 +57,130 @@ export default function AppSeasonStandingSection({
 
   const [selectedStep, setSelectedStep] = useState<number>(1);
   const [seedMap, setSeedMap] = useState<Record<number, string>>({});
-  const [eliteMatches, setEliteMatches] = useState<Match[]>([]);
   const [knockoutMatches, setKnockoutMatches] = useState<Match[]>([]);
   const [placeholders, setPlaceholders] = useState<MatchPlaceholder[]>([]);
   const [eliteStandings, setEliteStandings] = useState<DailyClubStanding[]>([]);
   const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([]);
+  const [isEventsLoaded, setIsEventsLoaded] = useState(false);
 
+  // 1. Fetch Calendar Events first
   useEffect(() => {
-    const dateStr = `${matchDate.getFullYear()}-${String(matchDate.getMonth() + 1).padStart(2, '0')}-${String(matchDate.getDate()).padStart(2, '0')}`;
-    setIsStandingsLoaded(false);
-
-    Promise.all(
-      LEAGUES.map(league => getStandings(league.id, undefined, false, dateStr))
-    )
-      .then(([alData, clData, glData, mlData]) => {
-        setAllStandings({
-          AL: alData,
-          CL: clData,
-          GL: glData,
-          ML: mlData,
-        });
-        setIsStandingsLoaded(true);
+    setIsEventsLoaded(false);
+    getCalendarEvents(seasonYear || undefined)
+      .then(events => {
+        setCalendarEvents(events);
+        setIsEventsLoaded(true);
       })
       .catch(e => {
-        console.error("Failed to fetch all standings", e);
-        setAllStandings({
-          AL: [],
-          CL: [],
-          GL: [],
-          ML: [],
-        });
-        setIsStandingsLoaded(true);
+        console.error("Failed to load calendar events", e);
+        setCalendarEvents([]);
+        setIsEventsLoaded(true);
       });
-  }, [matchDate, seasonYear]);
+  }, [seasonYear]);
 
+  // Extract Milestone Events dynamically (No Fallback Strings)
+  const openingEv = calendarEvents.find(e => e.label.includes('정규시즌 개막') || e.label.includes('개막'));
+  const secondHalfEv = calendarEvents.find(e => e.label.includes('RS 후반기') || e.label.includes('후반기'));
+  const eliteEv = calendarEvents.find(e =>
+    e.event_type === 'ELITE_LEAGUE' ||
+    e.label.includes('PS 개막') ||
+    e.label.includes('EL 1일차') ||
+    e.label.includes('크라운 정예리그') ||
+    e.label.includes('정예리그')
+  );
+  const knockoutEv = calendarEvents.find(e =>
+    e.label.includes('PS 8강') ||
+    e.label.includes('8강 1차전') ||
+    e.label.includes('포스트시즌 8강')
+  );
+
+  const matchDateStr = `${matchDate.getFullYear()}-${String(matchDate.getMonth() + 1).padStart(2, '0')}-${String(matchDate.getDate()).padStart(2, '0')}`;
+
+  // 2. Fetch Regular Season Standings
   useEffect(() => {
-    const dateStr = `${matchDate.getFullYear()}-${String(matchDate.getMonth() + 1).padStart(2, '0')}-${String(matchDate.getDate()).padStart(2, '0')}`;
-    const year = seasonYear || 2026;
-    const isPostseasonDate = matchDate >= new Date(year, 7, 17); // 8월 17일 이후 (sim_day >= 229)
+    setIsStandingsLoaded(false);
+
+    const isPostseasonDate = eliteEv ? matchDateStr >= eliteEv.date : false;
+
     if (isPostseasonDate) {
-      getStandings(hostLeagueId, undefined, true, dateStr)
-        .then(data => setEliteStandings(data))
+      // 포스트시즌 기간에는 정규시즌 최종 스탠딩을 한 번에 조회
+      getLatestStandings({ year: seasonYear || undefined, isPostseason: false })
+        .then(allData => {
+          setAllStandings({
+            AL: allData.filter(r => r.league_id === 1),
+            CL: allData.filter(r => r.league_id === 2),
+            GL: allData.filter(r => r.league_id === 3),
+            ML: allData.filter(r => r.league_id === 4),
+          });
+          setIsStandingsLoaded(true);
+        })
         .catch(e => {
-          console.error("Failed to fetch elite standings snapshot", e);
-          setEliteStandings([]);
+          console.error("Failed to fetch latest regular season standings", e);
+          setIsStandingsLoaded(true);
+        });
+    } else {
+      // 정규시즌 중 특정 날짜 조회
+      Promise.all(
+        LEAGUES.map(league => getStandings(league.id, undefined, false, matchDateStr))
+      )
+        .then(([alData, clData, glData, mlData]) => {
+          setAllStandings({
+            AL: alData,
+            CL: clData,
+            GL: glData,
+            ML: mlData,
+          });
+          setIsStandingsLoaded(true);
+        })
+        .catch(e => {
+          console.error("Failed to fetch all standings", e);
+          setAllStandings({
+            AL: [],
+            CL: [],
+            GL: [],
+            ML: [],
+          });
+          setIsStandingsLoaded(true);
         });
     }
-  }, [matchDate, seasonYear, hostLeagueId]);
+  }, [matchDate, seasonYear, matchDateStr, eliteEv]);
 
+  // 3. Fetch Elite Standings snapshot dynamically when in postseason
   useEffect(() => {
-    const finalSimDay = 228;
-    Promise.all(
-      LEAGUES.map(league => getStandings(league.id, finalSimDay))
-    )
+    const isPostseasonDate = eliteEv ? matchDateStr >= eliteEv.date : false;
+    if (isPostseasonDate) {
+      getStandings(hostLeagueId, undefined, true, matchDateStr)
+        .then(data => {
+          if (data && data.length > 0) {
+            setEliteStandings(data);
+          } else {
+            getLatestStandings({ year: seasonYear || undefined, isPostseason: true })
+              .then(latest => setEliteStandings(latest))
+              .catch(() => setEliteStandings([]));
+          }
+        })
+        .catch(() => {
+          getLatestStandings({ year: seasonYear || undefined, isPostseason: true })
+            .then(latest => setEliteStandings(latest))
+            .catch(() => setEliteStandings([]));
+        });
+    }
+  }, [matchDateStr, seasonYear, hostLeagueId, eliteEv]);
+
+  // 4. Fetch Post-season Matches, Placeholders, and Seed Map dynamically
+  useEffect(() => {
+    if (!isEventsLoaded) return;
+
+    // 정규시즌 최종 순위 스냅샷으로부터 1~4위 시드 맵을 단 1회 쿼리로 생성
+    getLatestStandings({ year: seasonYear || undefined, isPostseason: false })
       .then(results => {
         const map: Record<number, string> = {};
-        const leagueCodes = ['AL', 'CL', 'GL', 'ML'];
-        results.forEach((standings, idx) => {
-          const code = leagueCodes[idx];
-          standings.forEach(row => {
-            if (row.rank <= 4) {
-              map[row.club_id] = `${code}#${row.rank}`;
-            }
-          });
+        const leagueMapById: Record<number, string> = { 1: 'AL', 2: 'CL', 3: 'GL', 4: 'ML' };
+        results.forEach(row => {
+          if (row.rank <= 4) {
+            const code = leagueMapById[row.league_id] || 'AL';
+            map[row.club_id] = `${code}#${row.rank}`;
+          }
         });
         setSeedMap(map);
       })
@@ -133,39 +193,19 @@ export default function AppSeasonStandingSection({
     getMatches({ year: seasonYear || 2026 })
       .then(matches => {
         const ko = matches.filter(m => m.stage === 'KNOCKOUT');
-        const elite = matches.filter(m => m.stage === 'ELITE');
-
-        setEliteMatches(elite);
         setKnockoutMatches(ko);
       })
       .catch(e => console.error("Failed to load post-season matches", e));
+  }, [seasonYear, isEventsLoaded]);
 
-    getCalendarEvents(seasonYear || undefined)
-      .then(events => setCalendarEvents(events))
-      .catch(e => console.error("Failed to load calendar events for standings step", e));
-  }, [seasonYear, matchDate]);
+  const isSectionLoaded = isSeasonYearLoaded && isStandingsLoaded && isEventsLoaded && Object.keys(clubsMap).length > 0;
 
-  const isSectionLoaded = isSeasonYearLoaded && isStandingsLoaded && Object.keys(clubsMap).length > 0;
-
-  const year = seasonYear || 2026;
-  const matchDateStr = `${matchDate.getFullYear()}-${String(matchDate.getMonth() + 1).padStart(2, '0')}-${String(matchDate.getDate()).padStart(2, '0')}`;
-
-  // 백엔드 달력 주요 이벤트 기반 마일스톤 날짜 동적 추출
-  const openingEv = calendarEvents.find(e => e.label.includes('정규시즌 개막') || e.label.includes('개막'));
-  const secondHalfEv = calendarEvents.find(e => e.label.includes('RS 후반기 시작') || e.label.includes('후반기'));
-  const eliteEv = calendarEvents.find(e => e.label.includes('크라운 정예리그 개막') || e.event_type === 'ELITE');
-  const knockoutEv = calendarEvents.find(e => e.label.includes('PS 8강') || e.label.includes('포스트시즌 8강'));
-
-  const openingDateStr = openingEv?.date || `${year}-03-03`;
-  const secondHalfDateStr = secondHalfEv?.date || `${year}-05-26`;
-  const eliteDateStr = eliteEv?.date || `${year}-08-17`;
-  const knockoutDateStr = knockoutEv?.date || `${year}-10-02`;
-
-  const isOpening = matchDateStr >= openingDateStr;
-  const isSecondHalf = matchDateStr >= secondHalfDateStr;
-  const isPostSeason = matchDateStr >= eliteDateStr;
-  const isKnockout = matchDateStr >= knockoutDateStr ||
-    knockoutMatches.some(m => simDayToDateStr(m.sim_day) <= matchDateStr);
+  const isOpening = openingEv ? matchDateStr >= openingEv.date : true;
+  const isSecondHalf = secondHalfEv ? matchDateStr >= secondHalfEv.date : false;
+  const isPostSeason = eliteEv ? matchDateStr >= eliteEv.date : false;
+  const isKnockout = knockoutEv
+    ? matchDateStr >= knockoutEv.date
+    : knockoutMatches.length > 0 && knockoutMatches.some(m => m.status === 'COMPLETED');
 
   let currentStep = 1;
   if (!isSecondHalf) {
@@ -183,131 +223,6 @@ export default function AppSeasonStandingSection({
     setSelectedStep(currentStep);
   }, [currentStep]);
 
-  interface EliteStandingRow {
-    club_id: number;
-    wins: number;
-    losses: number;
-    draws: number;
-    games_played: number;
-    win_rate: number;
-    games_back: number;
-    rank: number;
-    streak: number;
-  }
-
-  // 4단계 크라운 정예리그 순위표 동적 집계 로직
-  const getEliteStandings = (): EliteStandingRow[] => {
-    const clubIds = Object.keys(seedMap).map(Number);
-    if (clubIds.length === 0) return [];
-
-    const stats: Record<number, Omit<EliteStandingRow, 'rank' | 'games_back'>> = {};
-    clubIds.forEach(cid => {
-      stats[cid] = {
-        club_id: cid,
-        wins: 0,
-        losses: 0,
-        draws: 0,
-        games_played: 0,
-        win_rate: 0,
-        streak: 0,
-      };
-    });
-
-    eliteMatches.forEach(m => {
-      const h = m.home_club_id;
-      const a = m.away_club_id;
-      if (stats[h] && stats[a] && m.status === 'COMPLETED') {
-        stats[h].games_played += 1;
-        stats[a].games_played += 1;
-        const h_score = m.home_score ?? 0;
-        const a_score = m.away_score ?? 0;
-
-        if (h_score > a_score) {
-          stats[h].wins += 1;
-          stats[a].losses += 1;
-        } else if (h_score < a_score) {
-          stats[a].wins += 1;
-          stats[h].losses += 1;
-        } else {
-          stats[h].draws += 1;
-          stats[a].draws += 1;
-        }
-      }
-    });
-
-    clubIds.forEach(cid => {
-      const row = stats[cid];
-      const win_loss = row.wins + row.losses;
-      row.win_rate = win_loss > 0 ? row.wins / win_loss : 0;
-    });
-
-    // 각 구단별 streak(연속 기록) 동적 계산
-    clubIds.forEach(cid => {
-      const clubMatches = eliteMatches
-        .filter(m => m.status === 'COMPLETED' && (m.home_club_id === cid || m.away_club_id === cid))
-        .sort((a, b) => b.sim_day - a.sim_day);
-
-      let streak = 0;
-      if (clubMatches.length > 0) {
-        const firstMatch = clubMatches[0];
-        const f_h = firstMatch.home_club_id;
-        const f_h_score = firstMatch.home_score ?? 0;
-        const f_a_score = firstMatch.away_score ?? 0;
-
-        let isFirstWin = false;
-        let isFirstLoss = false;
-
-        if (f_h_score > f_a_score) {
-          if (f_h === cid) isFirstWin = true;
-          else isFirstLoss = true;
-        } else if (f_h_score < f_a_score) {
-          if (f_h !== cid) isFirstWin = true;
-          else isFirstLoss = true;
-        }
-
-        if (isFirstWin) {
-          streak = 1;
-          for (let k = 1; k < clubMatches.length; k++) {
-            const m = clubMatches[k];
-            const h = m.home_club_id;
-            const h_s = m.home_score ?? 0;
-            const a_s = m.away_score ?? 0;
-            const isWin = (h_s > a_s && h === cid) || (h_s < a_s && h !== cid);
-            if (isWin) streak += 1;
-            else break;
-          }
-        } else if (isFirstLoss) {
-          streak = -1;
-          for (let k = 1; k < clubMatches.length; k++) {
-            const m = clubMatches[k];
-            const h = m.home_club_id;
-            const h_s = m.home_score ?? 0;
-            const a_s = m.away_score ?? 0;
-            const isLoss = (h_s < a_s && h === cid) || (h_s > a_s && h !== cid);
-            if (isLoss) streak -= 1;
-            else break;
-          }
-        }
-      }
-      stats[cid].streak = streak;
-    });
-
-    const list = Object.values(stats).sort((a, b) => {
-      if (b.win_rate !== a.win_rate) return b.win_rate - a.win_rate;
-      if (b.wins !== a.wins) return b.wins - a.wins;
-      return a.club_id - b.club_id;
-    });
-
-    if (list.length === 0) return [];
-    const leader = list[0];
-
-    return list.map((item) => {
-      const rank = list.findIndex(x => x.win_rate === item.win_rate && x.wins === item.wins) + 1;
-      const games_back = (((leader.wins - item.wins) + (item.losses - leader.losses)) / 2) * 10;
-      return { ...item, rank, games_back };
-    });
-  };
-
   // 5단계 토너먼트 대진 결과 집계 로직
   const getKnockoutResults = () => {
     if (!isKnockout) {
@@ -322,7 +237,6 @@ export default function AppSeasonStandingSection({
       };
     }
 
-    const eliteStandings = getEliteStandings();
     const top8 = eliteStandings.slice(0, 8).map(r => r.club_id);
     const clubsList = Object.keys(clubsMap).map(Number).slice(0, 8);
     const t8 = top8.length === 8 ? top8 : clubsList;
@@ -344,104 +258,56 @@ export default function AppSeasonStandingSection({
       return { c1_wins, c2_wins };
     };
 
-    // 1. placeholders DB 데이터를 이용한 정확한 트레이싱 및 대진 바인딩 (우선 적용)
-    if (placeholders.length >= 7) {
-      const qList = placeholders.filter(p => p.round === 'ROUND_OF_8').sort((a, b) => a.id - b.id);
-      const sList = placeholders.filter(p => p.round === 'SEMI_FINAL').sort((a, b) => a.id - b.id);
-      const fList = placeholders.filter(p => p.round === 'FINAL');
+    // placeholders DB 데이터를 이용한 정확한 트레이싱 및 대진 바인딩
+    const qList = placeholders.filter(p => p.round === 'ROUND_OF_8').sort((a, b) => a.id - b.id);
+    const sList = placeholders.filter(p => p.round === 'SEMI_FINAL').sort((a, b) => a.id - b.id);
+    const fList = placeholders.filter(p => p.round === 'FINAL');
 
-      // 8강전 (q1~q4)
-      const q_nodes = qList.map((p, idx) => {
-        const home = p.home_club_id ?? t8[idx] ?? null;
-        const away = p.away_club_id ?? t8[7 - idx] ?? null;
-        const wins = getWinsCount(home, away, true);
-        const winner = wins.c1_wins >= 2 ? home : (wins.c2_wins >= 2 ? away : null);
-        return { id: `q${idx + 1}`, home, away, wins, winner, pId: p.id };
-      });
+    // 8강전 (q1~q4)
+    const q_nodes = qList.map((p, idx) => {
+      const home = p.home_club_id ?? t8[idx] ?? null;
+      const away = p.away_club_id ?? t8[7 - idx] ?? null;
+      const wins = getWinsCount(home, away, true);
+      const winner = wins.c1_wins >= 2 ? home : (wins.c2_wins >= 2 ? away : null);
+      return { id: `q${idx + 1}`, home, away, wins, winner, pId: p.id };
+    });
 
-      const qMap = new Map(q_nodes.map(n => [n.pId, n]));
+    const qMap = new Map(q_nodes.map(n => [n.pId, n]));
 
-      // 4강/준결승전 (s1, s2)
-      const s_nodes = sList.map((p, idx) => {
-        const homeParent = p.home_parent_id ? qMap.get(p.home_parent_id) : null;
-        const awayParent = p.away_parent_id ? qMap.get(p.away_parent_id) : null;
+    // 4강/준결승전 (s1, s2)
+    const s_nodes = sList.map((p, idx) => {
+      const homeParent = p.home_parent_id ? qMap.get(p.home_parent_id) : null;
+      const awayParent = p.away_parent_id ? qMap.get(p.away_parent_id) : null;
 
-        const home = p.home_club_id ?? homeParent?.winner ?? null;
-        const away = p.away_club_id ?? awayParent?.winner ?? null;
+      const home = p.home_club_id ?? homeParent?.winner ?? null;
+      const away = p.away_club_id ?? awayParent?.winner ?? null;
 
-        const wins = getWinsCount(home, away, false);
-        const winner = wins.c1_wins >= 3 ? home : (wins.c2_wins >= 3 ? away : null);
-        return { id: `s${idx + 1}`, home, away, wins, winner, pId: p.id };
-      });
+      const wins = getWinsCount(home, away, false);
+      const winner = wins.c1_wins >= 3 ? home : (wins.c2_wins >= 3 ? away : null);
+      return { id: `s${idx + 1}`, home, away, wins, winner, pId: p.id };
+    });
 
-      const sMap = new Map(s_nodes.map(n => [n.pId, n]));
+    const sMap = new Map(s_nodes.map(n => [n.pId, n]));
 
-      // 결승전 (f)
-      const fP = fList[0];
-      const fHomeParent = fP?.home_parent_id ? sMap.get(fP.home_parent_id) : null;
-      const fAwayParent = fP?.away_parent_id ? sMap.get(fP.away_parent_id) : null;
+    // 결승전 (f)
+    const fP = fList[0];
+    const fHomeParent = fP?.home_parent_id ? sMap.get(fP.home_parent_id) : null;
+    const fAwayParent = fP?.away_parent_id ? sMap.get(fP.away_parent_id) : null;
 
-      const fHome = fP?.home_club_id ?? fHomeParent?.winner ?? null;
-      const fAway = fP?.away_club_id ?? fAwayParent?.winner ?? null;
+    const fHome = fP?.home_club_id ?? fHomeParent?.winner ?? null;
+    const fAway = fP?.away_club_id ?? fAwayParent?.winner ?? null;
 
-      const fWins = getWinsCount(fHome, fAway, false);
-      const fWinner = fWins.c1_wins >= 4 ? fHome : (fWins.c2_wins >= 4 ? fAway : null);
-
-      return {
-        q1: q_nodes[0] || { home: null, away: null, wins: { c1_wins: 0, c2_wins: 0 }, winner: null },
-        q2: q_nodes[1] || { home: null, away: null, wins: { c1_wins: 0, c2_wins: 0 }, winner: null },
-        q3: q_nodes[2] || { home: null, away: null, wins: { c1_wins: 0, c2_wins: 0 }, winner: null },
-        q4: q_nodes[3] || { home: null, away: null, wins: { c1_wins: 0, c2_wins: 0 }, winner: null },
-        s1: s_nodes[0] || { home: null, away: null, wins: { c1_wins: 0, c2_wins: 0 }, winner: null },
-        s2: s_nodes[1] || { home: null, away: null, wins: { c1_wins: 0, c2_wins: 0 }, winner: null },
-        f: { home: fHome, away: fAway, wins: fWins, winner: fWinner }
-      };
-    }
-
-    // 2. Fallback (DB placeholders가 비어있는 예외 상황에 대비)
-    const minSimDay = knockoutMatches.length > 0 ? Math.min(...knockoutMatches.map(m => m.sim_day)) : 0;
-    const q1stRoundMatches = knockoutMatches.filter(m => m.sim_day === minSimDay);
-
-    const matchups = [
-      { round: 'ROUND_OF_8', id: 'q1', home: q1stRoundMatches[0]?.home_club_id ?? t8[0], away: q1stRoundMatches[0]?.away_club_id ?? t8[7] },
-      { round: 'ROUND_OF_8', id: 'q2', home: q1stRoundMatches[1]?.home_club_id ?? t8[3], away: q1stRoundMatches[1]?.away_club_id ?? t8[4] },
-      { round: 'ROUND_OF_8', id: 'q3', home: q1stRoundMatches[2]?.home_club_id ?? t8[1], away: q1stRoundMatches[2]?.away_club_id ?? t8[6] },
-      { round: 'ROUND_OF_8', id: 'q4', home: q1stRoundMatches[3]?.home_club_id ?? t8[2], away: q1stRoundMatches[3]?.away_club_id ?? t8[5] },
-    ];
-
-    const q1_res = getWinsCount(matchups[0].home, matchups[0].away, true);
-    const q1_winner = q1_res.c1_wins >= 2 ? matchups[0].home : (q1_res.c2_wins >= 2 ? matchups[0].away : null);
-
-    const q2_res = getWinsCount(matchups[1].home, matchups[1].away, true);
-    const q2_winner = q2_res.c1_wins >= 2 ? matchups[1].home : (q2_res.c2_wins >= 2 ? matchups[1].away : null);
-
-    const q3_res = getWinsCount(matchups[2].home, matchups[2].away, true);
-    const q3_winner = q3_res.c1_wins >= 2 ? matchups[2].home : (q3_res.c2_wins >= 2 ? matchups[3].away : null);
-
-    const q4_res = getWinsCount(matchups[3].home, matchups[3].away, true);
-    const q4_winner = q4_res.c1_wins >= 2 ? matchups[3].home : (q4_res.c2_wins >= 2 ? matchups[3].away : null);
-
-    const s1_teams = { home: q1_winner, away: q2_winner };
-    const s2_teams = { home: q3_winner, away: q4_winner };
-
-    const s1_res = getWinsCount(s1_teams.home, s1_teams.away, false);
-    const s1_winner = s1_res.c1_wins >= 3 ? s1_teams.home : (s1_res.c2_wins >= 3 ? s1_teams.away : null);
-
-    const s2_res = getWinsCount(s2_teams.home, s2_teams.away, false);
-    const s2_winner = s2_res.c1_wins >= 3 ? s2_teams.home : (s2_res.c2_wins >= 3 ? s2_teams.away : null);
-
-    const f_teams = { home: s1_winner, away: s2_winner };
-    const f_res = getWinsCount(f_teams.home, f_teams.away, false);
-    const f_winner = f_res.c1_wins >= 4 ? f_teams.home : (f_res.c2_wins >= 4 ? f_teams.away : null);
+    const fWins = getWinsCount(fHome, fAway, false);
+    const fWinner = fWins.c1_wins >= 4 ? fHome : (fWins.c2_wins >= 4 ? fAway : null);
 
     return {
-      q1: { ...matchups[0], wins: q1_res, winner: q1_winner },
-      q2: { ...matchups[1], wins: q2_res, winner: q2_winner },
-      q3: { ...matchups[2], wins: q3_res, winner: q3_winner },
-      q4: { ...matchups[3], wins: q4_res, winner: q4_winner },
-      s1: { ...s1_teams, wins: s1_res, winner: s1_winner },
-      s2: { ...s2_teams, wins: s2_res, winner: s2_winner },
-      f: { ...f_teams, wins: f_res, winner: f_winner }
+      q1: q_nodes[0] || { home: null, away: null, wins: { c1_wins: 0, c2_wins: 0 }, winner: null },
+      q2: q_nodes[1] || { home: null, away: null, wins: { c1_wins: 0, c2_wins: 0 }, winner: null },
+      q3: q_nodes[2] || { home: null, away: null, wins: { c1_wins: 0, c2_wins: 0 }, winner: null },
+      q4: q_nodes[3] || { home: null, away: null, wins: { c1_wins: 0, c2_wins: 0 }, winner: null },
+      s1: s_nodes[0] || { home: null, away: null, wins: { c1_wins: 0, c2_wins: 0 }, winner: null },
+      s2: s_nodes[1] || { home: null, away: null, wins: { c1_wins: 0, c2_wins: 0 }, winner: null },
+      f: { home: fHome, away: fAway, wins: fWins, winner: fWinner }
     };
   };
 
@@ -626,7 +492,7 @@ export default function AppSeasonStandingSection({
                       </tr>
                     ))
                   ) : (
-                    (eliteStandings.length > 0 ? eliteStandings : getEliteStandings()).map((row, idx) => {
+                    eliteStandings.map((row, idx) => {
                       const club = clubsMap[row.club_id];
                       const clubDisplayName = club ? (club.abbr_name || (club.hometown_ko ? `${club.hometown_ko} ${club.name_ko}` : club.name_ko)) : '로딩중...';
                       const teamCode = club ? club.team_code : '';
@@ -724,7 +590,7 @@ export default function AppSeasonStandingSection({
                     ))
                   ) : (() => {
                     const standingsList = allStandings[activeLeague];
-                    const isZeroGames = !isOpening || standingsList.every(row => row.games_played === 0);
+                    const isZeroGames = !isOpening || (standingsList.length > 0 && standingsList.every(row => row.games_played === 0));
 
                     return standingsList.map((row, idx) => {
                       const club = clubsMap[row.club_id];

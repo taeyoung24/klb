@@ -8,7 +8,7 @@ KLB 코어 시뮬레이션 엔진 (Core Simulation Engine)
 
 import datetime
 from typing import NamedTuple
-from sqlmodel import Session, select, asc
+from sqlmodel import Session, select, asc, desc, func, col
 from src.models import WorldState, Match, Club, League, DailyClubStanding, MatchPlaceholder
 from src.enums import MatchStatus, MatchStage
 from src.services.schedule_utils import (
@@ -128,7 +128,7 @@ def _check_and_run_admin_tasks(session: Session, sim_day: int) -> None:
 
     all_regular_days = session.exec(
         select(Match.sim_day)
-        .where(Match.stage == MatchStage.REGULAR)
+        .where(col(Match.stage).in_((MatchStage.REGULAR, MatchStage.TIEBREAKER)))
         .where(Match.sim_day >= jan_1_sim_day)
         .where(Match.sim_day <= dec_31_sim_day)
     ).all()
@@ -166,16 +166,24 @@ def _check_and_run_admin_tasks(session: Session, sim_day: int) -> None:
             leagues = session.exec(select(League)).all()
             playoff_clubs = []
             for league in leagues:
-                standings = session.exec(
-                    select(DailyClubStanding)
+                max_std_day = session.exec(
+                    select(func.max(DailyClubStanding.sim_day))
                     .where(DailyClubStanding.league_id == league.id)
-                    .where(DailyClubStanding.sim_day == max_regular_day)
-                    .order_by(asc(DailyClubStanding.rank))
-                ).all()
-                for std in standings[:4]:
-                    club = session.get(Club, std.club_id)
-                    if club:
-                        playoff_clubs.append(club)
+                    .where(DailyClubStanding.is_postseason == False)
+                    .where(DailyClubStanding.sim_day <= max_regular_day)
+                ).first()
+                if max_std_day:
+                    standings = session.exec(
+                        select(DailyClubStanding)
+                        .where(DailyClubStanding.league_id == league.id)
+                        .where(DailyClubStanding.is_postseason == False)
+                        .where(DailyClubStanding.sim_day == max_std_day)
+                        .order_by(asc(DailyClubStanding.rank))
+                    ).all()
+                    for std in standings[:4]:
+                        club = session.get(Club, std.club_id)
+                        if club:
+                            playoff_clubs.append(club)
 
             if len(playoff_clubs) == 16:
                 elite_matches = generate_krown_elite_schedule(playoff_clubs, elite_start_day)
@@ -580,19 +588,38 @@ def _update_standings_and_rankings(session: Session, sim_day: int) -> None:
     """
     logger.debug(f"[{TIME_STANDINGS_UPDATE}] [Sim Day {sim_day}] 순위표 정산 중...")
 
-    all_regular_days = session.exec(select(Match.sim_day)).all()
-    if not all_regular_days:
-        return
-    max_regular_day = max(all_regular_days)
-    elite_start_day = max_regular_day + 5
+    # 당일 완료된 경기 목록 조회
+    today_completed_matches = session.exec(
+        select(Match)
+        .where(Match.sim_day == sim_day)
+        .where(Match.status == MatchStatus.COMPLETED)
+    ).all()
 
-    if sim_day <= max_regular_day + 1:
+    if not today_completed_matches:
+        return
+
+    # 1. 정규리그 또는 타이브레이커 경기가 치러진 경우: 정규시즌 스탠딩 갱신
+    has_regular_or_tb = any(m.stage in (MatchStage.REGULAR, MatchStage.TIEBREAKER) for m in today_completed_matches)
+    if has_regular_or_tb:
         update_daily_standings(session, sim_day)
-    elif sim_day >= elite_start_day:
+
+    # 2. 정예리그(ELITE) 경기가 치러진 경우: 정예리그 스탠딩 갱신
+    has_elite = any(m.stage == MatchStage.ELITE for m in today_completed_matches)
+    if has_elite:
+        elite_matches = session.exec(
+            select(Match).where(Match.stage == MatchStage.ELITE)
+        ).all()
+        playoff_club_ids = list(set([m.home_club_id for m in elite_matches]))
+        elite_start_day = min([m.sim_day for m in elite_matches]) if elite_matches else sim_day
+
+        all_regular_days = session.exec(
+            select(Match.sim_day)
+            .where(col(Match.stage).in_((MatchStage.REGULAR, MatchStage.TIEBREAKER)))
+        ).all()
+        max_regular_day = max(all_regular_days) if all_regular_days else sim_day - 5
         host_league = get_playoff_host_league(session, max_regular_day)
         host_league_id = host_league.id if host_league is not None else 1
-        playoff_matches = session.exec(select(Match).where(Match.sim_day >= elite_start_day)).all()
-        playoff_club_ids = list(set([m.home_club_id for m in playoff_matches]))
+
         if playoff_club_ids:
             update_elite_daily_standings(
                 session=session,

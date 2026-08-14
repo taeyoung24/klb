@@ -1,8 +1,8 @@
 import random
-from sqlmodel import Session, select, asc, desc
+from sqlmodel import Session, select, asc, desc, col
 from typing import Optional
 from src.models import League, Club, Match, DailyClubStanding
-from src.enums import MatchStatus
+from src.enums import MatchStatus, MatchStage
 
 
 def get_h2h_stats(session: Session, club_ids: list[int], max_sim_day: int) -> dict[int, dict[str, int]]:
@@ -223,11 +223,12 @@ def update_daily_standings(session: Session, sim_day: int):
         # 2. 해당 리그 소속 클럽 조회
         clubs = session.exec(select(Club).where(Club.league_id == league.id)).all()
 
-        # 오늘 날짜에 완료된 해당 리그 경기 목록 조회
+        # 오늘 날짜에 완료된 해당 리그 정규/타이브레이커 경기 목록 조회
         matches = session.exec(
             select(Match)
             .where(Match.sim_day == sim_day)
             .where(Match.status == MatchStatus.COMPLETED)
+            .where(col(Match.stage).in_((MatchStage.REGULAR, MatchStage.TIEBREAKER)))
         ).all()
 
         # 클럽별 당일 경기 결과 정리용 매핑
@@ -256,7 +257,9 @@ def update_daily_standings(session: Session, sim_day: int):
             yesterday_standing = session.exec(
                 select(DailyClubStanding)
                 .where(DailyClubStanding.club_id == club.id)
-                .where(DailyClubStanding.sim_day == sim_day - 1)
+                .where(DailyClubStanding.is_postseason == False)
+                .where(DailyClubStanding.sim_day < sim_day)
+                .order_by(desc(DailyClubStanding.sim_day))
             ).first()
 
             if yesterday_standing:

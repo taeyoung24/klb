@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import type { Club } from '../../api/clubs';
 import type { IngameInstructionLog, MatchLineupResponse } from '../../api/matches';
-import type { Player } from '../../api/players';
+import type { PlayerInfo } from '../../api/infoQuery';
 import { POSITION_KO_MAP } from '../../constants/positions';
 import './BroadcastTab.css';
 
@@ -9,13 +9,13 @@ export interface BroadcastTabProps {
   matchLog?: IngameInstructionLog | string | null;
   awayClub?: Club | null;
   homeClub?: Club | null;
-  playersMap?: Record<number, Player>;
+  playersMap?: Record<number, PlayerInfo>;
   lineupData?: MatchLineupResponse | null;
 }
 
 const getPlayerLabel = (
   playerId?: number | string,
-  playersMap?: Record<number, Player>,
+  playersMap?: Record<number, PlayerInfo>,
   fallbackRole: string = '선수',
   batterOrderMap?: Record<number, number>
 ) => {

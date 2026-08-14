@@ -16,7 +16,7 @@ import {
   type MatchLineupResponse,
   type MatchPlaceholder,
 } from '../../api/matches';
-import { getPlayers, type Player } from '../../api/players';
+import { getClubPlayers, type PlayerInfo } from '../../api/infoQuery';
 import { getSystemInfo } from '../../api/system';
 import LoadingSpinner from '../../components/LoadingSpinner/LoadingSpinner';
 import TeamLogo from '../../components/TeamLogo/TeamLogo';
@@ -123,7 +123,7 @@ export default function MatchDetail() {
   const [matchDetailData, setMatchDetailData] = useState<MatchDetailData | null>(null);
   const [lineupData, setLineupData] = useState<MatchLineupResponse | null>(null);
   const [analysisApiData, setAnalysisApiData] = useState<MatchAnalysisData | null>(null);
-  const [playersMap, setPlayersMap] = useState<Record<number, Player>>({});
+  const [playersMap, setPlayersMap] = useState<Record<number, PlayerInfo>>({});
   const [placeholders, setPlaceholders] = useState<MatchPlaceholder[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isDetailLoading, setIsDetailLoading] = useState<boolean>(false);
@@ -233,12 +233,12 @@ export default function MatchDetail() {
 
   useEffect(() => {
     if (awayClub?.id || homeClub?.id) {
-      const promises: Promise<Player[]>[] = [];
-      if (awayClub?.id) promises.push(getPlayers({ club_id: awayClub.id }).catch(() => []));
-      if (homeClub?.id) promises.push(getPlayers({ club_id: homeClub.id }).catch(() => []));
+      const promises: Promise<PlayerInfo[]>[] = [];
+      if (awayClub?.id) promises.push(getClubPlayers(awayClub.id).catch(() => []));
+      if (homeClub?.id) promises.push(getClubPlayers(homeClub.id).catch(() => []));
 
       Promise.all(promises).then((results) => {
-        const pMap: Record<number, Player> = {};
+        const pMap: Record<number, PlayerInfo> = {};
         results.flat().forEach((p) => {
           pMap[p.id] = p;
         });
