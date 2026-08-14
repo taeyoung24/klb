@@ -579,7 +579,7 @@ def _run_scheduled_matches(session: Session, sim_day: int) -> None:
             session.add(match)
         session.commit()
         logger.debug(f"  ➔ [Sim Day {sim_day}] {len(matches)}경기 시뮬레이션 완료")
-        update_knockout_placeholders_realtime(session)
+        update_knockout_placeholders_realtime(session, sim_day=sim_day)
 
 
 def _update_standings_and_rankings(session: Session, sim_day: int) -> None:
@@ -606,17 +606,27 @@ def _update_standings_and_rankings(session: Session, sim_day: int) -> None:
     # 2. 정예리그(ELITE) 경기가 치러진 경우: 정예리그 스탠딩 갱신
     has_elite = any(m.stage == MatchStage.ELITE for m in today_completed_matches)
     if has_elite:
-        elite_matches = session.exec(
-            select(Match).where(Match.stage == MatchStage.ELITE)
-        ).all()
-        playoff_club_ids = list(set([m.home_club_id for m in elite_matches]))
-        elite_start_day = min([m.sim_day for m in elite_matches]) if elite_matches else sim_day
+        curr_date = sim_day_to_date(sim_day)
+        season_start_sim_day = date_obj_to_sim_day(datetime.date(curr_date.year, 1, 1))
 
-        all_regular_days = session.exec(
-            select(Match.sim_day)
-            .where(col(Match.stage).in_((MatchStage.REGULAR, MatchStage.TIEBREAKER)))
+        # 현재 시즌 정예리그 경기만 조회 (시즌 경계 필터 추가)
+        elite_matches = session.exec(
+            select(Match)
+            .where(Match.stage == MatchStage.ELITE)
+            .where(Match.sim_day >= season_start_sim_day)
+            .where(Match.sim_day <= sim_day)
         ).all()
-        max_regular_day = max(all_regular_days) if all_regular_days else sim_day - 5
+        playoff_club_ids = list(set(m.home_club_id for m in elite_matches))
+        elite_start_day = min(m.sim_day for m in elite_matches) if elite_matches else sim_day
+
+        # func.max()로 단일 스칼라 집계 (전체 행 로드 제거) + 시즌 경계 필터
+        max_regular_day = session.exec(
+            select(func.max(Match.sim_day))
+            .where(col(Match.stage).in_((MatchStage.REGULAR, MatchStage.TIEBREAKER)))
+            .where(Match.sim_day >= season_start_sim_day)
+            .where(Match.sim_day < sim_day)
+        ).first() or (sim_day - 5)
+
         host_league = get_playoff_host_league(session, max_regular_day)
         host_league_id = host_league.id if host_league is not None else 1
 

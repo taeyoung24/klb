@@ -49,3 +49,8 @@ export const getLatestStandings = async (params?: {
   });
   return response.data;
 };
+
+export const getStandingSeasons = async (): Promise<number[]> => {
+  const response = await client.get<number[]>('/standings/seasons');
+  return response.data;
+};

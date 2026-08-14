@@ -73,6 +73,7 @@
   color: #94a3b8;
   text-decoration: none;
   cursor: pointer;
+  padding: 4px 0;
 }
 
 .info-query__sidebar-link--active {
@@ -180,7 +181,7 @@
 }
 
 .info-query__table-header {
-  padding: 6px 10px;
+  padding: 8px 10px;
   font-weight: 700;
   color: #1e293b;
   white-space: nowrap;
@@ -204,7 +205,7 @@
 }
 
 .info-query__table-cell {
-  padding: 6px 10px;
+  padding: 8px 10px;
   color: #334155;
   white-space: nowrap;
   border-right: 1px solid #f1f5f9;
@@ -223,6 +224,12 @@
   text-align: center;
 }
 
+.info-query__team-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .info-query__badge {
   display: inline-block;
   padding: 0 6px;
@@ -232,6 +239,232 @@
   background-color: #f1f5f9;
   border: 1px solid #cbd5e1;
   border-radius: 0;
+}
+
+.info-query__seed-badge {
+  font-size: 10px;
+  font-weight: 700;
+  color: #64748b;
+  background-color: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  padding: 0 3px;
+  border-radius: 2px;
+  line-height: 14px;
+  flex-shrink: 0;
+}
+
+/* --------------------------------------------------------------------------
+   Season Standings & Tournament Section
+   -------------------------------------------------------------------------- */
+.info-query__season-section {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+.info-query__sub-block {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.info-query__sub-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.info-query__sub-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+}
+
+.info-query__league-tabs {
+  display: flex;
+  gap: 4px;
+}
+
+.info-query__league-tab {
+  background-color: #ffffff;
+  border: 1px solid #cbd5e1;
+  font-size: 13px;
+  font-weight: 600;
+  color: #64748b;
+  padding: 6px 14px;
+  cursor: pointer;
+  border-radius: 0;
+}
+
+.info-query__league-tab--active {
+  background-color: #0f172a;
+  border-color: #0f172a;
+  color: #ffffff;
+  font-weight: 700;
+}
+
+/* --------------------------------------------------------------------------
+   Tournament Bracket (Flat White Theme - Clean Grid)
+   -------------------------------------------------------------------------- */
+.info-query__bracket-view {
+  display: flex;
+  flex-direction: row;
+  gap: 16px;
+  width: 100%;
+  box-sizing: border-box;
+  align-items: stretch;
+}
+
+.info-query__bracket-col {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  background-color: #ffffff;
+  box-sizing: border-box;
+}
+
+.info-query__bracket-col--qf {
+  flex: 0.85;
+}
+
+.info-query__bracket-col--sf {
+  flex: 1;
+}
+
+.info-query__bracket-col--f {
+  flex: 1.15;
+}
+
+.info-query__bracket-header {
+  font-size: 13px;
+  font-weight: 700;
+  color: #0f172a;
+  text-align: center;
+  border-bottom: 1px solid #e2e8f0;
+  padding-bottom: 10px;
+  margin-bottom: 16px;
+  background-color: #f8fafc;
+  padding-top: 6px;
+}
+
+.info-query__bracket-nodes {
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+  justify-content: space-around;
+  gap: 16px;
+}
+
+.info-query__bracket-nodes--center {
+  justify-content: center;
+}
+
+.info-query__bracket-node {
+  border: 1px solid #e2e8f0;
+  background-color: #ffffff;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+}
+
+.info-query__bracket-node-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: #64748b;
+  background-color: #f8fafc;
+  padding: 4px 8px;
+  border-bottom: 1px solid #e2e8f0;
+  text-transform: uppercase;
+}
+
+.info-query__bracket-node-teams {
+  display: flex;
+  flex-direction: column;
+}
+
+.info-query__bracket-team {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 8px;
+  border-bottom: 1px solid #f1f5f9;
+  font-size: 13px;
+  color: #334155;
+  background-color: #ffffff;
+}
+
+.info-query__bracket-team:last-child {
+  border-bottom: none;
+}
+
+.info-query__bracket-team--winner {
+  font-weight: 700;
+  color: #0f172a;
+  background-color: #f8fafc;
+}
+
+.info-query__bracket-team-info {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  flex: 1;
+}
+
+.info-query__bracket-seed {
+  font-size: 10px;
+  font-weight: 700;
+  color: #64748b;
+  background-color: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  padding: 0 3px;
+  border-radius: 2px;
+  line-height: 14px;
+  flex-shrink: 0;
+}
+
+.info-query__bracket-team-name {
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.info-query__bracket-scores {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  margin-left: 8px;
+  flex-shrink: 0;
+}
+
+.info-query__bracket-score-slot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #334155;
+  background-color: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  box-sizing: border-box;
+}
+
+.info-query__bracket-score-slot--empty {
+  color: #94a3b8;
+  background-color: #ffffff;
+}
+
+.info-query__bracket-score-slot--winner {
+  font-weight: 700;
+  color: #0f172a;
+  background-color: #e2e8f0;
+  border-color: #cbd5e1;
 }
 
 /* --------------------------------------------------------------------------
@@ -304,6 +537,13 @@
   font-weight: 600;
   color: #94a3b8;
   user-select: none;
+}
+
+@media (max-width: 1024px) {
+  .info-query__bracket-view {
+    flex-direction: column;
+    gap: 16px;
+  }
 }
 
 @media (max-width: 768px) {
