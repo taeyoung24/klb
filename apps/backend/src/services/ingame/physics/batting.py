@@ -2,8 +2,9 @@ import random
 import math
 from sqlmodel import SQLModel
 from src.enums import IngameContactType, IngameBattingStrategy
-from src.models import Player
+from src.models import Player, IngameContext
 from .pitching import PitchPhysicsResult
+from ..utils import calculate_pressure_weight
 
 
 class BattingPhysicsResult(SQLModel):
@@ -26,26 +27,40 @@ class BattingPhysicsResult(SQLModel):
 
 def calculate_swing_contact_probability(
     batter: Player,
+    pitcher: Player,
     pitch_physics: PitchPhysicsResult,
+    context: IngameContext | None = None,
 ) -> float:
     """
-    타자의 focus, flexibility 스탯과 투구 3D 탄착점 오프셋 거리(px, py)를 기반으로
-    배트 스윙 시 공을 맞출 컨택트(Contact) 성공 확률을 연산합니다.
-    
-    - 존 중심(d=0) 근처 공: ~90% 쉽게 맞춤
-    - 존 바깥(d>1.2) 볼존 공: 타자 focus/flexibility 커버리지 스탯에 따라 헛스윙률 자연 연출
+    타자와 투수의 스탯 대결(control, power, focus를 통한 상황 부담 억제)과 투구 탄착 오프셋(px, py)을 기반으로
+    배트 스윙 시 공을 맞출 순수 컨택트(Contact) 성공 확률(0.0 ~ 1.0)을 연산합니다.
+
+    - control 대결: 배트 컨트롤/스윙 궤적 제어 vs 투구 로케이션/제구 정밀도
+    - power 대결: 배트 스피드 vs 구속/구위
+    - focus 대결: 현재 상황의 '부담가중치'를 억제(1000 - focus)하여 위기/압박 속 멘탈 우위 점유
     """
     px = pitch_physics.actual_location_x
     py = pitch_physics.actual_location_y
     offset_dist = math.sqrt(px ** 2 + py ** 2)
 
-    # 타자의 focus, flexibility 스탯 커버리지 능력이 높을수록 어려운 공의 실효 오프셋 감축
-    coverage_ability = (batter.focus * 0.6 + batter.flexibility * 0.4) / 1000.0
-    effective_offset = offset_dist * (1.35 - coverage_ability * 0.70)
+    # 1. 상황 부담가중치 연산 및 focus를 통한 부담 억제 대결
+    pressure_weight = calculate_pressure_weight(context) if context is not None else 0.0
+    batter_pressure = pressure_weight * ((1000.0 - batter.focus) / 1000.0)
+    pitcher_pressure = pressure_weight * ((1000.0 - pitcher.focus) / 1000.0)
+    diff_pressure = pitcher_pressure - batter_pressure  # 타자가 부담을 덜 느낄수록 양수(우위)
 
-    # 중심 탄착 오프셋 기반 컨택트 확률 (0.15 ~ 0.95)
-    p_contact = max(0.15, min(0.95, 0.92 - (effective_offset * 0.45)))
-    return p_contact
+    # 2. 스탯 1:1 대칭 대결 우위 지수 (-1.0 ~ 1.0)
+    diff_control = (batter.control - pitcher.control) / 1000.0
+    diff_power = (batter.power - pitcher.power) / 1000.0
+
+    stat_advantage = (diff_control * 0.50 + diff_power * 0.25 + diff_pressure * 0.25)
+
+    # 3. 존 중심 오프셋에 따른 기본 컨택트 기준치
+    base_contact = 0.90 - ((offset_dist ** 1.3) * 0.24)
+
+    # 4. 최종 컨택트 확률 산출 (0.0 ~ 1.0 범위 클램핑)
+    p_contact = base_contact + (stat_advantage * 0.30)
+    return max(0.0, min(1.0, p_contact))
 
 
 def calculate_batting_physics(

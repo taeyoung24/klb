@@ -20,6 +20,7 @@ from src.models import (
     Match,
     IngameInstructionLog,
     Player,
+    IngameNoticeEvent,
     IngameGameStateEvent,
     IngameBatterEnterEvent,
     IngamePitchStartEvent,
@@ -44,15 +45,11 @@ from .physics import (
 
 
 
-
-
-
-
-
-
 def advance_runners(
     context: IngameContext,
     advance_bases: int,
+    reason: IngameBaseRunReason = IngameBaseRunReason.HIT_RUN,
+    skip_batter_start_event: bool = False,
 ) -> int:
     """주자들을 진루시키고 context 베이스 및 이벤트 대본을 업데이트하며 득점(runs)을 반환합니다."""
     runs = 0
@@ -75,7 +72,7 @@ def advance_runners(
                 runner_id=runner.id,
                 start_base=base,
                 target_base=new_base,
-                reason=IngameBaseRunReason.HIT_RUN
+                reason=reason
             ))
             if new_base >= 4:
                 runs += 1
@@ -103,14 +100,15 @@ def advance_runners(
                 ))
                 
     # 타자 진루 처리
-    context.logged_events.append(IngameBaseRunStartEvent(
-        event_type=IngameEventType.BASE_RUN_START,
-        sim_timestamp=context.sim_timestamp,
-        runner_id=batter.id,
-        start_base=0,
-        target_base=advance_bases,
-        reason=IngameBaseRunReason.HIT_RUN
-    ))
+    if not skip_batter_start_event:
+        context.logged_events.append(IngameBaseRunStartEvent(
+            event_type=IngameEventType.BASE_RUN_START,
+            sim_timestamp=context.sim_timestamp,
+            runner_id=batter.id,
+            start_base=0,
+            target_base=advance_bases,
+            reason=reason
+        ))
     
     if advance_bases >= 4:
         runs += 1
@@ -174,7 +172,7 @@ def advance_runners_walk(
             runner_id=runner.id,
             start_base=3,
             target_base=4,
-            reason=IngameBaseRunReason.HIT_RUN
+            reason=IngameBaseRunReason.WALK
         ))
         runs += 1
         new_runner_3b = None
@@ -195,7 +193,7 @@ def advance_runners_walk(
             runner_id=runner.id,
             start_base=2,
             target_base=3,
-            reason=IngameBaseRunReason.HIT_RUN
+            reason=IngameBaseRunReason.WALK
         ))
         new_runner_3b = runner
         new_runner_2b = None
@@ -216,7 +214,7 @@ def advance_runners_walk(
             runner_id=runner.id,
             start_base=1,
             target_base=2,
-            reason=IngameBaseRunReason.HIT_RUN
+            reason=IngameBaseRunReason.WALK
         ))
         new_runner_2b = runner
         new_runner_1b = None
@@ -235,7 +233,7 @@ def advance_runners_walk(
         runner_id=batter.id,
         start_base=0,
         target_base=1,
-        reason=IngameBaseRunReason.HIT_RUN
+        reason=IngameBaseRunReason.WALK
     ))
     new_runner_1b = batter
     context.logged_events.append(IngameBaseRunResultEvent(
@@ -346,8 +344,8 @@ def simulate_plate_appearance(
                         context.scoreboard.home_b += 1
                     break
         else:
-            # batting.py 모듈의 3D 투구 오프셋 및 타자 스탯 기반 컨택트 물리 함수 호출
-            p_contact = calculate_swing_contact_probability(batter, pitch_physics)
+            # batting.py 모듈의 타자/투수 스탯 및 상황 부담가중치 기반 컨택트 확률 함수 호출
+            p_contact = calculate_swing_contact_probability(batter, pitcher, pitch_physics, context)
             did_contact = random.random() < p_contact
             
             if not did_contact:
@@ -357,9 +355,8 @@ def simulate_plate_appearance(
                     sim_timestamp=context.sim_timestamp,
                     pitcher_id=pitcher.id,
                     batter_id=batter.id,
-                    result=IngamePitchResult.STRIKE,
+                    result=IngamePitchResult.STRIKE_SWINGING,
                     pitch_velocity=pitch_physics.pitch_velocity
-
                 ))
                 if context.scoreboard.strikes == 3:
                     context.scoreboard.outs += 1
@@ -371,6 +368,31 @@ def simulate_plate_appearance(
                 # 2. 공기저항, 백스핀, 구장 펜스 반영 타구 궤적 & 비거리/홈런 연산
                 trajectory_physics = calculate_trajectory_physics(batting_physics, context.stadium)
 
+                # [투구 결과 이벤트 기록] 타격된 투구(IN_PLAY 또는 FOUL)를 PITCH 이벤트로 먼저 기록
+                pitch_result = (
+                    IngamePitchResult.IN_PLAY
+                    if batting_physics.is_fair_territory
+                    else IngamePitchResult.FOUL
+                )
+                context.logged_events.append(IngamePitchEvent(
+                    event_type=IngameEventType.PITCH,
+                    sim_timestamp=context.sim_timestamp,
+                    pitcher_id=pitcher.id,
+                    batter_id=batter.id,
+                    result=pitch_result,
+                    pitch_velocity=pitch_physics.pitch_velocity
+                ))
+
+                # [타격 이벤트 기록] 타격 발생 시점(sim_timestamp)에 기록
+                context.logged_events.append(IngameBatContactEvent(
+                    event_type=IngameEventType.BAT_CONTACT,
+                    sim_timestamp=context.sim_timestamp,
+                    batter_id=batter.id,
+                    contact_type=IngameContactType.CONTACT_IN_PLAY if batting_physics.is_fair_territory else IngameContactType.FOUL,
+                    hit_velocity=batting_physics.hit_velocity,
+                    launch_angle=batting_physics.launch_angle
+                ))
+
                 # [경우 A] 장외 홈런 (HitOutcome.HOME_RUN)
                 if trajectory_physics.outcome == HitOutcome.HOME_RUN:
                     if context.is_top:
@@ -378,90 +400,137 @@ def simulate_plate_appearance(
                     else:
                         context.scoreboard.home_h += 1
 
-                    context.logged_events.append(IngameBatContactEvent(
-                        event_type=IngameEventType.BAT_CONTACT,
-                        sim_timestamp=context.sim_timestamp,
-                        batter_id=batter.id,
-                        contact_type=IngameContactType.CONTACT_IN_PLAY,
-                        hit_velocity=batting_physics.hit_velocity,
-                        launch_angle=batting_physics.launch_angle
-                    ))
+                    # 주자 수에 따른 홈런 유형 및 득점 연산 (1~4점)
+                    base_runners = [r for r in [context.runner_1b, context.runner_2b, context.runner_3b] if r is not None]
+                    homerun_runs = 1 + len(base_runners)
+                    runs_scored += homerun_runs
 
-                    # 타자 포함 베이스 주자 전원 득점 (4베이스 진루)
-                    runs_scored += advance_runners(context, 4)
+                    homerun_type_map = {
+                        1: "솔로 홈런",
+                        2: "2점 홈런",
+                        3: "3점 홈런",
+                        4: "만루 홈런"
+                    }
+                    homerun_label = homerun_type_map.get(homerun_runs, f"{homerun_runs}점 홈런")
+                    distance_m = round(trajectory_physics.distance_m, 1)
+
+                    # 주자가 있을 경우 주자 이름 목록 포맷팅 (예: "주자 노지혁, 김서래")
+                    runner_names = [r.name for r in base_runners]
+                    runner_detail = f", 주자 {', '.join(runner_names)}" if runner_names else ""
+                    homerun_message = f"{homerun_label} (비거리 {distance_m}m{runner_detail})"
+
+                    # 베이스 주자 전원 클리어
+                    context.runner_1b = None
+                    context.runner_2b = None
+                    context.runner_3b = None
+
+                    # 홈런 안내 및 타자 득점 이벤트 기록
+                    context.logged_events.append(IngameNoticeEvent(
+                        event_type=IngameEventType.NOTICE,
+                        sim_timestamp=context.sim_timestamp + 3.5,
+                        message=homerun_message
+                    ))
+                    context.logged_events.append(IngameBaseRunResultEvent(
+                        event_type=IngameEventType.BASE_RUN_RESULT,
+                        sim_timestamp=context.sim_timestamp + 4.0,
+                        runner_id=batter.id,
+                        target_base=4,
+                        result=IngameBaseRunResult.SAFE
+                    ))
                     break
 
                 # [경우 B] 인플레이 타구 (IN_FIELD, FENCE_HIT, FOUL_OUT)
                 # 의사결정 엔진(engine)을 통해 주자의 진루 목표 베이스(1루 vs 2루타 도전) 판단
-                # (기본 룰베이스 엔진 -> 향후 인공신경망 NN 러닝 엔진으로 1:1 대체)
                 fielding_physics_est = calculate_fielding_physics(defense_lineup, trajectory_physics, target_base=1)
                 target_base = engine.decide_baserunning_target_base(context, batter, fielding_physics_est)
-
-
-
-
-
 
                 # 3. 야수 수비 도달시간/포구/송구 완류 연산 (파울 지역 포함)
                 fielding_physics = calculate_fielding_physics(defense_lineup, trajectory_physics, target_base=target_base)
 
-                context.logged_events.append(IngameFieldingActionEvent(
-                    event_type=IngameEventType.FIELDING_ACTION,
-                    sim_timestamp=context.sim_timestamp + fielding_physics.reach_time_sec,
-                    fielder_id=fielding_physics.fielder.id,
-                    action_type=fielding_physics.fielding_action
-                ))
-
                 # [경우 B-1] 공중 뜬공 포구 아웃 (Fly Out / Foul Fly Out)
                 if fielding_physics.is_caught_in_air:
-                    context.scoreboard.outs += 1
-                    context.logged_events.append(IngameBatContactEvent(
-                        event_type=IngameEventType.BAT_CONTACT,
-                        sim_timestamp=context.sim_timestamp,
-                        batter_id=batter.id,
-                        contact_type=IngameContactType.CONTACT_IN_PLAY if batting_physics.is_fair_territory else IngameContactType.FOUL,
-                        hit_velocity=batting_physics.hit_velocity,
-                        launch_angle=batting_physics.launch_angle
+                    context.logged_events.append(IngameFieldingActionEvent(
+                        event_type=IngameEventType.FIELDING_ACTION,
+                        sim_timestamp=context.sim_timestamp + fielding_physics.reach_time_sec,
+                        fielder_id=fielding_physics.fielder.id,
+                        action_type=fielding_physics.fielding_action
                     ))
+                    context.scoreboard.outs += 1
                     break
 
-                # [경우 B-2] 공중 포구 실패 및 바운드 타구
+                # [경우 B-2] 공중 포구 실패 및 바운드 파울 (일반 파울 - 수비 에러 미발생)
                 if not batting_physics.is_fair_territory:
-                    # 야수가 파울 지면 타구를 공중에서 못 잡은 경우 -> 일반 파울 (Foul Ball)
-                    context.logged_events.append(IngameBatContactEvent(
-                        event_type=IngameEventType.BAT_CONTACT,
-                        sim_timestamp=context.sim_timestamp,
-                        batter_id=batter.id,
-                        contact_type=IngameContactType.FOUL,
-                        hit_velocity=batting_physics.hit_velocity,
-                        launch_angle=batting_physics.launch_angle
-                    ))
+                    # 야수가 파울 지면 타구를 공중에서 못 잡은 경우 -> 일반 파울 (Foul Ball, 수비 이벤트 불필요)
                     if context.scoreboard.strikes < 2:
                         context.scoreboard.strikes += 1
                 else:
-                    # 페어 지역 안타/땅볼 -> 주자 주력 시간 vs 송구 완료 시간 연산
-                    if context.is_top:
-                        context.scoreboard.away_h += 1
-                    else:
-                        context.scoreboard.home_h += 1
+                    # [경우 B-3] 페어 지역 인플레이 타구 (안타 또는 땅볼 수비)
+                    is_error = fielding_physics.fielding_action in [IngameFieldingAction.ERROR, IngameFieldingAction.DROP]
+                    run_reason = IngameBaseRunReason.ERROR if is_error else IngameBaseRunReason.HIT_RUN
 
-                    context.logged_events.append(IngameBatContactEvent(
-                        event_type=IngameEventType.BAT_CONTACT,
+                    # 1. [주루 시작 이벤트] 타격 직후 타자 주자 및 기존 베이스 주자들의 스타트 기록
+                    context.logged_events.append(IngameBaseRunStartEvent(
+                        event_type=IngameEventType.BASE_RUN_START,
                         sim_timestamp=context.sim_timestamp,
-                        batter_id=batter.id,
-                        contact_type=IngameContactType.CONTACT_IN_PLAY,
-                        hit_velocity=batting_physics.hit_velocity,
-                        launch_angle=batting_physics.launch_angle
+                        runner_id=batter.id,
+                        start_base=0,
+                        target_base=target_base,
+                        reason=run_reason
                     ))
 
+                    # 2. [수비수 포구 이벤트] 야수가 타구 지점으로 이동하여 포구
+                    context.logged_events.append(IngameFieldingActionEvent(
+                        event_type=IngameEventType.FIELDING_ACTION,
+                        sim_timestamp=context.sim_timestamp + fielding_physics.reach_time_sec,
+                        fielder_id=fielding_physics.fielder.id,
+                        action_type=fielding_physics.fielding_action
+                    ))
+
+                    # 3. [수비수 송구 이벤트] 포구 야수가 목표 베이스 수비수에게 송구
+                    role_map = {1: IngameRole.FIRST_BASE, 2: IngameRole.SECOND_BASE, 3: IngameRole.THIRD_BASE, 4: IngameRole.CATCHER}
+                    target_role = role_map.get(target_base)
+                    receiver = next((p for p in defense_lineup if p.position == target_role), defense_lineup[0]) if defense_lineup else fielding_physics.fielder
+
+                    if receiver and receiver.id != fielding_physics.fielder.id:
+                        context.logged_events.append(IngameThrowActionEvent(
+                            event_type=IngameEventType.THROW_ACTION,
+                            sim_timestamp=context.sim_timestamp + fielding_physics.reach_time_sec + 0.3,
+                            thrower_id=fielding_physics.fielder.id,
+                            receiver_id=receiver.id,
+                            target_base=target_base,
+                            is_successful=not is_error
+                        ))
+
+                    # 4. [주루 도달 및 아웃/세이프 판정]
                     baserunning_physics = calculate_baserunning_physics(batter, start_base=0, target_base=target_base, fielding_physics=fielding_physics)
 
                     if baserunning_physics.is_safe:
-                        # 세이프! (안타 / 2루타 / 3루타 진루 성공)
-                        runs_scored += advance_runners(context, target_base)
+                        # 세이프! (안타 또는 실책 출루)
+                        if not is_error:
+                            if context.is_top:
+                                context.scoreboard.away_h += 1
+                            else:
+                                context.scoreboard.home_h += 1
+                        else:
+                            # 수비측 실책(Error) 카운트 증가
+                            if context.is_top:
+                                context.scoreboard.home_e += 1
+                            else:
+                                context.scoreboard.away_e += 1
+
+                        runs_scored += advance_runners(context, target_base, reason=run_reason, skip_batter_start_event=True)
                     else:
-                        # 아웃! (땅볼 / 베이스 태그아웃)
+                        # 아웃! (땅볼 / 1루 포스아웃 / 2루 태그아웃)
                         context.scoreboard.outs += 1
+
+                        # 목표 베이스 최종 아웃 판정 이벤트 발행
+                        context.logged_events.append(IngameBaseRunResultEvent(
+                            event_type=IngameEventType.BASE_RUN_RESULT,
+                            sim_timestamp=context.sim_timestamp + fielding_physics.throw_time_sec,
+                            runner_id=batter.id,
+                            target_base=target_base,
+                            result=IngameBaseRunResult.OUT
+                        ))
 
                     break
 
