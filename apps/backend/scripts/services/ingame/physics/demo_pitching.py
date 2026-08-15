@@ -24,6 +24,7 @@ def main():
             power=920,    # 구속 상급 (155km+ 직구)
             flexibility=600,
             focus=700,
+            stamina=500,
             roster_status=RosterStatus.ACTIVE,
             position=IngameRole.PITCHER,
             personality=[1, 2],
@@ -41,6 +42,7 @@ def main():
             power=960,    # 최정상급 구속 (160km+)
             flexibility=500,
             focus=500,
+            stamina=500,
             roster_status=RosterStatus.ACTIVE,
             position=IngameRole.PITCHER,
             personality=[3, 4],
@@ -58,6 +60,7 @@ def main():
             power=420,    # 둔한 구속 (140km대 직구)
             flexibility=800,
             focus=850,
+            stamina=500,
             roster_status=RosterStatus.ACTIVE,
             position=IngameRole.PITCHER,
             personality=[1, 5],

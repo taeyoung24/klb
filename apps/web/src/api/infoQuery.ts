@@ -13,6 +13,7 @@ export interface PlayerInfo {
   power?: number;
   flexibility?: number;
   focus?: number;
+  stamina?: number;
   height?: number;
   weight?: number;
   region_id?: number;

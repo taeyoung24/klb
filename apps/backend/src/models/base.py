@@ -116,11 +116,13 @@ class Player(SQLModel, table=True):
 
     uniform_number: str = Field(...)
 
-    speed: int        = Field(ge=1, le=1000)
-    control: int      = Field(ge=1, le=1000)
-    power: int        = Field(ge=1, le=1000)
-    flexibility: int  = Field(ge=1, le=1000)
-    focus: int        = Field(ge=1, le=1000)
+    # 스탯은 고정 상수이며 대개 계수로 사용됨.
+    speed: int        = Field(ge=1, le=1000) # 주력
+    control: int      = Field(ge=1, le=1000) # 제구, 신체 제어 능력
+    power: int        = Field(ge=1, le=1000) # 힘
+    flexibility: int  = Field(ge=1, le=1000) # 유연성 (부상 관련)
+    focus: int        = Field(ge=1, le=1000) # 집중력 (버프/디버프 계수)
+    stamina: int      = Field(ge=1, le=1000) # 지구력 (체력 소진 억제)
 
     roster_status: RosterStatus
     position: IngameRole

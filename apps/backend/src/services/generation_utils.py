@@ -25,19 +25,19 @@ PRIMARY_POSITIONS = [
 
 def generate_stats(height: float, weight: float, general: bool = False) -> dict:
     """
-    선수의 5대 스탯(speed, control, power, flexibility, focus)을 생성합니다.
-    - 스탯 총합(오각형 면적): 정규분포를 따르며 general=False(고교)일 때 전체 총합 분포가 낮습니다.
+    선수의 6대 스탯(speed, control, power, flexibility, focus, stamina)을 생성합니다.
+    - 스탯 총합: 정규분포를 따르며 general=False(고교)일 때 전체 총합 분포가 낮습니다.
     - 개별 스탯: 총합 내에서 생 랜덤(Uniform) 가중치 비율로 분배됩니다.
     """
     # 1. 정규분포로 스탯 총합(면적) 결정
     if not general:
-        # 고교 선수: 총합 평균 1850 (개별 평균 370), 표준편차 200
-        mean_total, std_total = 1850.0, 200.0
-        min_total, max_total = 1000, 2600
+        # 고교 선수: 총합 평균 2220 (개별 평균 370), 표준편차 240
+        mean_total, std_total = 2220.0, 240.0
+        min_total, max_total = 1200, 3100
     else:
-        # 일반 선수: 총합 평균 2500 (개별 평균 500), 표준편차 250
-        mean_total, std_total = 2500.0, 250.0
-        min_total, max_total = 1500, 3500
+        # 일반 선수: 총합 평균 3000 (개별 평균 500), 표준편차 300
+        mean_total, std_total = 3000.0, 300.0
+        min_total, max_total = 1800, 4200
 
     total_stat = int(max(min_total, min(max_total, random.gauss(mean_total, std_total))))
 
@@ -50,8 +50,9 @@ def generate_stats(height: float, weight: float, general: bool = False) -> dict:
     w_control = random.uniform(0.5, 1.5)
     w_flexibility = random.uniform(0.5, 1.5)
     w_focus = random.uniform(0.5, 1.5)
+    w_stamina = random.uniform(0.5, 1.5)
 
-    weights = [w_speed, w_control, w_power, w_flexibility, w_focus]
+    weights = [w_speed, w_control, w_power, w_flexibility, w_focus, w_stamina]
     total_weight = sum(weights)
 
     # 3. 비율 기반 스탯 분배
@@ -59,13 +60,13 @@ def generate_stats(height: float, weight: float, general: bool = False) -> dict:
     stat_values = [int(round(v)) for v in raw_values]
 
     # 최소/최대 스탯 안전범위 지정 (100 ~ 950)
-    for i in range(5):
+    for i in range(6):
         stat_values[i] = max(100, min(950, stat_values[i]))
 
     # 정수화 및 클램핑에 따른 합계 차이 보정 (총합이 정확히 total_stat이 되도록)
     diff = total_stat - sum(stat_values)
     while diff != 0:
-        idx = random.randint(0, 4)
+        idx = random.randint(0, 5)
         if diff > 0 and stat_values[idx] < 950:
             stat_values[idx] += 1
             diff -= 1
@@ -78,7 +79,8 @@ def generate_stats(height: float, weight: float, general: bool = False) -> dict:
         "control": stat_values[1],
         "power": stat_values[2],
         "flexibility": stat_values[3],
-        "focus": stat_values[4]
+        "focus": stat_values[4],
+        "stamina": stat_values[5]
     }
 
 def generate_player(
@@ -145,6 +147,7 @@ def generate_player(
         power=stats["power"],
         flexibility=stats["flexibility"],
         focus=stats["focus"],
+        stamina=stats["stamina"],
         roster_status=RosterStatus.ACTIVE,
         position=final_pos,
         personality=personality_traits,

@@ -31,10 +31,10 @@ def process_season_end_retirements(session: Session, year: int, sim_day: int) ->
 
     for player in players:
         age = year - player.birthday.year
-        total_stat = player.speed + player.control + player.power + player.flexibility + player.focus
+        total_stat = player.speed + player.control + player.power + player.flexibility + player.focus + player.stamina
 
-        # 은퇴 조건: 36세 이상이며 스탯 합 2000 미만이거나, 38세 이상인 경우
-        is_retire_candidate = (age >= 36 and total_stat < 2000) or (age >= 38)
+        # 은퇴 조건: 36세 이상이며 스탯 합 2400 미만이거나, 38세 이상인 경우
+        is_retire_candidate = (age >= 36 and total_stat < 2400) or (age >= 38)
 
         if is_retire_candidate:
             old_club_id = player.club_id
@@ -70,7 +70,7 @@ def process_season_end_releases(session: Session, year: int, sim_day: int) -> No
             continue
 
         # 나이가 28세 이상이고 스탯 합이 낮은 순으로 정렬하여 하위 1~2명 방출
-        roster.sort(key=lambda p: (year - p.birthday.year, -(p.speed + p.control + p.power + p.flexibility + p.focus)), reverse=True)
+        roster.sort(key=lambda p: (year - p.birthday.year, -(p.speed + p.control + p.power + p.flexibility + p.focus + p.stamina)), reverse=True)
         candidates = [p for p in roster if (year - p.birthday.year) >= 28][:2]
 
         for player in candidates:
@@ -83,7 +83,7 @@ def process_season_end_releases(session: Session, year: int, sim_day: int) -> No
                 transaction_type=PlayerTransactionType.RELEASE,
                 from_club_id=club.id,
                 to_club_id=None,
-                details=f"{year}시즌 종료 1차 구단 자유계약 방출"
+                details=f"{year}시즌 종료 방출 (만 {year - player.birthday.year}세)"
             )
             session.add(history)
             released_count += 1
@@ -107,7 +107,7 @@ def process_pre_draft_releases(session: Session, year: int, sim_day: int, target
             excess_count = len(roster) - target_roster_limit
 
             # 스탯 기준 하위 선수 방출
-            roster.sort(key=lambda p: (p.speed + p.control + p.power + p.flexibility + p.focus))
+            roster.sort(key=lambda p: (p.speed + p.control + p.power + p.flexibility + p.focus + p.stamina))
             release_targets = roster[:excess_count]
 
             for player in release_targets:
