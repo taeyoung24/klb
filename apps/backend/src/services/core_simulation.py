@@ -19,7 +19,7 @@ from src.services.schedule_utils import (
     generate_tiebreaker_schedule,
     update_knockout_placeholders_realtime,
 )
-from src.services.ingame import run_match
+from src.services.ingame import run_match, recover_player_energy_daily
 from src.services.standing import (
     update_daily_standings,
     apply_tiebreaker_rules_to_standings,
@@ -651,32 +651,38 @@ def _update_standings_and_rankings(session: Session, sim_day: int) -> None:
 def _recover_daily_energy(session: Session, sim_day: int) -> None:
     """
     23:59 시각: 하루가 마감될 때 모든 선수의 일일 자연 체력 회복을 수행합니다.
-    - 당일 경기 출전 선수: +800 회복
-    - 미출전/휴식 선수: +2000 회복 (4~5일 휴식 시 100% 완충)
+    - 미출전/휴식 선수: +1800 회복 (4~5일 휴식 시 100% 완충)
+    - 출전 타자: +450 회복
+    - 등판 투수: +300 회복
+    - 원정(Away) 경기 구단 선수: 회복량의 70%(AWAY_RECOVERY_RATIO)만 적용
     """
-    # 1. 당일 완료된 경기 조회 및 출전 구단 ID 수집
+    # 1. 당일 완료된 경기 조회 및 홈/원정 구단 ID 수집
     today_matches = session.exec(
         select(Match)
         .where(Match.sim_day == sim_day)
         .where(Match.status == MatchStatus.COMPLETED)
     ).all()
-    
-    # 당일 경기에 참가한 구단 ID 집합
-    played_club_ids = set()
-    for m in today_matches:
-        played_club_ids.add(m.home_club_id)
-        played_club_ids.add(m.away_club_id)
+
+    home_club_ids = {m.home_club_id for m in today_matches}
+    away_club_ids = {m.away_club_id for m in today_matches}
+    played_club_ids = home_club_ids | away_club_ids
 
     # 2. 모든 등록 선수 조회 후 체력 회복
     all_players = session.exec(select(Player)).all()
     for player in all_players:
         if player.current_energy >= player.max_energy:
             continue
-        
-        # 소속 구단이 오늘 경기를 치렀는지 여부로 출전/피로 여부 판단
+
+        is_away = player.club_id in away_club_ids
         participated = player.club_id in played_club_ids
-        recovery = 800 if participated else 2000
-        player.current_energy = min(player.max_energy, player.current_energy + recovery)
+        is_pitcher = (player.position == "PITCHER")
+
+        recover_player_energy_daily(
+            player,
+            participated=participated,
+            is_pitcher=is_pitcher,
+            is_away=is_away,
+        )
         session.add(player)
 
 

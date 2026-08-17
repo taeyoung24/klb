@@ -1,5 +1,12 @@
 from src.models import Player
 
+# --- 일일 체력 회복 밸런스 상수 파라미터 ---
+BASE_RECOVERY_REST = 1800       # 경기 미출전/휴식 선수 1일 기본 회복량
+BASE_RECOVERY_BATTER = 450      # 당일 경기 출전 야수 1일 기본 회복량
+BASE_RECOVERY_PITCHER = 300     # 당일 경기 등판 투수 1일 기본 회복량
+
+AWAY_RECOVERY_RATIO = 0.70      # 원정 경기 체류 시 회복 배율 (기본 70%)
+
 
 def drain_pitcher_energy(pitcher: Player, is_power_pitch: bool = False) -> int:
     """
@@ -53,13 +60,29 @@ def drain_fielder_energy(fielder: Player, is_difficult_play: bool = False) -> in
     return drain_amount
 
 
-def recover_player_energy_daily(player: Player, participated: bool = False) -> int:
+def recover_player_energy_daily(
+    player: Player,
+    participated: bool = False,
+    is_pitcher: bool = False,
+    is_away: bool = False,
+) -> int:
     """
     매일 자정/일일 마감 시 선수의 체력을 자연 회복합니다.
-    - 미출전/휴식 선수: +2000 회복 (4~5일 휴식 시 완충)
-    - 출전 선수: +800 회복 (주 6연전 시 피로 누적 완충)
+    - 미출전/휴식 선수: +1800 회복 (4~5일 휴식 시 완충)
+    - 출전 타자: +450 회복
+    - 등판 투수: +300 회복
+    - 원정(Away) 체류 시: 회복량의 70%(AWAY_RECOVERY_RATIO)만 적용
     """
-    recovery_amount = 800 if participated else 2000
+    if not participated:
+        base_recovery = BASE_RECOVERY_REST
+    elif is_pitcher:
+        base_recovery = BASE_RECOVERY_PITCHER
+    else:
+        base_recovery = BASE_RECOVERY_BATTER
+
+    ratio = AWAY_RECOVERY_RATIO if is_away else 1.0
+    recovery_amount = int(base_recovery * ratio)
+
     prev_energy = player.current_energy
     max_cap = player.max_energy or 10000
     player.current_energy = min(max_cap, player.current_energy + recovery_amount)
