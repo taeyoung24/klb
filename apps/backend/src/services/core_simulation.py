@@ -36,6 +36,8 @@ from src.services.roster_management import (
     process_pre_draft_releases,
     process_annual_player_progression,
 )
+from src.services.front_office.trade import process_daily_trade_market
+from src.services.front_office.free_agency import process_daily_fa_market
 from src.utils.logger import logger
 
 
@@ -566,6 +568,11 @@ def _check_and_run_admin_tasks(session: Session, sim_day: int) -> None:
     if current_date.month == 12 and current_date.day == 31:
         logger.info(f"[{current_date.year}년 연말 결산] 전 선수 연간 에이징 커브 스텝업/다운 처리 진행 (Sim Day: {sim_day})")
         process_annual_player_progression(session, year=current_date.year, sim_day=sim_day)
+
+    # 8. 일일 상호 협의 트레이드(Trade) 및 FA 영입 시장 체크
+    is_ps_ended = f_node is not None and sim_day > f_node.sim_day
+    process_daily_trade_market(session, year=current_date.year, sim_day=sim_day, current_date=current_date, is_postseason_ended=is_ps_ended)
+    process_daily_fa_market(session, year=current_date.year, sim_day=sim_day, current_date=current_date, is_postseason_ended=is_ps_ended)
 
 
 def _run_scheduled_matches(session: Session, sim_day: int) -> None:
