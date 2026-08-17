@@ -1,9 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import { fetchInfoQueryPlayers, type PlayerInfo } from '../../api/infoQuery'
+import { fetchInfoQueryPlayers, type PlayerListItem } from '../../api/infoQuery'
 import type { Club } from '../../api/clubs'
 import { formatPosition } from '../../constants/positions'
 import { InfoQueryTable, type TableColumn } from '../../components/InfoQuery'
-import PlayerDetail from './PlayerDetail'
 
 const ITEMS_PER_PAGE = 20
 
@@ -23,10 +22,11 @@ const POSITION_OPTIONS = [
 export interface PlayersTabProps {
   clubs: Club[]
   clubsMap: Record<number, Club>
+  onSelectPlayer?: (player: PlayerListItem) => void
 }
 
-export const PlayersTab: React.FC<PlayersTabProps> = ({ clubs, clubsMap }) => {
-  const [players, setPlayers] = useState<PlayerInfo[]>([])
+export const PlayersTab: React.FC<PlayersTabProps> = ({ clubs, clubsMap, onSelectPlayer }) => {
+  const [players, setPlayers] = useState<PlayerListItem[]>([])
   const [selectedClubId, setSelectedClubId] = useState<string>('all')
   const [selectedPosition, setSelectedPosition] = useState<string>('all')
   const [searchInput, setSearchInput] = useState<string>('')
@@ -36,9 +36,6 @@ export const PlayersTab: React.FC<PlayersTabProps> = ({ clubs, clubsMap }) => {
   const [totalPages, setTotalPages] = useState<number>(1)
   const [isLoading, setIsLoading] = useState<boolean>(true)
   const [error, setError] = useState<string | null>(null)
-
-  // 선택된 상세 선수 상태 (null이면 검색 테이블 목록 표시)
-  const [selectedPlayer, setSelectedPlayer] = useState<PlayerInfo | null>(null)
 
   useEffect(() => {
     let isMounted = true
@@ -76,7 +73,7 @@ export const PlayersTab: React.FC<PlayersTabProps> = ({ clubs, clubsMap }) => {
     }
   }, [selectedClubId, selectedPosition, appliedSearchName, currentPage])
 
-  // 필터 조건 변경 시 1페이지로 리셋 및 상세 뷰 닫기
+  // 필터 조건 변경 시 1페이지로 리셋
   useEffect(() => {
     setCurrentPage(1)
   }, [selectedClubId, selectedPosition, appliedSearchName])
@@ -84,11 +81,18 @@ export const PlayersTab: React.FC<PlayersTabProps> = ({ clubs, clubsMap }) => {
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     setAppliedSearchName(searchInput.trim())
-    setSelectedPlayer(null)
+  }
+
+  const handlePlayerClick = (p: PlayerListItem) => {
+    if (onSelectPlayer) {
+      onSelectPlayer(p)
+    } else {
+      window.location.hash = `#info/players/${p.id}`
+    }
   }
 
   // 컬럼 정의
-  const columns: TableColumn<PlayerInfo>[] = useMemo(
+  const columns: TableColumn<PlayerListItem>[] = useMemo(
     () => [
       {
         key: 'uniform_number',
@@ -105,7 +109,7 @@ export const PlayersTab: React.FC<PlayersTabProps> = ({ clubs, clubsMap }) => {
           <span
             className="info-query__name-link"
             title={`${p.name} 선수 상세정보 조회`}
-            onClick={() => setSelectedPlayer(p)}
+            onClick={() => handlePlayerClick(p)}
           >
             {p.name}
           </span>
@@ -141,19 +145,6 @@ export const PlayersTab: React.FC<PlayersTabProps> = ({ clubs, clubsMap }) => {
     [clubsMap]
   )
 
-  // 1. 선수가 선택된 경우 -> 선수 상세 화면으로 영역 전환
-  if (selectedPlayer) {
-    return (
-      <PlayerDetail
-        playerId={selectedPlayer.id}
-        initialPlayer={selectedPlayer}
-        clubsMap={clubsMap}
-        onBack={() => setSelectedPlayer(null)}
-      />
-    )
-  }
-
-  // 2. 기본 선수 검색 목록 화면
   return (
     <>
       {/* Filter & Search Controls */}

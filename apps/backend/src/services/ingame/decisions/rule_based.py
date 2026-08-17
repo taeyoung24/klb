@@ -253,14 +253,18 @@ class RuleBasedDecisionEngine(BaseDecisionEngine):
     def decide_starting_pitcher(self, pitchers: list[Player]) -> Player:
         """
         투수들 중 선발 투수를 선택합니다.
-        (기본 룰베이스 전략: 제구력 + 구속 종합 능력치가 가장 높은 투수 선택)
+        - 체력이 충분히 회복된 투수(current_energy >= 7000) 중 종합 능력치(control + speed)가 높은 투수 우선.
+        - 완충된 투수가 없다면 가장 체력이 많이 찬 투수 선택 (자연스러운 5선발 로테이션 확립).
         """
-        return max(pitchers, key=lambda p: p.control + p.speed)
+        rested = [p for p in pitchers if getattr(p, "current_energy", 10000) >= 7000]
+        if rested:
+            return max(rested, key=lambda p: p.control + p.speed)
+        return max(pitchers, key=lambda p: getattr(p, "current_energy", 10000))
 
     def decide_batting_order(self, batters: list[Player]) -> list[Player]:
         """
         야수/타자들 중 9명의 선발 라인업 및 타순을 결정합니다.
-        (기본 룰베이스 전략: 각 주요 포지션별 최고 능력치 선수 1명씩 우선 배치 후 타순 배치)
+        - 각 포지션별 체력(피로도) 및 종합 능력치(power + speed + focus)를 종합하여 선발.
         """
         target_positions = [
             IngameRole.CATCHER,
@@ -274,24 +278,31 @@ class RuleBasedDecisionEngine(BaseDecisionEngine):
             IngameRole.DESIGNATED_HITTER,
         ]
 
+        def _batter_score(p: Player) -> float:
+            energy = getattr(p, "current_energy", 10000)
+            stat_sum = p.power + p.speed + p.focus
+            # 체력이 3000 미만으로 소진된 선수는 피로 페널티를 주어 백업 야수 출전 및 주전 휴식 유도
+            fatigue_penalty = 500 if energy < 3000 else 0
+            return stat_sum - fatigue_penalty
+
         selected_batters: list[Player] = []
         used_player_ids = set()
 
-        # 1. 각 포지션별 가장 능력이 뛰어난 선수 1명씩 우선 배치
+        # 1. 각 포지션별 가장 능력이 뛰어난(체력 양호) 선수 1명씩 우선 배치
         for pos in target_positions:
             candidates = [
                 p for p in batters
                 if p.position == pos and p.id not in used_player_ids
             ]
             if candidates:
-                best_player = max(candidates, key=lambda p: p.power + p.speed + p.focus)
+                best_player = max(candidates, key=_batter_score)
                 selected_batters.append(best_player)
                 if best_player.id:
                     used_player_ids.add(best_player.id)
 
-        # 2. 남은 자리가 있다면 남은 타자 중 종합 능력치순으로 채움
+        # 2. 남은 자리가 있다면 남은 타자 중 종합 점수순으로 채움
         remaining = [p for p in batters if p.id not in used_player_ids]
-        remaining.sort(key=lambda p: p.power + p.speed + p.focus, reverse=True)
+        remaining.sort(key=_batter_score, reverse=True)
 
         while len(selected_batters) < 9 and remaining:
             player = remaining.pop(0)

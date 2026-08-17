@@ -15,7 +15,7 @@ export interface TableColumn<T> {
   header: string
   align?: TableAlign
   bold?: boolean
-  render: (row: T, index: number) => React.ReactNode
+  render?: (row: T, index: number) => React.ReactNode
 }
 
 export interface TablePaginationProps {
@@ -136,7 +136,9 @@ export function InfoQueryTable<T>({
                         key={col.key}
                         className={`info-query-table__cell ${alignClass} ${boldClass}`.trim()}
                       >
-                        {col.render(row, rowIndex)}
+                        {col.render
+                          ? col.render(row, rowIndex)
+                          : String((row as Record<string, any>)[col.key] ?? '-')}
                       </td>
                     )
                   })}

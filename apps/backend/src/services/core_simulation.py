@@ -575,6 +575,12 @@ def _run_scheduled_matches(session: Session, sim_day: int) -> None:
 
     if matches:
         for match in matches:
+            away_club = session.get(Club, match.away_club_id)
+            home_club = session.get(Club, match.home_club_id)
+            away_abbr = away_club.abbr_name if away_club and away_club.abbr_name else (away_club.name if away_club else f"Club#{match.away_club_id}")
+            home_abbr = home_club.abbr_name if home_club and home_club.abbr_name else (home_club.name if home_club else f"Club#{match.home_club_id}")
+
+            logger.info(f"  [Match {match.id:>4}] {away_abbr:>15} vs {home_abbr:<15} 진행 중...")
             run_match(match, session=session)
             session.add(match)
         session.commit()

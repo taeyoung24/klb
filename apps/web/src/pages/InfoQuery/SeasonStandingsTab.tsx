@@ -107,7 +107,9 @@ export const SeasonStandingsTab: React.FC<SeasonStandingsTabProps> = ({
 
   const formatGb = (gb?: number) => {
     if (gb === undefined || gb === null || gb === 0) return '-'
-    return gb % 1 === 0 ? gb.toFixed(0) : gb.toFixed(1)
+    const val = gb / 10
+    if (val === 0) return '-'
+    return val % 1 === 0 ? val.toFixed(0) : val.toFixed(1)
   }
 
   const formatStreak = (streak?: number) => {

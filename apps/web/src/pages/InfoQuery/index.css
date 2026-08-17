@@ -883,7 +883,7 @@
 }
 
 /* --------------------------------------------------------------------------
-   MBTI Personality Area (Flat White Theme)
+   MBTI Personality Area (Spectrum Track & Tooltip Indicator)
    -------------------------------------------------------------------------- */
 .player-detail__mbti-col {
   display: flex;
@@ -894,7 +894,7 @@
 .player-detail__mbti-container {
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 20px;
   padding: 20px;
   background-color: #f8fafc;
   border: 1px solid #e2e8f0;
@@ -924,41 +924,91 @@
 .player-detail__mbti-axes {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 18px;
 }
 
 .player-detail__mbti-axis-row {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;
 }
 
-.player-detail__mbti-axis-labels {
-  display: flex;
-  justify-content: space-between;
+.player-detail__mbti-indicator-area {
+  position: relative;
+  height: 24px;
+  margin: 0 24px;
+}
+
+.player-detail__mbti-tooltip {
+  position: absolute;
+  bottom: 2px;
+  transform: translateX(-50%);
+  display: inline-flex;
   align-items: center;
-  font-size: 12px;
-  font-weight: 600;
-  color: #64748b;
+  justify-content: center;
+  background-color: #0f172a;
+  color: #ffffff;
+  padding: 4px 6px;
+  border-radius: 0;
+  white-space: nowrap;
 }
 
-.player-detail__mbti-axis-label--dominant {
+.player-detail__mbti-tooltip-text {
+  font-size: 11px;
   font-weight: 800;
-  color: #0f172a;
+  line-height: 14px;
 }
 
-.player-detail__mbti-bar-track {
-  width: 100%;
-  height: 8px;
+.player-detail__mbti-tooltip-arrow {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-top: 4px solid #0f172a;
+}
+
+.player-detail__mbti-track-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.player-detail__mbti-dimmed-label {
+  font-size: 13px;
+  font-weight: 800;
+  color: #94a3b8;
+  white-space: nowrap;
+  min-width: 14px;
+  text-align: center;
+}
+
+.player-detail__mbti-dimmed-label--left {
+  text-align: left;
+}
+
+.player-detail__mbti-dimmed-label--right {
+  text-align: right;
+}
+
+.player-detail__mbti-spectrum-track {
+  flex: 1;
+  height: 6px;
   background-color: #e2e8f0;
   border-radius: 0;
-  overflow: hidden;
   position: relative;
 }
 
-.player-detail__mbti-bar-fill {
-  height: 100%;
+.player-detail__mbti-position-tick {
+  position: absolute;
+  top: -4px;
+  bottom: -4px;
+  width: 2px;
   background-color: #0f172a;
+  transform: translateX(-50%);
 }
 
 @media (max-width: 860px) {
@@ -966,5 +1016,3 @@
     grid-template-columns: 1fr;
   }
 }
-
-

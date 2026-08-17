@@ -16,6 +16,39 @@ export interface PlayerListItem {
   high_school?: HighSchool | null;
 }
 
+export interface PlayerBattingRecord {
+  season: string;
+  avg: string;
+  games: number;
+  ab: number;
+  hits: number;
+  homeruns: number;
+  rbi: number;
+  so: number;
+  obp: string;
+  ops: string;
+}
+
+export type PlayerSeasonRecord = PlayerBattingRecord;
+
+export interface PlayerPitchingRecord {
+  season: string;
+  era: string;
+  games: number;
+  innings: string;
+  wins: number;
+  losses: number;
+  saves: number;
+  holds: number;
+  so: number;
+  hits: number;
+  homeruns: number;
+  runs: number;
+  bb: number;
+  hbp: number;
+  whip: string;
+}
+
 export interface PlayerDetailInfo {
   id: number;
   name: string;
@@ -39,6 +72,9 @@ export interface PlayerDetailInfo {
   region?: Region | null;
   high_school_id?: number;
   high_school?: HighSchool | null;
+  records?: PlayerBattingRecord[];
+  batting_records?: PlayerBattingRecord[];
+  pitching_records?: PlayerPitchingRecord[];
 }
 
 export type PlayerInfo = PlayerListItem;

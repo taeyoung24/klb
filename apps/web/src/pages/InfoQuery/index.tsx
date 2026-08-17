@@ -4,20 +4,66 @@ import { getStandingSeasons } from '../../api/standings'
 import { getSystemInfo } from '../../api/system'
 import PlayersTab from './PlayersTab'
 import SeasonStandingsTab from './SeasonStandingsTab'
+import PlayerDetail from './PlayerDetail'
 import './index.css'
 
 export type InfoQueryMenuType = 'players' | 'seasonStandings'
 
+export interface ParsedInfoRoute {
+  menu: InfoQueryMenuType
+  playerId: number | null
+}
+
+export function parseInfoRoute(): ParsedInfoRoute {
+  const hash = window.location.hash || '#info'
+
+  // 1. 경로 파라미터 매칭: #info/players/123 또는 #info/player/123
+  const pathMatch = hash.match(/^#info\/players?\/(\d+)/i)
+  if (pathMatch) {
+    return { menu: 'players', playerId: Number(pathMatch[1]) }
+  }
+
+  // 2. 쿼리 파라미터 매칭: #info?playerId=123 등
+  if (hash.includes('?')) {
+    const q = hash.split('?')[1]
+    const params = new URLSearchParams(q)
+    const pId = params.get('playerId') || params.get('id')
+    const tab = params.get('tab')
+    const menu: InfoQueryMenuType =
+      tab === 'seasonStandings' || tab === 'standings' ? 'seasonStandings' : 'players'
+    return { menu, playerId: pId ? Number(pId) : null }
+  }
+
+  // 3. 시즌 순위 경로: #info/standings
+  if (hash.startsWith('#info/standings') || hash.startsWith('#info/seasonStandings')) {
+    return { menu: 'seasonStandings', playerId: null }
+  }
+
+  return { menu: 'players', playerId: null }
+}
+
 export default function InfoQuery() {
-  // Sidebar tab state
-  const [activeMenu, setActiveMenu] = useState<InfoQueryMenuType>('players')
+  // Hash 경로 기반 라우트 상태
+  const [route, setRoute] = useState<ParsedInfoRoute>(() => parseInfoRoute())
 
   // Shared state: Clubs & Available Seasons
   const [clubs, setClubs] = useState<Club[]>([])
   const [availableSeasons, setAvailableSeasons] = useState<number[]>([])
   const [initialSeasonYear, setInitialSeasonYear] = useState<number | null>(null)
 
-  // 1. Initial System Info, Clubs & Available Seasons load
+  // 1. hashchange 이벤트 리스너로 브라우저 새로고침/앞/뒤로가기 동기화
+  useEffect(() => {
+    const handleHashChange = () => {
+      setRoute(parseInfoRoute())
+    }
+
+    window.addEventListener('hashchange', handleHashChange)
+    return () => {
+      window.removeEventListener('hashchange', handleHashChange)
+    }
+  }, [])
+
+  // 2. Initial System Info, Clubs & Available Seasons load
   useEffect(() => {
     let isMounted = true
     Promise.all([getClubs(), getSystemInfo(), getStandingSeasons().catch(() => [])])
@@ -53,6 +99,18 @@ export default function InfoQuery() {
     return map
   }, [clubs])
 
+  const handleNavigateMenu = (menu: InfoQueryMenuType) => {
+    if (menu === 'players') {
+      window.location.hash = '#info/players'
+    } else {
+      window.location.hash = '#info/standings'
+    }
+  }
+
+  const handleBackToPlayerList = () => {
+    window.location.hash = '#info/players'
+  }
+
   return (
     <div className="info-query">
       <div className="info-query__container">
@@ -65,9 +123,9 @@ export default function InfoQuery() {
                 <li className="info-query__sidebar-item">
                   <span
                     className={`info-query__sidebar-link ${
-                      activeMenu === 'players' ? 'info-query__sidebar-link--active' : ''
+                      route.menu === 'players' ? 'info-query__sidebar-link--active' : ''
                     }`}
-                    onClick={() => setActiveMenu('players')}
+                    onClick={() => handleNavigateMenu('players')}
                   >
                     선수 조회
                   </span>
@@ -75,9 +133,9 @@ export default function InfoQuery() {
                 <li className="info-query__sidebar-item">
                   <span
                     className={`info-query__sidebar-link ${
-                      activeMenu === 'seasonStandings' ? 'info-query__sidebar-link--active' : ''
+                      route.menu === 'seasonStandings' ? 'info-query__sidebar-link--active' : ''
                     }`}
-                    onClick={() => setActiveMenu('seasonStandings')}
+                    onClick={() => handleNavigateMenu('seasonStandings')}
                   >
                     시즌 최종 순위
                   </span>
@@ -88,9 +146,24 @@ export default function InfoQuery() {
 
           {/* Main Content Area */}
           <main className="info-query__main">
-            {activeMenu === 'players' && <PlayersTab clubs={clubs} clubsMap={clubsMap} />}
+            {route.menu === 'players' &&
+              (route.playerId ? (
+                <PlayerDetail
+                  playerId={route.playerId}
+                  clubsMap={clubsMap}
+                  onBack={handleBackToPlayerList}
+                />
+              ) : (
+                <PlayersTab
+                  clubs={clubs}
+                  clubsMap={clubsMap}
+                  onSelectPlayer={(p) => {
+                    window.location.hash = `#info/players/${p.id}`
+                  }}
+                />
+              ))}
 
-            {activeMenu === 'seasonStandings' && (
+            {route.menu === 'seasonStandings' && (
               <SeasonStandingsTab
                 clubsMap={clubsMap}
                 availableSeasons={availableSeasons}

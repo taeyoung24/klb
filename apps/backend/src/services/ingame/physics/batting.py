@@ -49,11 +49,23 @@ def calculate_swing_contact_probability(
     pitcher_pressure = pressure_weight * ((1000.0 - pitcher.focus) / 1000.0)
     diff_pressure = pitcher_pressure - batter_pressure  # 타자가 부담을 덜 느낄수록 양수(우위)
 
-    # 2. 스탯 1:1 대칭 대결 우위 지수 (-1.0 ~ 1.0)
+    # 2. 스탯 및 현 체력 1:1 대칭 대결 우위 지수 (-1.0 ~ 1.0)
     diff_control = (batter.control - pitcher.control) / 1000.0
     diff_power = (batter.power - pitcher.power) / 1000.0
 
-    stat_advantage = (diff_control * 0.50 + diff_power * 0.25 + diff_pressure * 0.25)
+    # 양쪽 '현 체력'의 합에 대한 각자의 현체력 비율 대결 (-1.0 ~ 1.0)
+    total_energy = max(0, batter.current_energy) + max(0, pitcher.current_energy)
+    if total_energy > 0:
+        diff_energy = (batter.current_energy - pitcher.current_energy) / total_energy
+    else:
+        diff_energy = 0.0
+
+    stat_advantage = (
+        diff_control * 0.36
+        + diff_power * 0.20
+        + diff_pressure * 0.21
+        + diff_energy * 0.23
+    )
 
     # 3. 존 중심 오프셋에 따른 기본 컨택트 기준치
     base_contact = 0.90 - ((offset_dist ** 1.3) * 0.24)

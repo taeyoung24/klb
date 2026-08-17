@@ -1,10 +1,17 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { FiArrowLeft } from 'react-icons/fi'
-import { fetchInfoQueryPlayerDetail, type PlayerDetailInfo, type PlayerListItem } from '../../api/infoQuery'
+import {
+  fetchInfoQueryPlayerDetail,
+  type PlayerBattingRecord,
+  type PlayerDetailInfo,
+  type PlayerListItem,
+  type PlayerPitchingRecord,
+} from '../../api/infoQuery'
 import type { Club } from '../../api/clubs'
 import TeamLogo from '../../components/TeamLogo/TeamLogo'
 import { formatPosition } from '../../constants/positions'
 import { useSystemContext } from '../../context/SystemContext'
+import { InfoQueryTable, type TableColumn } from '../../components/InfoQuery'
 
 export interface PlayerDetailProps {
   playerId: number
@@ -33,13 +40,13 @@ const MBTI_TITLES: Record<string, string> = {
 }
 
 /**
- * 성향 MBTI 분석 및 4대 척도 시각화 컴포넌트
+ * 성향 MBTI 분석 및 4대 척도 스펙트럼 인디케이터 컴포넌트
  */
 const PersonalityMbtiView: React.FC<{ personality?: number[] }> = ({ personality }) => {
   const defaultValues = [500, 500, 500, 500]
   const p = personality && personality.length >= 4 ? personality : defaultValues
 
-  // 1000 스케일을 100% 비율로 환산
+  // 1000 스케일을 100% 비율로 환산 (0 ~ 100%)
   const ePct = Math.min(100, Math.max(0, Math.round((p[0] / 1000) * 100)))
   const sPct = Math.min(100, Math.max(0, Math.round((p[1] / 1000) * 100)))
   const tPct = Math.min(100, Math.max(0, Math.round((p[2] / 1000) * 100)))
@@ -52,32 +59,28 @@ const PersonalityMbtiView: React.FC<{ personality?: number[] }> = ({ personality
 
   const mbtiAxes = [
     {
-      leftLabel: '외향 (E)',
-      rightLabel: '내향 (I)',
-      leftPct: ePct,
-      rightPct: 100 - ePct,
-      isLeftDominant: ePct >= 50,
+      leftCode: 'E',
+      rightCode: 'I',
+      pct: ePct,
+      badgeText: ePct >= 50 ? `E ${ePct}%` : `I ${100 - ePct}%`,
     },
     {
-      leftLabel: '감각 (S)',
-      rightLabel: '직관 (N)',
-      leftPct: sPct,
-      rightPct: 100 - sPct,
-      isLeftDominant: sPct >= 50,
+      leftCode: 'S',
+      rightCode: 'N',
+      pct: sPct,
+      badgeText: sPct >= 50 ? `S ${sPct}%` : `N ${100 - sPct}%`,
     },
     {
-      leftLabel: '사고 (T)',
-      rightLabel: '감정 (F)',
-      leftPct: tPct,
-      rightPct: 100 - tPct,
-      isLeftDominant: tPct >= 50,
+      leftCode: 'T',
+      rightCode: 'F',
+      pct: tPct,
+      badgeText: tPct >= 50 ? `T ${tPct}%` : `F ${100 - tPct}%`,
     },
     {
-      leftLabel: '판단 (J)',
-      rightLabel: '인식 (P)',
-      leftPct: jPct,
-      rightPct: 100 - jPct,
-      isLeftDominant: jPct >= 50,
+      leftCode: 'J',
+      rightCode: 'P',
+      pct: jPct,
+      badgeText: jPct >= 50 ? `J ${jPct}%` : `P ${100 - jPct}%`,
     },
   ]
 
@@ -89,31 +92,36 @@ const PersonalityMbtiView: React.FC<{ personality?: number[] }> = ({ personality
         <span className="player-detail__mbti-title">{mbtiTitle}</span>
       </div>
 
-      {/* 4대 척도 비율 바 목록 */}
+      {/* 4대 스펙트럼 인디케이터 목록 */}
       <div className="player-detail__mbti-axes">
         {mbtiAxes.map((axis, idx) => (
           <div key={idx} className="player-detail__mbti-axis-row">
-            <div className="player-detail__mbti-axis-labels">
-              <span
-                className={`player-detail__mbti-axis-label ${
-                  axis.isLeftDominant ? 'player-detail__mbti-axis-label--dominant' : ''
-                }`}
-              >
-                {axis.leftLabel} {axis.leftPct}%
-              </span>
-              <span
-                className={`player-detail__mbti-axis-label ${
-                  !axis.isLeftDominant ? 'player-detail__mbti-axis-label--dominant' : ''
-                }`}
-              >
-                {axis.rightPct}% {axis.rightLabel}
-              </span>
-            </div>
-            <div className="player-detail__mbti-bar-track">
+            {/* 1. 상단 말풍선 인디케이터 영역 */}
+            <div className="player-detail__mbti-indicator-area">
               <div
-                className="player-detail__mbti-bar-fill"
-                style={{ width: `${axis.leftPct}%` }}
-              />
+                className="player-detail__mbti-tooltip"
+                style={{ left: `${axis.pct}%` }}
+              >
+                <span className="player-detail__mbti-tooltip-text">{axis.badgeText}</span>
+                <div className="player-detail__mbti-tooltip-arrow" />
+              </div>
+            </div>
+
+            {/* 2. 트랙 및 양 끝 영문 시그니처 라벨 */}
+            <div className="player-detail__mbti-track-row">
+              <span className="player-detail__mbti-dimmed-label player-detail__mbti-dimmed-label--left">
+                {axis.leftCode}
+              </span>
+              <div className="player-detail__mbti-spectrum-track">
+                {/* 실제 성향 위치의 세로선 틱 */}
+                <div
+                  className="player-detail__mbti-position-tick"
+                  style={{ left: `${axis.pct}%` }}
+                />
+              </div>
+              <span className="player-detail__mbti-dimmed-label player-detail__mbti-dimmed-label--right">
+                {axis.rightCode}
+              </span>
             </div>
           </div>
         ))}
@@ -233,6 +241,47 @@ export const PlayerDetail: React.FC<PlayerDetailProps> = ({
   const energyPercent =
     maxEnergy > 0 ? Math.min(100, Math.max(0, Math.round((currentEnergy / maxEnergy) * 100))) : 100
 
+  const isPitcher = targetPlayer?.position === 'PITCHER'
+
+  // 타격 기록 테이블 컬럼 정의
+  const battingColumns: TableColumn<PlayerBattingRecord>[] = useMemo(
+    () => [
+      { key: 'season', header: '시즌', align: 'center', bold: true },
+      { key: 'avg', header: '타율', align: 'center', bold: true },
+      { key: 'games', header: '경기수', align: 'center' },
+      { key: 'ab', header: '타수', align: 'center' },
+      { key: 'hits', header: '안타', align: 'center' },
+      { key: 'homeruns', header: '홈런', align: 'center' },
+      { key: 'rbi', header: '타점', align: 'center' },
+      { key: 'so', header: '삼진', align: 'center' },
+      { key: 'obp', header: '출루율', align: 'center' },
+      { key: 'ops', header: 'OPS', align: 'center', bold: true },
+    ],
+    []
+  )
+
+  // 투구 기록 테이블 컬럼 정의
+  const pitchingColumns: TableColumn<PlayerPitchingRecord>[] = useMemo(
+    () => [
+      { key: 'season', header: '시즌', align: 'center', bold: true },
+      { key: 'era', header: 'ERA', align: 'center', bold: true },
+      { key: 'games', header: '경기수', align: 'center' },
+      { key: 'innings', header: '이닝', align: 'center' },
+      { key: 'wins', header: '승', align: 'center' },
+      { key: 'losses', header: '패', align: 'center' },
+      { key: 'saves', header: '세이브', align: 'center' },
+      { key: 'holds', header: '홀드', align: 'center' },
+      { key: 'so', header: 'K', align: 'center' },
+      { key: 'hits', header: '피안타', align: 'center' },
+      { key: 'homeruns', header: '피홈런', align: 'center' },
+      { key: 'runs', header: '실점', align: 'center' },
+      { key: 'bb', header: '볼넷', align: 'center' },
+      { key: 'hbp', header: '사구', align: 'center' },
+      { key: 'whip', header: 'WHIP', align: 'center', bold: true },
+    ],
+    []
+  )
+
   return (
     <div className="player-detail">
       {/* Top Back Navigation Button */}
@@ -344,6 +393,28 @@ export const PlayerDetail: React.FC<PlayerDetailProps> = ({
               <h3 className="player-detail__section-title">성향 및 멘탈리티 (MBTI)</h3>
               <PersonalityMbtiView personality={player?.personality} />
             </div>
+          </div>
+
+          {/* Season & Career Records Section (Pitcher / Batter) */}
+          <div className="player-detail__section">
+            <h3 className="player-detail__section-title">
+              {isPitcher ? '시즌별 투구 성적' : '시즌별 타격 성적'}
+            </h3>
+            {isPitcher ? (
+              <InfoQueryTable
+                columns={pitchingColumns}
+                data={player?.pitching_records || []}
+                rowKey={(r, idx) => `pitch-${r.season}-${idx}`}
+                emptyMessage="기록된 투구 성적이 없습니다."
+              />
+            ) : (
+              <InfoQueryTable
+                columns={battingColumns}
+                data={player?.batting_records || player?.records || []}
+                rowKey={(r, idx) => `bat-${r.season}-${idx}`}
+                emptyMessage="기록된 타격 성적이 없습니다."
+              />
+            )}
           </div>
         </>
       ) : null}
