@@ -18,6 +18,7 @@ from src.services.schedule_utils import (
     save_knockout_placeholders,
     generate_tiebreaker_schedule,
     update_knockout_placeholders_realtime,
+    determine_series_home_away,
 )
 from src.services.ingame import run_match, recover_player_energy_daily
 from src.services.standing import (
@@ -368,9 +369,13 @@ def _check_and_run_admin_tasks(session: Session, sim_day: int) -> None:
                     continue
                 for offset, g_num in essential_semi_games:
                     target_sim_day = semi_start_day + offset
-                    is_home = g_num in [1, 2, 5]
-                    actual_home = s.home_club_id if is_home else s.away_club_id
-                    actual_away = s.away_club_id if is_home else s.home_club_id
+                    actual_home, actual_away = determine_series_home_away(
+                        s.home_club_id, s.away_club_id,
+                        game_num=g_num,
+                        advantage_game_nums=[1, 2, 5],
+                        session=session,
+                        sim_day=sim_day
+                    )
                     if not actual_home or not actual_away:
                         continue
                     h_club = session.get(Club, actual_home)
@@ -428,9 +433,13 @@ def _check_and_run_admin_tasks(session: Session, sim_day: int) -> None:
             a_wins = len(s_matches) - h_wins
 
             if h_wins < 3 and a_wins < 3:
-                is_home = game_num in [1, 2, 5]
-                actual_home = s.home_club_id if is_home else s.away_club_id
-                actual_away = s.away_club_id if is_home else s.home_club_id
+                actual_home, actual_away = determine_series_home_away(
+                    s.home_club_id, s.away_club_id,
+                    game_num=game_num,
+                    advantage_game_nums=[1, 2, 5],
+                    session=session,
+                    sim_day=sim_day
+                )
                 h_club = session.get(Club, actual_home)
                 m = Match(
                     home_club_id=actual_home,
@@ -473,24 +482,29 @@ def _check_and_run_admin_tasks(session: Session, sim_day: int) -> None:
             # 결승전 (Final Bo7) 필수 1, 2, 3차전 Match 사전 생성
             final_start_day = semi_start_day + 8
             essential_final_games = [(0, 1), (1, 2), (2, 3)]  # (offset, game_num)
-            for offset, g_num in essential_final_games:
-                target_sim_day = final_start_day + offset
-                is_home = g_num in [1, 2, 3, 7]
-                actual_home = f_node.home_club_id if is_home else f_node.away_club_id
-                actual_away = f_node.away_club_id if is_home else f_node.home_club_id
-                if not actual_home or not actual_away:
-                    continue
-                h_club = session.get(Club, actual_home)
-                m = Match(
-                    home_club_id=actual_home,
-                    away_club_id=actual_away,
-                    stadium_id=h_club.home_stadium_id if h_club else None,
-                    sim_day=target_sim_day,
-                    status=MatchStatus.SCHEDULED,
-                    stage=MatchStage.KNOCKOUT,
-                    limit_extra_innings=False
-                )
-                session.add(m)
+            if f_node.home_club_id and f_node.away_club_id:
+                for offset, g_num in essential_final_games:
+                    target_sim_day = final_start_day + offset
+                    actual_home, actual_away = determine_series_home_away(
+                        f_node.home_club_id, f_node.away_club_id,
+                        game_num=g_num,
+                        advantage_game_nums=[1, 2, 3, 7],
+                        session=session,
+                        sim_day=sim_day
+                    )
+                    if not actual_home or not actual_away:
+                        continue
+                    h_club = session.get(Club, actual_home)
+                    m = Match(
+                        home_club_id=actual_home,
+                        away_club_id=actual_away,
+                        stadium_id=h_club.home_stadium_id if h_club else None,
+                        sim_day=target_sim_day,
+                        status=MatchStatus.SCHEDULED,
+                        stage=MatchStage.KNOCKOUT,
+                        limit_extra_innings=False
+                    )
+                    session.add(m)
 
             session.commit()
             logger.info(">>> 녹아웃 4강전 완주 ➔ 결승전(Krown Series) 대진표 확정 및 1~3차전 사전 매치 등록")
@@ -530,9 +544,13 @@ def _check_and_run_admin_tasks(session: Session, sim_day: int) -> None:
             a_wins = len(f_matches) - h_wins
 
             if h_wins < 4 and a_wins < 4:
-                is_home = game_num in [1, 2, 3, 7]
-                actual_home = f_node.home_club_id if is_home else f_node.away_club_id
-                actual_away = f_node.away_club_id if is_home else f_node.home_club_id
+                actual_home, actual_away = determine_series_home_away(
+                    f_node.home_club_id, f_node.away_club_id,
+                    game_num=game_num,
+                    advantage_game_nums=[1, 2, 3, 7],
+                    session=session,
+                    sim_day=sim_day
+                )
                 h_club = session.get(Club, actual_home)
                 m = Match(
                     home_club_id=actual_home,
