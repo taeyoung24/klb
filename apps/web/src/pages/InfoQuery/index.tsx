@@ -108,7 +108,11 @@ export default function InfoQuery() {
   }
 
   const handleBackToPlayerList = () => {
-    window.location.hash = '#info/players'
+    if (window.history.length > 1) {
+      window.history.back()
+    } else {
+      window.location.hash = '#info/players'
+    }
   }
 
   return (
@@ -146,22 +150,26 @@ export default function InfoQuery() {
 
           {/* Main Content Area */}
           <main className="info-query__main">
-            {route.menu === 'players' &&
-              (route.playerId ? (
-                <PlayerDetail
-                  playerId={route.playerId}
-                  clubsMap={clubsMap}
-                  onBack={handleBackToPlayerList}
-                />
-              ) : (
-                <PlayersTab
-                  clubs={clubs}
-                  clubsMap={clubsMap}
-                  onSelectPlayer={(p) => {
-                    window.location.hash = `#info/players/${p.id}`
-                  }}
-                />
-              ))}
+            {route.menu === 'players' && (
+              <>
+                <div style={{ display: route.playerId ? 'none' : 'block' }}>
+                  <PlayersTab
+                    clubs={clubs}
+                    clubsMap={clubsMap}
+                    onSelectPlayer={(p) => {
+                      window.location.hash = `#info/players/${p.id}`
+                    }}
+                  />
+                </div>
+                {route.playerId && (
+                  <PlayerDetail
+                    playerId={route.playerId}
+                    clubsMap={clubsMap}
+                    onBack={handleBackToPlayerList}
+                  />
+                )}
+              </>
+            )}
 
             {route.menu === 'seasonStandings' && (
               <SeasonStandingsTab

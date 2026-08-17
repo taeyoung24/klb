@@ -375,8 +375,13 @@ def simulate_plate_appearance(
                     context.scoreboard.outs += 1
                     break
             else:
-                # 1. 타자 스탯(power, focus) 및 투구 물리 기반 3D 타구 벡터 연산
-                batting_physics = calculate_batting_physics(batter, pitch_physics, batting_strategy)
+                # 1. 타자 스탯(power, focus) 및 투구 물리, 투수 스탯 기반 3D 타구 벡터 연산
+                batting_physics = calculate_batting_physics(
+                    batter,
+                    pitch_physics,
+                    batting_strategy,
+                    pitcher=pitcher,
+                )
 
                 # 2. 공기저항, 백스핀, 구장 펜스 반영 타구 궤적 & 비거리/홈런 연산
                 trajectory_physics = calculate_trajectory_physics(batting_physics, context.stadium)

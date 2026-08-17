@@ -38,6 +38,7 @@ class PlayerListItemRead(BaseModel):
     potential: Optional[int] = None
     height: Optional[float] = None
     weight: Optional[float] = None
+    birthday: Optional[datetime.datetime] = None
     region_id: Optional[int] = None
     region: Optional[RegionRead] = None
     high_school_id: Optional[int] = None
@@ -130,12 +131,14 @@ def get_info_query_players(
     club_id: Optional[int] = Query(None, description="구단 ID"),
     position: Optional[str] = Query(None, description="포지션 코드/이름"),
     name: Optional[str] = Query(None, description="선수명 검색어"),
+    sort_by: str = Query("id", description="정렬 기준 필드 (id, name, age, uniform_number, height, weight, potential)"),
+    order: str = Query("asc", description="정렬 방향 (asc, desc)"),
     page: int = Query(1, ge=1, description="페이지 번호"),
     limit: int = Query(20, ge=1, le=100, description="페이지당 항목 수"),
     session: Session = Depends(get_session),
 ):
     """
-    정보조회 전용 선수 목록 검색/페이징 경량 엔드포인트
+    정보조회 전용 선수 목록 검색/페이징/정렬 경량 엔드포인트
     """
     query = (
         select(Player)
@@ -166,6 +169,30 @@ def get_info_query_players(
 
     total_count = session.exec(count_query).one()
     total_pages = (total_count + limit - 1) // limit if total_count > 0 else 1
+
+    # 정렬 (Sorting) 로직
+    is_desc = order.lower() == "desc"
+    if sort_by == "name":
+        sort_col = col(Player.name).desc() if is_desc else col(Player.name).asc()
+    elif sort_by == "age" or sort_by == "birthday":
+        # 나이순: 'age desc'(나이 많은 순) -> 생일이 빠른 순(birthday asc)
+        # 'age asc'(나이 어린 순) -> 생일이 늦은 순(birthday desc)
+        if sort_by == "age":
+            sort_col = col(Player.birthday).asc() if is_desc else col(Player.birthday).desc()
+        else:
+            sort_col = col(Player.birthday).desc() if is_desc else col(Player.birthday).asc()
+    elif sort_by == "uniform_number":
+        sort_col = col(Player.uniform_number).desc() if is_desc else col(Player.uniform_number).asc()
+    elif sort_by == "height":
+        sort_col = col(Player.height).desc() if is_desc else col(Player.height).asc()
+    elif sort_by == "weight":
+        sort_col = col(Player.weight).desc() if is_desc else col(Player.weight).asc()
+    elif sort_by == "potential":
+        sort_col = col(Player.potential).desc() if is_desc else col(Player.potential).asc()
+    else:
+        sort_col = col(Player.id).desc() if is_desc else col(Player.id).asc()
+
+    query = query.order_by(sort_col)
 
     offset = (page - 1) * limit
     paginated_query = query.offset(offset).limit(limit)
@@ -265,66 +292,72 @@ def get_info_query_player_detail(
                 if curr_pitcher_id == player_id:
                     pitcher_participated = True
 
-            # 타자 입장 집계
-            if curr_batter_id == player_id:
-                if etype == 'PITCH':
-                    res = _get_val(ev, 'result')
-                    if res == 'BALL':
-                        balls += 1
-                        if balls == 4:
+            elif etype == 'PITCH':
+                res = _get_val(ev, 'result')
+                if res == 'BALL':
+                    balls += 1
+                    if balls == 4:
+                        if curr_batter_id == player_id:
                             yearly_batting[year_key]["bb"] += 1
-                    elif res in ('STRIKE', 'STRIKE_LOOKING', 'STRIKE_SWINGING'):
-                        strikes += 1
-                        if strikes == 3:
+                        if curr_pitcher_id == player_id:
+                            yearly_pitching[year_key]["bb"] += 1
+                elif res in ('STRIKE', 'STRIKE_LOOKING', 'STRIKE_SWINGING'):
+                    strikes += 1
+                    if strikes == 3:
+                        if curr_batter_id == player_id:
                             yearly_batting[year_key]["ab"] += 1
                             yearly_batting[year_key]["so"] += 1
-                    elif res == 'FOUL':
-                        if strikes < 2:
-                            strikes += 1
-                elif etype == 'NOTICE':
-                    msg = _get_val(ev, 'message', '')
-                    if '홈런' in str(msg):
+                        if curr_pitcher_id == player_id:
+                            yearly_pitching[year_key]["so"] += 1
+                            yearly_pitching[year_key]["outs"] += 1
+                elif res == 'FOUL':
+                    if strikes < 2:
+                        strikes += 1
+                elif res in ('HIT_BY_PITCH', 'DEAD_BALL', 'HBP'):
+                    if curr_pitcher_id == player_id:
+                        yearly_pitching[year_key]["hbp"] += 1
+
+            elif etype == 'NOTICE':
+                msg = _get_val(ev, 'message', '')
+                if '홈런' in str(msg):
+                    if curr_batter_id == player_id:
                         yearly_batting[year_key]["ab"] += 1
                         yearly_batting[year_key]["hits"] += 1
                         yearly_batting[year_key]["homeruns"] += 1
                         yearly_batting[year_key]["tb"] += 4
                         yearly_batting[year_key]["rbi"] += 1
-                elif etype == 'BASE_RUN_RESULT':
-                    target_base = _get_val(ev, 'target_base')
-                    res = _get_val(ev, 'result')
-                    if res == 'OUT':
-                        yearly_batting[year_key]["ab"] += 1
-                    elif res == 'SAFE' and target_base and 1 <= target_base <= 3:
-                        yearly_batting[year_key]["ab"] += 1
-                        yearly_batting[year_key]["hits"] += 1
-                        yearly_batting[year_key]["tb"] += target_base
-
-            # 투수 입장 집계
-            if curr_pitcher_id == player_id:
-                if etype == 'PITCH':
-                    res = _get_val(ev, 'result')
-                    if res == 'BALL':
-                        # 투구 볼넷 여부는 투구수 누적 판별
-                        pass
-                    elif res in ('STRIKE', 'STRIKE_LOOKING', 'STRIKE_SWINGING'):
-                        pass
-                    elif res in ('DEAD_BALL', 'HBP'):
-                        yearly_pitching[year_key]["hbp"] += 1
-                elif etype == 'NOTICE':
-                    msg = _get_val(ev, 'message', '')
-                    if '홈런' in str(msg):
+                    if curr_pitcher_id == player_id:
                         yearly_pitching[year_key]["hits"] += 1
                         yearly_pitching[year_key]["homeruns"] += 1
                         yearly_pitching[year_key]["runs"] += 1
-                elif etype == 'BASE_RUN_RESULT':
-                    target_base = _get_val(ev, 'target_base')
-                    res = _get_val(ev, 'result')
+
+            elif etype == 'BASE_RUN_RESULT':
+                target_base = _get_val(ev, 'target_base')
+                res = _get_val(ev, 'result')
+                reason = _get_val(ev, 'reason')
+                runner_id = _get_val(ev, 'runner_id')
+
+                # 타자 주자의 인플레이 타구 결과 집계
+                if runner_id is None or runner_id == curr_batter_id:
                     if res == 'OUT':
-                        yearly_pitching[year_key]["outs"] += 1
-                    elif res == 'SAFE':
-                        if target_base and 1 <= target_base <= 3:
+                        if curr_batter_id == player_id:
+                            yearly_batting[year_key]["ab"] += 1
+                        if curr_pitcher_id == player_id:
+                            yearly_pitching[year_key]["outs"] += 1
+                    elif res == 'SAFE' and target_base and 1 <= target_base <= 3 and reason != 'WALK':
+                        if curr_batter_id == player_id:
+                            yearly_batting[year_key]["ab"] += 1
+                            yearly_batting[year_key]["hits"] += 1
+                            yearly_batting[year_key]["tb"] += target_base
+                        if curr_pitcher_id == player_id:
                             yearly_pitching[year_key]["hits"] += 1
-                        elif target_base == 4:
+                else:
+                    # 루상 주자의 진루/아웃 처리 (득점 또는 주루사)
+                    if res == 'OUT':
+                        if curr_pitcher_id == player_id:
+                            yearly_pitching[year_key]["outs"] += 1
+                    elif res == 'SAFE' and target_base == 4:
+                        if curr_pitcher_id == player_id:
                             yearly_pitching[year_key]["runs"] += 1
 
         if batter_participated:

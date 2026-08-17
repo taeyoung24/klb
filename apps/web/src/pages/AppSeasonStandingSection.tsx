@@ -46,7 +46,13 @@ export default function AppSeasonStandingSection({
 }: AppSeasonStandingSectionProps) {
   const { clubsMap, hostLeagueName, hostLeagueId } = useSystemContext();
 
-  const [activeLeague, setActiveLeague] = useState<'AL' | 'CL' | 'GL' | 'ML'>('AL')
+  const [activeLeague, setActiveLeague] = useState<'AL' | 'CL' | 'GL' | 'ML'>(() => {
+    const saved = localStorage.getItem('klb_standing_active_league');
+    if (saved && ['AL', 'CL', 'GL', 'ML'].includes(saved)) {
+      return saved as 'AL' | 'CL' | 'GL' | 'ML';
+    }
+    return 'AL';
+  });
   const [allStandings, setAllStandings] = useState<Record<'AL' | 'CL' | 'GL' | 'ML', DailyClubStanding[]>>({
     AL: [],
     CL: [],
@@ -55,7 +61,14 @@ export default function AppSeasonStandingSection({
   });
   const [isStandingsLoaded, setIsStandingsLoaded] = useState(false);
 
-  const [selectedStep, setSelectedStep] = useState<number>(1);
+  const [selectedStep, setSelectedStep] = useState<number>(() => {
+    const saved = localStorage.getItem('klb_standing_selected_step');
+    if (saved) {
+      const num = Number(saved);
+      if (num >= 1 && num <= 5) return num;
+    }
+    return 1;
+  });
   const [seedMap, setSeedMap] = useState<Record<number, string>>({});
   const [knockoutMatches, setKnockoutMatches] = useState<Match[]>([]);
   const [placeholders, setPlaceholders] = useState<MatchPlaceholder[]>([]);
@@ -218,9 +231,22 @@ export default function AppSeasonStandingSection({
     currentStep = 5;
   }
 
-  // 현재 날짜 단계가 바뀌면 자동으로 선택된 단계를 활성화
+  const handleSelectStep = (step: number) => {
+    setSelectedStep(step);
+    localStorage.setItem('klb_standing_selected_step', String(step));
+  };
+
+  const handleSelectLeague = (leagueCode: 'AL' | 'CL' | 'GL' | 'ML') => {
+    setActiveLeague(leagueCode);
+    localStorage.setItem('klb_standing_active_league', leagueCode);
+  };
+
+  // 저장된 사용자 선택이 없을 때만 현재 날짜 단계(currentStep)로 초기화
   useEffect(() => {
-    setSelectedStep(currentStep);
+    const saved = localStorage.getItem('klb_standing_selected_step');
+    if (!saved) {
+      setSelectedStep(currentStep);
+    }
   }, [currentStep]);
 
   // 5단계 토너먼트 대진 결과 집계 로직
@@ -411,27 +437,27 @@ export default function AppSeasonStandingSection({
         <div className={`progress-status ${isSectionLoaded ? 'loaded' : 'loading'}`}>
           <div className="progress-status__season-title">KLB {seasonYear}</div>
           <div className="progress-status__steps">
-            <div className={`progress-status__step progress-status__step--${selectedStep === 1 ? 'active' : 'inactive'} ${currentStep === 1 ? 'progress-status__step--current' : ''}`} onClick={() => setSelectedStep(1)}>
+            <div className={`progress-status__step progress-status__step--${selectedStep === 1 ? 'active' : 'inactive'} ${currentStep === 1 ? 'progress-status__step--current' : ''}`} onClick={() => handleSelectStep(1)}>
               <span className="progress-status__step-num">1</span>
               <span className="progress-status__step-text">정규리그 전반</span>
             </div>
             <div className="progress-status__connector"></div>
-            <div className={`progress-status__step progress-status__step--${selectedStep === 2 ? 'active' : 'inactive'} ${currentStep === 2 ? 'progress-status__step--current' : ''}`} onClick={() => setSelectedStep(2)}>
+            <div className={`progress-status__step progress-status__step--${selectedStep === 2 ? 'active' : 'inactive'} ${currentStep === 2 ? 'progress-status__step--current' : ''}`} onClick={() => handleSelectStep(2)}>
               <span className="progress-status__step-num">2</span>
               <span className="progress-status__step-text">인터리그</span>
             </div>
             <div className="progress-status__connector"></div>
-            <div className={`progress-status__step progress-status__step--${selectedStep === 3 ? 'active' : 'inactive'} ${currentStep === 3 ? 'progress-status__step--current' : ''}`} onClick={() => setSelectedStep(3)}>
+            <div className={`progress-status__step progress-status__step--${selectedStep === 3 ? 'active' : 'inactive'} ${currentStep === 3 ? 'progress-status__step--current' : ''}`} onClick={() => handleSelectStep(3)}>
               <span className="progress-status__step-num">3</span>
               <span className="progress-status__step-text">정규리그 후반</span>
             </div>
             <div className="progress-status__connector"></div>
-            <div className={`progress-status__step progress-status__step--${selectedStep === 4 ? 'active' : 'inactive'} ${currentStep === 4 ? 'progress-status__step--current' : ''}`} onClick={() => setSelectedStep(4)}>
+            <div className={`progress-status__step progress-status__step--${selectedStep === 4 ? 'active' : 'inactive'} ${currentStep === 4 ? 'progress-status__step--current' : ''}`} onClick={() => handleSelectStep(4)}>
               <span className="progress-status__step-num">4</span>
               <span className="progress-status__step-text">포스트 리그</span>
             </div>
             <div className="progress-status__connector"></div>
-            <div className={`progress-status__step progress-status__step--${selectedStep === 5 ? 'active' : 'inactive'} ${currentStep === 5 ? 'progress-status__step--current' : ''}`} onClick={() => setSelectedStep(5)}>
+            <div className={`progress-status__step progress-status__step--${selectedStep === 5 ? 'active' : 'inactive'} ${currentStep === 5 ? 'progress-status__step--current' : ''}`} onClick={() => handleSelectStep(5)}>
               <span className="progress-status__step-num">5</span>
               <span className="progress-status__step-text">포스트 파이널</span>
             </div>
@@ -545,7 +571,7 @@ export default function AppSeasonStandingSection({
                   <button
                     key={league.code}
                     className={`standings__tab ${activeLeague === league.code ? 'standings__tab--active' : ''}`}
-                    onClick={() => setActiveLeague(league.code)}
+                    onClick={() => handleSelectLeague(league.code)}
                   >
                     {league.code}
                   </button>

@@ -66,7 +66,18 @@ function App() {
   return (
     <>
       <header className="header">
-        <a href="#home" className="header__logo">
+        <a
+          href="#home"
+          className="header__logo"
+          onClick={(e) => {
+            if (window.location.hash === '#home' || window.location.hash === '') {
+              e.preventDefault()
+              window.location.reload()
+            } else {
+              window.location.hash = '#home'
+            }
+          }}
+        >
           <img className="header__logo-img" src="/klb-logo-256.svg" alt="KLB Logo" />
           <span className="header__logo-text">KLB</span>
         </a>
@@ -135,10 +146,21 @@ function App() {
       <footer className="footer">
         <div className="footer__container">
           <div className="footer__info">
-            <div className="footer__logo">
+            <a
+              href="#home"
+              className="footer__logo"
+              onClick={(e) => {
+                if (window.location.hash === '#home' || window.location.hash === '') {
+                  e.preventDefault()
+                  window.location.reload()
+                } else {
+                  window.location.hash = '#home'
+                }
+              }}
+            >
               <img className="footer__logo-img" src="/klb-logo-256.svg" alt="KLB Logo" />
               <span className="footer__logo-text">KLB</span>
-            </div>
+            </a>
             <p className="footer__desc">
               Krown League Baseball은 여러분의 역사를 간직합니다.
             </p>

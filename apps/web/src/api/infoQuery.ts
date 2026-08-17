@@ -11,6 +11,7 @@ export interface PlayerListItem {
   potential?: number;
   height?: number;
   weight?: number;
+  birthday?: string;
   region_id?: number;
   region?: Region | null;
   high_school_id?: number;
@@ -85,6 +86,8 @@ export interface InfoQueryPlayersParams {
   club_id?: number;
   position?: string;
   name?: string;
+  sort_by?: string;
+  order?: 'asc' | 'desc';
   page?: number;
   limit?: number;
 }

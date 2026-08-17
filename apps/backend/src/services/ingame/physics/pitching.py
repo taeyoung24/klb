@@ -63,30 +63,31 @@ def calculate_pitch_physics(
     power = pitcher.power
     control = pitcher.control
 
-    # 1. 구속 연산 (km/h)
-    max_fb_speed = 130.0 + (power / 1000.0) * 32.0
+    # 0. 피로도(Fatigue) 산출 (체력 40% 이하부터 점진적 피로 발생: 0.0 ~ 1.0)
+    max_energy = getattr(pitcher, "max_energy", 10000) or 10000
+    energy_ratio = max(0.0, min(1.0, pitcher.current_energy / max_energy))
+    fatigue = max(0.0, (0.40 - energy_ratio) / 0.40)  # 40% 이상: 0.0, 0% 방전: 1.0
+
+    # 1. 구속 연산 (km/h) - 피로 시 최대 5.0 km/h 감속
+    max_fb_speed = 130.0 + (power / 1000.0) * 32.0 - (fatigue * 5.0)
     speed_ratio = PITCH_SPEED_RATIO.get(pitch_selection.pitch_type, 0.90)
     speed_fluctuation = random.uniform(-1.5, 1.5)
     actual_velocity = round(max_fb_speed * speed_ratio + speed_fluctuation, 1)
 
-    # 2. 회전수 연산 (Spin Rate, RPM)
+    # 2. 회전수 연산 (Spin Rate, RPM) - 피로 시 최대 200 RPM 감소
     base_rpm = PITCH_BASE_SPIN_RPM.get(pitch_selection.pitch_type, 2000)
-    # 파워/제구 스탯 합산에 따른 회전수 추가 보정 (±300 RPM 범위)
-    stat_boost_rpm = int(((power + control) / 2000.0) * 350) - 175
+    stat_boost_rpm = int(((power + control) / 2000.0) * 350) - 175 - int(fatigue * 200)
     actual_spin_rate = max(1000, base_rpm + stat_boost_rpm + random.randint(-80, 80))
 
     # 3. 제구 및 탄착점 연산 (x, y 좌표)
-    # TODO: 향후 투수 투구수 누적 및 이닝 진행에 따른 체력(Stamina/Fatigue) 감쇄 물리 수식 추가 예정
     focus = pitcher.focus
     
-    # control 수치에 따른 탄착 분산 표준편차 연속 수식 연산 (control 1000 -> sigma 0.32, control 1 -> sigma 1.10)
-    sigma = 0.32 + (1.0 - control / 1000.0) * 0.78
+    # control 수치에 따른 탄착 분산 표준편차 (피로 시 최대 35% 산포도 증가)
+    base_sigma = 0.32 + (1.0 - control / 1000.0) * 0.78
+    sigma = base_sigma * (1.0 + fatigue * 0.35)
 
-    # focus(집중력) 수치에 따른 제구 실투 오차 변동 강화
-    focus_wildness = random.gauss(0, (1.0 - focus / 1000.0) * 0.45)
-
-
-
+    # focus(집중력) 수치 및 피로도에 따른 제구 실투 오차 변동
+    focus_wildness = random.gauss(0, (1.0 - focus / 1000.0) * 0.45 + (fatigue * 0.25))
 
     target_x, target_y = ZONE_COORDINATES.get(
         pitch_selection.target_zone, (0.0, 0.0)
@@ -96,7 +97,6 @@ def calculate_pitch_physics(
     actual_y = round(random.gauss(target_y + focus_wildness, sigma), 2)
 
     is_strike = (abs(actual_x) <= 1.0) and (abs(actual_y) <= 1.0)
-
 
     return PitchPhysicsResult(
         pitch_type=pitch_selection.pitch_type,

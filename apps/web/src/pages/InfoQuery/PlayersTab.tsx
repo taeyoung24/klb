@@ -3,6 +3,7 @@ import { fetchInfoQueryPlayers, type PlayerListItem } from '../../api/infoQuery'
 import type { Club } from '../../api/clubs'
 import { formatPosition } from '../../constants/positions'
 import { InfoQueryTable, type TableColumn } from '../../components/InfoQuery'
+import { useSystemContext } from '../../context/SystemContext'
 
 const ITEMS_PER_PAGE = 20
 
@@ -19,6 +20,16 @@ const POSITION_OPTIONS = [
   'DESIGNATED_HITTER',
 ]
 
+const SORT_OPTIONS = [
+  { value: 'id', label: '기본 등록순' },
+  { value: 'name', label: '이름순' },
+  { value: 'age', label: '나이순' },
+  { value: 'uniform_number', label: '배번순' },
+  { value: 'height', label: '신장순' },
+  { value: 'weight', label: '체중순' },
+  { value: 'potential', label: '잠재력순' },
+]
+
 export interface PlayersTabProps {
   clubs: Club[]
   clubsMap: Record<number, Club>
@@ -26,9 +37,12 @@ export interface PlayersTabProps {
 }
 
 export const PlayersTab: React.FC<PlayersTabProps> = ({ clubs, clubsMap, onSelectPlayer }) => {
+  const { currentDate } = useSystemContext()
   const [players, setPlayers] = useState<PlayerListItem[]>([])
   const [selectedClubId, setSelectedClubId] = useState<string>('all')
   const [selectedPosition, setSelectedPosition] = useState<string>('all')
+  const [sortBy, setSortBy] = useState<string>('id')
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc')
   const [searchInput, setSearchInput] = useState<string>('')
   const [appliedSearchName, setAppliedSearchName] = useState<string>('')
   const [currentPage, setCurrentPage] = useState<number>(1)
@@ -47,6 +61,8 @@ export const PlayersTab: React.FC<PlayersTabProps> = ({ clubs, clubsMap, onSelec
           club_id: selectedClubId !== 'all' ? Number(selectedClubId) : undefined,
           position: selectedPosition !== 'all' ? selectedPosition : undefined,
           name: appliedSearchName !== '' ? appliedSearchName : undefined,
+          sort_by: sortBy,
+          order: sortOrder,
           page: currentPage,
           limit: ITEMS_PER_PAGE,
         })
@@ -71,12 +87,12 @@ export const PlayersTab: React.FC<PlayersTabProps> = ({ clubs, clubsMap, onSelec
     return () => {
       isMounted = false
     }
-  }, [selectedClubId, selectedPosition, appliedSearchName, currentPage])
+  }, [selectedClubId, selectedPosition, appliedSearchName, sortBy, sortOrder, currentPage])
 
-  // 필터 조건 변경 시 1페이지로 리셋
+  // 필터나 정렬 조건 변경 시 1페이지로 리셋
   useEffect(() => {
     setCurrentPage(1)
-  }, [selectedClubId, selectedPosition, appliedSearchName])
+  }, [selectedClubId, selectedPosition, appliedSearchName, sortBy, sortOrder])
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -89,6 +105,19 @@ export const PlayersTab: React.FC<PlayersTabProps> = ({ clubs, clubsMap, onSelec
     } else {
       window.location.hash = `#info/players/${p.id}`
     }
+  }
+
+  const formatAge = (birthday?: string) => {
+    if (!birthday) return '-'
+    const birth = new Date(birthday)
+    if (isNaN(birth.getTime())) return '-'
+    const now = currentDate || new Date(1953, 0, 1)
+    let age = now.getFullYear() - birth.getFullYear()
+    const m = now.getMonth() - birth.getMonth()
+    if (m < 0 || (m === 0 && now.getDate() < birth.getDate())) {
+      age--
+    }
+    return age >= 0 ? `만 ${age}세` : '-'
   }
 
   // 컬럼 정의
@@ -106,13 +135,19 @@ export const PlayersTab: React.FC<PlayersTabProps> = ({ clubs, clubsMap, onSelec
         header: '이름',
         bold: true,
         render: (p) => (
-          <span
+          <a
+            href={`#info/players/${p.id}`}
             className="info-query__name-link"
             title={`${p.name} 선수 상세정보 조회`}
-            onClick={() => handlePlayerClick(p)}
+            onClick={(e) => {
+              if (e.button === 0 && !e.ctrlKey && !e.metaKey && !e.shiftKey && !e.altKey) {
+                e.preventDefault()
+                handlePlayerClick(p)
+              }
+            }}
           >
             {p.name}
-          </span>
+          </a>
         ),
       },
       {
@@ -125,6 +160,12 @@ export const PlayersTab: React.FC<PlayersTabProps> = ({ clubs, clubsMap, onSelec
         header: '포지션',
         align: 'center',
         render: (p) => <span className="info-query__badge">{formatPosition(p.position)}</span>,
+      },
+      {
+        key: 'age',
+        header: '나이',
+        align: 'center',
+        render: (p) => formatAge(p.birthday),
       },
       {
         key: 'physical',
@@ -185,6 +226,46 @@ export const PlayersTab: React.FC<PlayersTabProps> = ({ clubs, clubsMap, onSelec
                   {formatPosition(pos)}
                 </option>
               ))}
+            </select>
+          </div>
+
+          <div>
+            <label htmlFor="sort-select" className="info-query__label">
+              정렬:{' '}
+            </label>
+            <select
+              id="sort-select"
+              className="info-query__select"
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+            >
+              {SORT_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+            <select
+              id="order-select"
+              className="info-query__select"
+              style={{ marginLeft: '4px' }}
+              value={sortOrder}
+              onChange={(e) => setSortOrder(e.target.value as 'asc' | 'desc')}
+            >
+              <option value="asc">
+                {sortBy === 'name'
+                  ? '가나다순 (▲)'
+                  : sortBy === 'age'
+                    ? '어린순 (▲)'
+                    : '오름차순 (▲)'}
+              </option>
+              <option value="desc">
+                {sortBy === 'name'
+                  ? '역순 (▼)'
+                  : sortBy === 'age'
+                    ? '많은순 (▼)'
+                    : '내림차순 (▼)'}
+              </option>
             </select>
           </div>
         </div>

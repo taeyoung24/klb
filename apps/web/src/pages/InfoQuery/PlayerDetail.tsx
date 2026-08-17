@@ -213,7 +213,7 @@ export const PlayerDetail: React.FC<PlayerDetailProps> = ({
     if (isNaN(birth.getTime())) return '-'
 
     const dateStr = `${birth.getFullYear()}년 ${birth.getMonth() + 1}월 ${birth.getDate()}일`
-    const now = currentDate || new Date()
+    const now = currentDate || new Date(1953, 0, 1)
 
     let age = now.getFullYear() - birth.getFullYear()
     const m = now.getMonth() - birth.getMonth()
