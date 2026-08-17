@@ -199,7 +199,7 @@ def play_live_simulation(match: Match, update_interval: float = 0.1, speed: floa
 
             elif isinstance(evt, IngamePitchEvent):
                 p_res = evt.result.value if hasattr(evt.result, "value") else str(evt.result)
-                res_str = str(p_res).upper()
+                res_str = p_res.upper()
                 if "STRIKE" in res_str:
                     strikes += 1
                 elif "BALL" in res_str:
@@ -229,7 +229,7 @@ def play_live_simulation(match: Match, update_interval: float = 0.1, speed: floa
 
             elif isinstance(evt, IngameBaseRunResultEvent):
                 run_res = evt.result.value if hasattr(evt.result, "value") else str(evt.result)
-                res_upper = str(run_res).upper()
+                res_upper = run_res.upper()
                 runner_str = get_player_display_name(evt.runner_id, player_map)
 
                 if "OUT" in res_upper:

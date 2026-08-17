@@ -9,7 +9,7 @@ KLB 코어 시뮬레이션 엔진 (Core Simulation Engine)
 import datetime
 from typing import NamedTuple
 from sqlmodel import Session, select, asc, desc, func, col
-from src.models import WorldState, Match, Club, League, DailyClubStanding, MatchPlaceholder
+from src.models import WorldState, Match, Club, League, DailyClubStanding, MatchPlaceholder, Player
 from src.enums import MatchStatus, MatchStage
 from src.services.schedule_utils import (
     generate_regular_schedule,
@@ -18,8 +18,9 @@ from src.services.schedule_utils import (
     save_knockout_placeholders,
     generate_tiebreaker_schedule,
     update_knockout_placeholders_realtime,
+    determine_series_home_away,
 )
-from src.services.ingame import run_match
+from src.services.ingame import run_match, recover_player_energy_daily
 from src.services.standing import (
     update_daily_standings,
     apply_tiebreaker_rules_to_standings,
@@ -34,7 +35,10 @@ from src.services.roster_management import (
     process_season_end_retirements,
     process_season_end_releases,
     process_pre_draft_releases,
+    process_annual_player_progression,
 )
+from src.services.front_office.trade import process_daily_trade_market
+from src.services.front_office.free_agency import process_daily_fa_market
 from src.utils.logger import logger
 
 
@@ -365,9 +369,13 @@ def _check_and_run_admin_tasks(session: Session, sim_day: int) -> None:
                     continue
                 for offset, g_num in essential_semi_games:
                     target_sim_day = semi_start_day + offset
-                    is_home = g_num in [1, 2, 5]
-                    actual_home = s.home_club_id if is_home else s.away_club_id
-                    actual_away = s.away_club_id if is_home else s.home_club_id
+                    actual_home, actual_away = determine_series_home_away(
+                        s.home_club_id, s.away_club_id,
+                        game_num=g_num,
+                        advantage_game_nums=[1, 2, 5],
+                        session=session,
+                        sim_day=sim_day
+                    )
                     if not actual_home or not actual_away:
                         continue
                     h_club = session.get(Club, actual_home)
@@ -425,9 +433,13 @@ def _check_and_run_admin_tasks(session: Session, sim_day: int) -> None:
             a_wins = len(s_matches) - h_wins
 
             if h_wins < 3 and a_wins < 3:
-                is_home = game_num in [1, 2, 5]
-                actual_home = s.home_club_id if is_home else s.away_club_id
-                actual_away = s.away_club_id if is_home else s.home_club_id
+                actual_home, actual_away = determine_series_home_away(
+                    s.home_club_id, s.away_club_id,
+                    game_num=game_num,
+                    advantage_game_nums=[1, 2, 5],
+                    session=session,
+                    sim_day=sim_day
+                )
                 h_club = session.get(Club, actual_home)
                 m = Match(
                     home_club_id=actual_home,
@@ -470,24 +482,29 @@ def _check_and_run_admin_tasks(session: Session, sim_day: int) -> None:
             # 결승전 (Final Bo7) 필수 1, 2, 3차전 Match 사전 생성
             final_start_day = semi_start_day + 8
             essential_final_games = [(0, 1), (1, 2), (2, 3)]  # (offset, game_num)
-            for offset, g_num in essential_final_games:
-                target_sim_day = final_start_day + offset
-                is_home = g_num in [1, 2, 3, 7]
-                actual_home = f_node.home_club_id if is_home else f_node.away_club_id
-                actual_away = f_node.away_club_id if is_home else f_node.home_club_id
-                if not actual_home or not actual_away:
-                    continue
-                h_club = session.get(Club, actual_home)
-                m = Match(
-                    home_club_id=actual_home,
-                    away_club_id=actual_away,
-                    stadium_id=h_club.home_stadium_id if h_club else None,
-                    sim_day=target_sim_day,
-                    status=MatchStatus.SCHEDULED,
-                    stage=MatchStage.KNOCKOUT,
-                    limit_extra_innings=False
-                )
-                session.add(m)
+            if f_node.home_club_id and f_node.away_club_id:
+                for offset, g_num in essential_final_games:
+                    target_sim_day = final_start_day + offset
+                    actual_home, actual_away = determine_series_home_away(
+                        f_node.home_club_id, f_node.away_club_id,
+                        game_num=g_num,
+                        advantage_game_nums=[1, 2, 3, 7],
+                        session=session,
+                        sim_day=sim_day
+                    )
+                    if not actual_home or not actual_away:
+                        continue
+                    h_club = session.get(Club, actual_home)
+                    m = Match(
+                        home_club_id=actual_home,
+                        away_club_id=actual_away,
+                        stadium_id=h_club.home_stadium_id if h_club else None,
+                        sim_day=target_sim_day,
+                        status=MatchStatus.SCHEDULED,
+                        stage=MatchStage.KNOCKOUT,
+                        limit_extra_innings=False
+                    )
+                    session.add(m)
 
             session.commit()
             logger.info(">>> 녹아웃 4강전 완주 ➔ 결승전(Krown Series) 대진표 확정 및 1~3차전 사전 매치 등록")
@@ -527,9 +544,13 @@ def _check_and_run_admin_tasks(session: Session, sim_day: int) -> None:
             a_wins = len(f_matches) - h_wins
 
             if h_wins < 4 and a_wins < 4:
-                is_home = game_num in [1, 2, 3, 7]
-                actual_home = f_node.home_club_id if is_home else f_node.away_club_id
-                actual_away = f_node.away_club_id if is_home else f_node.home_club_id
+                actual_home, actual_away = determine_series_home_away(
+                    f_node.home_club_id, f_node.away_club_id,
+                    game_num=game_num,
+                    advantage_game_nums=[1, 2, 3, 7],
+                    session=session,
+                    sim_day=sim_day
+                )
                 h_club = session.get(Club, actual_home)
                 m = Match(
                     home_club_id=actual_home,
@@ -561,6 +582,16 @@ def _check_and_run_admin_tasks(session: Session, sim_day: int) -> None:
         process_season_end_retirements(session, year=current_date.year, sim_day=sim_day)
         process_season_end_releases(session, year=current_date.year, sim_day=sim_day)
 
+    # 7. 매년 마지막 날(12월 31일): 연간 에이징 커브 스텝업/다운 처리 (Annual Progression & Regression)
+    if current_date.month == 12 and current_date.day == 31:
+        logger.info(f"[{current_date.year}년 연말 결산] 전 선수 연간 에이징 커브 스텝업/다운 처리 진행 (Sim Day: {sim_day})")
+        process_annual_player_progression(session, year=current_date.year, sim_day=sim_day)
+
+    # 8. 일일 상호 협의 트레이드(Trade) 및 FA 영입 시장 체크
+    is_ps_ended = f_node is not None and sim_day > f_node.sim_day
+    process_daily_trade_market(session, year=current_date.year, sim_day=sim_day, current_date=current_date, is_postseason_ended=is_ps_ended)
+    process_daily_fa_market(session, year=current_date.year, sim_day=sim_day, current_date=current_date, is_postseason_ended=is_ps_ended)
+
 
 def _run_scheduled_matches(session: Session, sim_day: int) -> None:
     """
@@ -575,6 +606,12 @@ def _run_scheduled_matches(session: Session, sim_day: int) -> None:
 
     if matches:
         for match in matches:
+            away_club = session.get(Club, match.away_club_id)
+            home_club = session.get(Club, match.home_club_id)
+            away_abbr = away_club.abbr_name if away_club and away_club.abbr_name else (away_club.name if away_club else f"Club#{match.away_club_id}")
+            home_abbr = home_club.abbr_name if home_club and home_club.abbr_name else (home_club.name if home_club else f"Club#{match.home_club_id}")
+
+            logger.info(f"  [Match {match.id:>4}] {away_abbr:>15} vs {home_abbr:<15} 진행 중...")
             run_match(match, session=session)
             session.add(match)
         session.commit()
@@ -637,7 +674,47 @@ def _update_standings_and_rankings(session: Session, sim_day: int) -> None:
                 elite_start_day=elite_start_day,
                 host_league_id=host_league_id,
                 playoff_club_ids=playoff_club_ids,
+                regular_max_day=max_regular_day,
+                elite_matches=elite_matches,
             )
+
+
+def _recover_daily_energy(session: Session, sim_day: int) -> None:
+    """
+    23:59 시각: 하루가 마감될 때 모든 선수의 일일 자연 체력 회복을 수행합니다.
+    - 미출전/휴식 선수: +1800 회복 (4~5일 휴식 시 100% 완충)
+    - 출전 타자: +450 회복
+    - 등판 투수: +300 회복
+    - 원정(Away) 경기 구단 선수: 회복량의 70%(AWAY_RECOVERY_RATIO)만 적용
+    """
+    # 1. 당일 완료된 경기 조회 및 홈/원정 구단 ID 수집
+    today_matches = session.exec(
+        select(Match)
+        .where(Match.sim_day == sim_day)
+        .where(Match.status == MatchStatus.COMPLETED)
+    ).all()
+
+    home_club_ids = {m.home_club_id for m in today_matches}
+    away_club_ids = {m.away_club_id for m in today_matches}
+    played_club_ids = home_club_ids | away_club_ids
+
+    # 2. 모든 등록 선수 조회 후 체력 회복
+    all_players = session.exec(select(Player)).all()
+    for player in all_players:
+        if player.current_energy >= player.max_energy:
+            continue
+
+        is_away = player.club_id in away_club_ids
+        participated = player.club_id in played_club_ids
+        is_pitcher = (player.position == "PITCHER")
+
+        recover_player_energy_daily(
+            player,
+            participated=participated,
+            is_pitcher=is_pitcher,
+            is_away=is_away,
+        )
+        session.add(player)
 
 
 # ==============================================================================
@@ -669,7 +746,8 @@ def step_simulation_day(session: Session) -> None:
     # 3. 22:00 일일 순위표 및 기록 정산
     _update_standings_and_rankings(session, sim_day)
 
-    # 4. 23:59 일일 마감 및 WorldState 시각 1일 진전
+    # 4. 23:59 일일 마감, 선수 체력 자연 회복 및 WorldState 시각 1일 진전
+    _recover_daily_energy(session, sim_day)
     world_state.current_sim_day = sim_day + 1
     session.add(world_state)
     session.commit()

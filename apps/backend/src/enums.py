@@ -85,9 +85,12 @@ class IngamePitchType(StrEnum):
 
 
 class IngamePitchResult(StrEnum):
-    """배트 비접촉 투구 결과"""
+    """투구 결과"""
     STRIKE            = "STRIKE"
+    STRIKE_SWINGING   = "STRIKE_SWINGING"
     BALL              = "BALL"
+    FOUL              = "FOUL"
+    IN_PLAY           = "IN_PLAY"
     HIT_BY_PITCH      = "HIT_BY_PITCH"
     WILD_PITCH        = "WILD_PITCH"
     INTENTIONAL_WALK  = "INTENTIONAL_WALK"
@@ -102,16 +105,23 @@ class IngameContactType(StrEnum):
 
 class IngameFieldingAction(StrEnum):
     """수비 액션 타입"""
-    CATCH  = "CATCH"
-    ERROR  = "ERROR"
-    DROP   = "DROP"
+    FLY_CATCH     = "FLY_CATCH"     # 공중 뜬공 포구 (플라이 아웃)
+    GROUND_CATCH  = "GROUND_CATCH"  # 지면 바운드 타구 포구
+    CATCH         = "CATCH"         # 일반 포구
+    ERROR         = "ERROR"         # 수비 실책
+    DROP          = "DROP"          # 포구 실패 / 낙구
 
 
 class IngameBaseRunReason(StrEnum):
     """진루 시작 원인"""
-    STEAL    = "STEAL"
-    HIT_RUN  = "HIT_RUN"
-    TAG_UP   = "TAG_UP"
+    STEAL         = "STEAL"          # 도루 시도
+    HIT_RUN       = "HIT_RUN"        # 안타/인플레이 타구 진루
+    HOMERUN       = "HOMERUN"        # 홈런 진루
+    WALK          = "WALK"           # 볼넷 강제 진루
+    HIT_BY_PITCH  = "HIT_BY_PITCH"   # 사구 강제 진루
+    ERROR         = "ERROR"          # 수비 실책으로 인한 진루
+    WILD_PITCH    = "WILD_PITCH"     # 폭투/낫아웃 진루
+    TAG_UP        = "TAG_UP"         # 뜬공 포구 후 태그업 진루
 
 
 class IngameBaseRunResult(StrEnum):

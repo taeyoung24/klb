@@ -104,7 +104,7 @@ def calculate_fielding_physics(
             is_caught_in_air = False
         else:
             # 공중 포구 완벽 성공 (Fly Out)
-            fielding_action = IngameFieldingAction.CATCH
+            fielding_action = IngameFieldingAction.FLY_CATCH
             is_caught_in_air = True
             fumble_delay_sec = 0.0
 
@@ -118,7 +118,7 @@ def calculate_fielding_physics(
             fielding_action = IngameFieldingAction.ERROR
             fumble_delay_sec = round(random.uniform(0.7, 1.6), 2)  # 더듬거리느라 1초 내외 추가 지연
         else:
-            fielding_action = IngameFieldingAction.CATCH
+            fielding_action = IngameFieldingAction.GROUND_CATCH
             fumble_delay_sec = 0.0
 
     # 3. 송구 도달 시간 (throw_time_sec) 연산

@@ -111,6 +111,26 @@ def get_season_calendar_events(session: Session, year: int) -> list[CalendarEven
                 event_type="SEASON_EVENT"
             ))
 
+        # 3-4. 트레이드 마감일 (7월 31일)
+        trade_deadline_date = datetime.date(year, 7, 31)
+        trade_deadline_sim_day = date_obj_to_sim_day(trade_deadline_date)
+        events.append(CalendarEvent(
+            date=trade_deadline_date.strftime("%Y-%m-%d"),
+            sim_day=trade_deadline_sim_day,
+            label="트레이드 마감일",
+            event_type="SEASON_EVENT"
+        ))
+
+        # 3-5. 신인 드래프트 (10월 첫째 주 월요일)
+        draft_date = get_first_monday_of_october(year)
+        draft_sim_day = date_obj_to_sim_day(draft_date)
+        events.append(CalendarEvent(
+            date=draft_date.strftime("%Y-%m-%d"),
+            sim_day=draft_sim_day,
+            label="신인 드래프트",
+            event_type="SEASON_EVENT"
+        ))
+
     # 4. 크라운 정예리그 (EL: Elite League) (스칼라 sim_day 쿼리로 경량화)
     elite_sim_days = session.exec(
         select(Match.sim_day)
@@ -279,7 +299,7 @@ def get_season_calendar_events(session: Session, year: int) -> list[CalendarEven
         all_busy_days.add(e.sim_day)
 
     if reg_sim_days and last_season_day:
-        season_first_day = reg_days[0]
+        season_first_day = min(reg_sim_days)
         for s_day in range(season_first_day, last_season_day + 1):
             if s_day not in all_busy_days:
                 s_date = sim_day_to_date(s_day)

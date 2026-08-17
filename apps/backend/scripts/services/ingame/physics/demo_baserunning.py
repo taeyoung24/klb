@@ -10,10 +10,10 @@ from src.services.ingame.physics import (
 )
 
 
-def create_runner(name: str, speed: int, focus: int, flexibility: int) -> Player:
+def create_runner(name: str, speed: int, focus: int, flexibility: int, stamina: int = 500) -> Player:
     return Player(
         id=1, name=name, club_id=1, uniform_number="7", speed=speed, control=500, power=500,
-        flexibility=flexibility, focus=focus, roster_status=RosterStatus.ACTIVE,
+        flexibility=flexibility, focus=focus, stamina=stamina, roster_status=RosterStatus.ACTIVE,
         position=IngameRole.CENTER_FIELD, personality=[1], birthday=datetime(1998, 1, 1),
         height=180.0, weight=75.0
     )

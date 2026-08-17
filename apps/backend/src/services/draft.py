@@ -109,7 +109,7 @@ def evaluate_prospect_for_club(club: Club, prospect: Player, club_roster: list[P
     - 포지션 가중치: 구단 현 로스터 내 해당 포지션 인원 빈곤도 보정
     """
     # TODO: 추후 고교 리그 공식 성적, 스카우팅 리포트 및 NN AI 지표 반영 예정 (Antigravity)
-    base_score = float(prospect.speed + prospect.control + prospect.power + prospect.flexibility + prospect.focus)
+    base_score = float(prospect.speed + prospect.control + prospect.power + prospect.flexibility + prospect.focus + prospect.stamina)
 
     # 포지션별 현 로스터 인원 파악
     pos_count = sum(1 for p in club_roster if p.position == prospect.position)

@@ -23,6 +23,7 @@ def main():
         power=850,
         flexibility=500,
         focus=500,
+        stamina=500,
         roster_status=RosterStatus.ACTIVE,
         position=IngameRole.PITCHER,
         personality=[1],
@@ -43,6 +44,7 @@ def main():
             power=960,   # 최상급 장타력 (강력한 타구속도)
             flexibility=500,
             focus=650,   # 보통 집중력
+            stamina=500,
             roster_status=RosterStatus.ACTIVE,
             position=IngameRole.THIRD_BASE,
             personality=[1],
@@ -60,6 +62,7 @@ def main():
             power=620,   # 보통 파워
             flexibility=700,
             focus=950,   # 극상의 선구안 & 스윗스폿 정타 능력
+            stamina=500,
             roster_status=RosterStatus.ACTIVE,
             position=IngameRole.SHORT_STOP,
             personality=[2],
@@ -77,6 +80,7 @@ def main():
             power=380,   # 약한 파워
             flexibility=400,
             focus=420,   # 낮은 정타율 및 잦은 빗맞음
+            stamina=500,
             roster_status=RosterStatus.ACTIVE,
             position=IngameRole.CATCHER,
             personality=[3],

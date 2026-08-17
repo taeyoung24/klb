@@ -31,24 +31,24 @@ def main():
     # 2. 테스트 투수 및 타자
     pitcher = Player(
         id=10, name="Pitcher (152km/h)", club_id=1, uniform_number="1", speed=500, control=750, power=850,
-        flexibility=500, focus=500, roster_status=RosterStatus.ACTIVE, position=IngameRole.PITCHER,
+        flexibility=500, focus=500, stamina=500, roster_status=RosterStatus.ACTIVE, position=IngameRole.PITCHER,
         personality=[1], birthday=datetime(1995, 1, 1), height=185.0, weight=85.0
     )
 
     batters = [
         ("Choi Power (Slugger / Power 960)", Player(
             id=1, name="Choi Power", club_id=1, uniform_number="55", speed=400, control=500, power=960,
-            flexibility=500, focus=700, roster_status=RosterStatus.ACTIVE, position=IngameRole.THIRD_BASE,
+            flexibility=500, focus=700, stamina=500, roster_status=RosterStatus.ACTIVE, position=IngameRole.THIRD_BASE,
             personality=[1], birthday=datetime(1996, 4, 15), height=190.0, weight=100.0
         )),
         ("Son Contact (Contact Master / Power 650)", Player(
             id=2, name="Son Contact", club_id=1, uniform_number="7", speed=800, control=500, power=650,
-            flexibility=700, focus=950, roster_status=RosterStatus.ACTIVE, position=IngameRole.SHORT_STOP,
+            flexibility=700, focus=950, stamina=500, roster_status=RosterStatus.ACTIVE, position=IngameRole.SHORT_STOP,
             personality=[2], birthday=datetime(1999, 7, 22), height=178.0, weight=75.0
         )),
         ("Kang Weak (Weak Batter / Power 380)", Player(
             id=3, name="Kang Weak", club_id=1, uniform_number="99", speed=450, control=500, power=380,
-            flexibility=400, focus=420, roster_status=RosterStatus.ACTIVE, position=IngameRole.CATCHER,
+            flexibility=400, focus=420, stamina=500, roster_status=RosterStatus.ACTIVE, position=IngameRole.CATCHER,
             personality=[3], birthday=datetime(2002, 10, 1), height=175.0, weight=72.0
         )),
     ]

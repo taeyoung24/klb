@@ -21,3 +21,7 @@ dependencies = [
     "sqlmodel>=0.0.39",
     "uvicorn>=0.51.0",
 ]
+
+[tool.pyrefly]
+search_path = ["."]
+

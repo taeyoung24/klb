@@ -30,6 +30,7 @@ def create_defense_lineup(team_name: str, base_stat: int) -> list[Player]:
             power=base_stat,
             flexibility=base_stat,
             focus=base_stat,
+            stamina=base_stat,
             roster_status=RosterStatus.ACTIVE,
             position=role,
             personality=[1],
@@ -53,7 +54,7 @@ def main():
     pitcher = gold_glove_team[0]
     batter = Player(
         id=1, name="Batter", club_id=2, uniform_number="55", speed=600, control=500, power=850,
-        flexibility=500, focus=750, roster_status=RosterStatus.ACTIVE, position=IngameRole.THIRD_BASE,
+        flexibility=500, focus=750, stamina=500, roster_status=RosterStatus.ACTIVE, position=IngameRole.THIRD_BASE,
         personality=[1], birthday=datetime(1996, 4, 15), height=188.0, weight=92.0
     )
 
