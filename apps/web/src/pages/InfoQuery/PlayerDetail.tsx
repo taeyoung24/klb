@@ -225,7 +225,7 @@ export const PlayerDetail: React.FC<PlayerDetailProps> = ({
     return `${dateStr}${ageStr}`
   }
 
-  // 주요 6대 스탯 목록
+  // 주요 능력치 스탯 목록
   const mainStats = [
     { label: '주력 (Speed)', value: player?.speed ?? 500, desc: '주루 속도 및 도루 능력' },
     { label: '제구 / 제어 (Control)', value: player?.control ?? 500, desc: '신체 제어 및 투구 제구력' },
@@ -233,6 +233,7 @@ export const PlayerDetail: React.FC<PlayerDetailProps> = ({
     { label: '유연성 (Flexibility)', value: player?.flexibility ?? 500, desc: '부상 방지 및 수비 반경' },
     { label: '집중력 (Focus)', value: player?.focus ?? 500, desc: '경기 상황별 보정 능력' },
     { label: '지구력 (Stamina)', value: player?.stamina ?? 500, desc: '이닝 소화 및 체력 소진 억제' },
+    { label: '잠재력 (Potential)', value: player?.potential ?? 500, desc: '연간 스탯 성장 및 에이징 커브 보정 계수' },
   ]
 
   // 에너지 퍼센티지

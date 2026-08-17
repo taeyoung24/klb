@@ -8,6 +8,7 @@ export interface PlayerListItem {
   club_id: number;
   uniform_number: string;
   position: string;
+  potential?: number;
   height?: number;
   weight?: number;
   region_id?: number;
@@ -61,6 +62,7 @@ export interface PlayerDetailInfo {
   flexibility?: number;
   focus?: number;
   stamina?: number;
+  potential?: number;
   current_energy?: number;
   max_energy?: number;
   height?: number;

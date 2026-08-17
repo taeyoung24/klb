@@ -124,6 +124,9 @@ class Player(SQLModel, table=True):
     focus: int        = Field(ge=1, le=1000) # 집중력 (버프/디버프 계수)
     stamina: int      = Field(ge=1, le=1000) # 지구력 (체력 소진 억제)
 
+    # 선수 고유 불변 잠재력 계수 (0 ~ 1000, 에이징 커브 연간 스텝업/다운 가중치)
+    potential: int    = Field(default=500, ge=0, le=1000)
+
     # 실시간 체력 및 최대 체력
     current_energy: int = Field(default=10000, ge=0) # 현재 체력/에너지 (경기 시뮬레이션 소진/회복)
     max_energy: int     = Field(default=10000, ge=1) # 최대 체력/에너지

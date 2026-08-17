@@ -34,6 +34,7 @@ from src.services.roster_management import (
     process_season_end_retirements,
     process_season_end_releases,
     process_pre_draft_releases,
+    process_annual_player_progression,
 )
 from src.utils.logger import logger
 
@@ -560,6 +561,11 @@ def _check_and_run_admin_tasks(session: Session, sim_day: int) -> None:
         logger.info(f"[{current_date.year}시즌 종료 행정] 은퇴 및 1차 방출 처리 진행")
         process_season_end_retirements(session, year=current_date.year, sim_day=sim_day)
         process_season_end_releases(session, year=current_date.year, sim_day=sim_day)
+
+    # 7. 매년 마지막 날(12월 31일): 연간 에이징 커브 스텝업/다운 처리 (Annual Progression & Regression)
+    if current_date.month == 12 and current_date.day == 31:
+        logger.info(f"[{current_date.year}년 연말 결산] 전 선수 연간 에이징 커브 스텝업/다운 처리 진행 (Sim Day: {sim_day})")
+        process_annual_player_progression(session, year=current_date.year, sim_day=sim_day)
 
 
 def _run_scheduled_matches(session: Session, sim_day: int) -> None:

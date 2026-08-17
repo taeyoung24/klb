@@ -45,19 +45,20 @@ def generate_stats(height: float, weight: float, general: bool = False) -> dict:
     size_factor = (height - 175) * 0.01 + (weight - 75) * 0.01
     weight_factor = (78 - weight) * 0.01
 
-    w_power = max(0.1, random.uniform(0.5, 1.5) + size_factor)
-    w_speed = max(0.1, random.uniform(0.5, 1.5) + weight_factor)
-    w_control = random.uniform(0.5, 1.5)
-    w_flexibility = random.uniform(0.5, 1.5)
-    w_focus = random.uniform(0.5, 1.5)
-    w_stamina = random.uniform(0.5, 1.5)
+    # 피지컬 조건에 따른 성향 보정치 + 가중치 범위 대폭 확장 (0.1 ~ 3.0)
+    w_power = max(0.05, random.uniform(0.1, 3.0) + size_factor)
+    w_speed = max(0.05, random.uniform(0.1, 3.0) + weight_factor)
+    w_control = max(0.05, random.uniform(0.1, 3.0))
+    w_flexibility = max(0.05, random.uniform(0.1, 3.0))
+    w_focus = max(0.05, random.uniform(0.1, 3.0))
+    w_stamina = max(0.05, random.uniform(0.1, 3.0))
 
     weights = [w_speed, w_control, w_power, w_flexibility, w_focus, w_stamina]
     total_weight = sum(weights)
 
     # 3. 비율 기반 스탯 분배
     raw_values = [w / total_weight * total_stat for w in weights]
-    stat_values = [int(round(v)) for v in raw_values]
+    stat_values = [round(v) for v in raw_values]
 
     # 최소/최대 스탯 안전범위 지정 (100 ~ 950)
     for i in range(6):
@@ -118,21 +119,31 @@ def generate_player(
     # 3. 포지션 설정
     final_pos = position if position is not None else random.choice(PRIMARY_POSITIONS)
 
-    # 4. 신장 및 체중 (투수 vs 야수)
+    # 4. 신장 및 체중 (투수 vs 야수 및 정규분포 적용)
     is_pitcher = final_pos == IngameRole.PITCHER
-    base_height = 178 if is_pitcher else 175
-    base_weight = 80 if is_pitcher else 75
+    mean_height = 183.0 if is_pitcher else 179.0
+    mean_weight = 85.0 if is_pitcher else 80.0
 
-    height = float(base_height + int((random.random() - 0.5) * 20))
-    weight = float(base_weight + int((random.random() - 0.5) * 20))
+    # 신장: 가우시안 분포 (표준편차 6.5cm, 163cm ~ 205cm 범위 클램핑)
+    raw_height = random.gauss(mean_height, 6.5)
+    height = round(max(163.0, min(205.0, raw_height)), 1)
+
+    # 체중: 신장 연동 보정치 + 가우시안 분포 (60kg ~ 125kg 범위 클램핑)
+    height_delta = height - mean_height
+    raw_weight = random.gauss(mean_weight + height_delta * 0.75, 6.0)
+    weight = round(max(60.0, min(125.0, raw_weight)), 1)
 
     # 5. 스탯 생성
     stats = generate_stats(height, weight, general=general)
 
-    # 6. 인격(personality)
+    # 6. 잠재력(potential) 생성 (0 ~ 1000, 정규분포 평균 500, 표준편차 160)
+    raw_potential = int(random.gauss(500, 160))
+    potential = max(50, min(980, raw_potential))
+
+    # 7. 인격(personality)
     personality_traits = [random.randint(0, 1000) for _ in range(4)]
 
-    # 7. 등번호 생성 ("00" ~ "99")
+    # 8. 등번호 생성 ("00" ~ "99")
     # TODO: 구단 내 등번호 중복 방지 및 고유 등번호 재할당 검증 로직 구현 필요 (26. 8. 3. Antigravity)
     uniform_number = f"{random.randint(0, 99):02d}"
 
@@ -148,6 +159,7 @@ def generate_player(
         flexibility=stats["flexibility"],
         focus=stats["focus"],
         stamina=stats["stamina"],
+        potential=potential,
         current_energy=10000,
         max_energy=10000,
         roster_status=RosterStatus.ACTIVE,
