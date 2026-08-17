@@ -125,6 +125,7 @@ const FIELDING_ACTION_MAP: Record<string, string> = {
 const BASE_RUN_REASON_MAP: Record<string, string> = {
   STEAL: '도루 시도',
   HIT_RUN: '인플레이 진루',
+  HOMERUN: '홈런 주루',
   WALK: '볼넷 출루',
   HIT_BY_PITCH: '사구 출루',
   ERROR: '실책 진루',

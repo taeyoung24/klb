@@ -417,9 +417,12 @@ def simulate_plate_appearance(
                     drain_runner_energy(batter, 4)
 
                     # 주자 수에 따른 홈런 유형 및 득점 연산 (1~4점)
-                    base_runners = [r for r in [context.runner_1b, context.runner_2b, context.runner_3b] if r is not None]
-                    for r in base_runners:
-                        drain_runner_energy(r, 3)
+                    base_runners_with_pos = [
+                        (3, context.runner_3b),
+                        (2, context.runner_2b),
+                        (1, context.runner_1b),
+                    ]
+                    base_runners = [r for _, r in base_runners_with_pos if r is not None]
 
                     homerun_runs = 1 + len(base_runners)
                     runs_scored += homerun_runs
@@ -438,24 +441,54 @@ def simulate_plate_appearance(
                     runner_detail = f", 주자 {', '.join(runner_names)}" if runner_names else ""
                     homerun_message = f"{homerun_label} (비거리 {distance_m}m{runner_detail})"
 
-                    # 베이스 주자 전원 클리어
-                    context.runner_1b = None
-                    context.runner_2b = None
-                    context.runner_3b = None
-
-                    # 홈런 안내 및 타자 득점 이벤트 기록
+                    # 홈런 안내 공지 이벤트 기록
                     context.logged_events.append(IngameNoticeEvent(
                         event_type=IngameEventType.NOTICE,
-                        sim_timestamp=context.sim_timestamp + 3.5,
+                        sim_timestamp=context.sim_timestamp + 3.0,
                         message=homerun_message
+                    ))
+
+                    # 1. 루상 주자들 홈 진루(BASE_RUN_START -> BASE_RUN_RESULT) 및 체력 소진 기록
+                    for idx, (base_num, r) in enumerate(base_runners_with_pos):
+                        if r is not None:
+                            drain_runner_energy(r, 4 - base_num)
+                            context.logged_events.append(IngameBaseRunStartEvent(
+                                event_type=IngameEventType.BASE_RUN_START,
+                                sim_timestamp=context.sim_timestamp + 3.2 + (idx * 0.2),
+                                runner_id=r.id,
+                                start_base=base_num,
+                                target_base=4,
+                                reason=IngameBaseRunReason.HOMERUN
+                            ))
+                            context.logged_events.append(IngameBaseRunResultEvent(
+                                event_type=IngameEventType.BASE_RUN_RESULT,
+                                sim_timestamp=context.sim_timestamp + 3.5 + (idx * 0.2),
+                                runner_id=r.id,
+                                target_base=4,
+                                result=IngameBaseRunResult.SAFE
+                            ))
+
+                    # 2. 타자 본인 홈런 주루 및 득점 이벤트 기록
+                    context.logged_events.append(IngameBaseRunStartEvent(
+                        event_type=IngameEventType.BASE_RUN_START,
+                        sim_timestamp=context.sim_timestamp + 3.2,
+                        runner_id=batter.id,
+                        start_base=0,
+                        target_base=4,
+                        reason=IngameBaseRunReason.HOMERUN
                     ))
                     context.logged_events.append(IngameBaseRunResultEvent(
                         event_type=IngameEventType.BASE_RUN_RESULT,
-                        sim_timestamp=context.sim_timestamp + 4.0,
+                        sim_timestamp=context.sim_timestamp + 4.5,
                         runner_id=batter.id,
                         target_base=4,
                         result=IngameBaseRunResult.SAFE
                     ))
+
+                    # 베이스 주자 전원 클리어
+                    context.runner_1b = None
+                    context.runner_2b = None
+                    context.runner_3b = None
                     break
 
                 # [경우 B] 인플레이 타구 (IN_FIELD, FENCE_HIT, FOUL_OUT)
