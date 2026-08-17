@@ -2,7 +2,21 @@ import client from './client';
 import type { Region } from './regions';
 import type { HighSchool } from './highSchools';
 
-export interface PlayerInfo {
+export interface PlayerListItem {
+  id: number;
+  name: string;
+  club_id: number;
+  uniform_number: string;
+  position: string;
+  height?: number;
+  weight?: number;
+  region_id?: number;
+  region?: Region | null;
+  high_school_id?: number;
+  high_school?: HighSchool | null;
+}
+
+export interface PlayerDetailInfo {
   id: number;
   name: string;
   club_id: number;
@@ -18,11 +32,16 @@ export interface PlayerInfo {
   max_energy?: number;
   height?: number;
   weight?: number;
+  birthday?: string;
+  personality?: number[];
+  roster_status?: string;
   region_id?: number;
   region?: Region | null;
   high_school_id?: number;
   high_school?: HighSchool | null;
 }
+
+export type PlayerInfo = PlayerListItem;
 
 export interface InfoQueryPlayersParams {
   club_id?: number;
@@ -33,14 +52,14 @@ export interface InfoQueryPlayersParams {
 }
 
 export interface InfoQueryPlayersResponse {
-  items: PlayerInfo[];
+  items: PlayerListItem[];
   total: number;
   page: number;
   limit: number;
   total_pages: number;
 }
 
-export type Player = PlayerInfo;
+export type Player = PlayerListItem;
 
 export const fetchInfoQueryPlayers = async (
   params: InfoQueryPlayersParams = {}
@@ -49,7 +68,14 @@ export const fetchInfoQueryPlayers = async (
   return response.data;
 };
 
-export const getClubPlayers = async (clubId: number): Promise<PlayerInfo[]> => {
+export const fetchInfoQueryPlayerDetail = async (
+  playerId: number
+): Promise<PlayerDetailInfo> => {
+  const response = await client.get<PlayerDetailInfo>(`/info-query/players/${playerId}`);
+  return response.data;
+};
+
+export const getClubPlayers = async (clubId: number): Promise<PlayerListItem[]> => {
   const response = await client.get<InfoQueryPlayersResponse>('/info-query/players', {
     params: { club_id: clubId, limit: 100 },
   });

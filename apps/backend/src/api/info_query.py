@@ -1,5 +1,6 @@
+import datetime
 from typing import Optional, cast, Any
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 from sqlmodel import Session, select, func, col
 from sqlalchemy.orm import joinedload
@@ -27,7 +28,26 @@ class HighSchoolRead(BaseModel):
         from_attributes = True
 
 
+class PlayerListItemRead(BaseModel):
+    """선수 조회 목록 테이블 렌더링용 경량 모델 (스탯/성향 등 대용량 데이터 제외)"""
+    id: int
+    name: str
+    club_id: Optional[int] = None
+    uniform_number: str
+    position: str
+    height: Optional[float] = None
+    weight: Optional[float] = None
+    region_id: Optional[int] = None
+    region: Optional[RegionRead] = None
+    high_school_id: Optional[int] = None
+    high_school: Optional[HighSchoolRead] = None
+
+    class Config:
+        from_attributes = True
+
+
 class PlayerDetailRead(BaseModel):
+    """선수 1명 세부 정보 조회용 풀스펙 모델"""
     id: int
     name: str
     club_id: Optional[int] = None
@@ -43,6 +63,9 @@ class PlayerDetailRead(BaseModel):
     max_energy: Optional[int] = None
     height: Optional[float] = None
     weight: Optional[float] = None
+    birthday: Optional[datetime.datetime] = None
+    personality: Optional[list[int]] = None
+    roster_status: Optional[str] = None
     region_id: Optional[int] = None
     region: Optional[RegionRead] = None
     high_school_id: Optional[int] = None
@@ -53,7 +76,7 @@ class PlayerDetailRead(BaseModel):
 
 
 class PaginatedPlayersResponse(BaseModel):
-    items: list[PlayerDetailRead]
+    items: list[PlayerListItemRead]
     total: int
     page: int
     limit: int
@@ -70,7 +93,7 @@ def get_info_query_players(
     session: Session = Depends(get_session),
 ):
     """
-    정보조회 전용 선수 기본 정보 및 연관 데이터(지역, 고교) DB 쿼리/검색/페이징 엔드포인트
+    정보조회 전용 선수 목록 검색/페이징 경량 엔드포인트
     """
     query = (
         select(Player)
@@ -113,3 +136,26 @@ def get_info_query_players(
         "limit": limit,
         "total_pages": total_pages,
     }
+
+
+@router.get("/players/{player_id}", response_model=PlayerDetailRead)
+def get_info_query_player_detail(
+    player_id: int,
+    session: Session = Depends(get_session),
+):
+    """
+    선수 단일 세부 정보 (스탯, 성향, 실시간 체력, 생년월일 등) 정밀 조회 엔드포인트
+    """
+    query = (
+        select(Player)
+        .where(Player.id == player_id)
+        .options(
+            joinedload(getattr(Player, "region")),
+            joinedload(getattr(Player, "high_school")),
+        )
+    )
+    player = session.exec(query).first()
+    if not player:
+        raise HTTPException(status_code=404, detail="선수를 찾을 수 없습니다.")
+    return player
+

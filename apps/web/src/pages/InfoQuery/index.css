@@ -584,3 +584,387 @@
     gap: 4px;
   }
 }
+
+/* ==========================================================================
+   Player Detail View Style (Flat White Theme)
+   ========================================================================== */
+
+.info-query__name-link {
+  color: #0f172a;
+  text-decoration: none;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.info-query__name-link:hover {
+  text-decoration: underline;
+}
+
+.player-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 100%;
+}
+
+.player-detail__top-nav {
+  display: flex;
+  align-items: center;
+}
+
+.player-detail__back-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #0f172a;
+  background-color: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 0;
+  cursor: pointer;
+}
+
+.player-detail__header {
+  padding: 20px;
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+}
+
+.player-detail__header-main {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.player-detail__uniform {
+  font-size: 28px;
+  font-weight: 900;
+  color: #64748b;
+  line-height: 1;
+}
+
+.player-detail__title-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.player-detail__name-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.player-detail__name {
+  font-size: 22px;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0;
+}
+
+.player-detail__position-badge {
+  font-size: 12px;
+  font-weight: 700;
+  color: #ffffff;
+  background-color: #0f172a;
+  padding: 2px 8px;
+  border-radius: 0;
+}
+
+.player-detail__status-badge {
+  font-size: 12px;
+  font-weight: 600;
+  color: #334155;
+  background-color: #e2e8f0;
+  padding: 2px 8px;
+  border-radius: 0;
+}
+
+.player-detail__team-info {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.player-detail__team-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #475569;
+}
+
+/* --------------------------------------------------------------------------
+   Profile Specs Section
+   -------------------------------------------------------------------------- */
+.player-detail__section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.player-detail__section-title {
+  font-size: 15px;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0;
+  padding-bottom: 8px;
+  border-bottom: 2px solid #0f172a;
+}
+
+.player-detail__profile-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1px;
+  background-color: #e2e8f0;
+  border: 1px solid #e2e8f0;
+}
+
+.player-detail__profile-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 16px;
+  background-color: #ffffff;
+}
+
+.player-detail__profile-item--full {
+  grid-column: span 2;
+}
+
+.player-detail__profile-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: #64748b;
+}
+
+.player-detail__profile-value {
+  font-size: 14px;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.player-detail__energy-wrap {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 4px;
+}
+
+.player-detail__energy-bar-track {
+  flex: 1;
+  height: 10px;
+  background-color: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  border-radius: 0;
+  overflow: hidden;
+}
+
+.player-detail__energy-bar-fill {
+  height: 100%;
+  background-color: #0f172a;
+}
+
+.player-detail__energy-text {
+  font-size: 13px;
+  font-weight: 700;
+  color: #334155;
+  white-space: nowrap;
+}
+
+/* --------------------------------------------------------------------------
+   Visual Layout (Stats Bar + Radar Chart)
+   -------------------------------------------------------------------------- */
+.player-detail__visual-layout {
+  display: grid;
+  grid-template-columns: 1.2fr 0.8fr;
+  gap: 20px;
+}
+
+.player-detail__stats-col,
+.player-detail__radar-col {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.player-detail__stats-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 16px;
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+}
+
+.player-detail__stat-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.player-detail__stat-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.player-detail__stat-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.player-detail__stat-val-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.player-detail__grade-badge {
+  font-size: 11px;
+  font-weight: 800;
+  padding: 1px 5px;
+  border-radius: 0;
+  border: 1px solid transparent;
+}
+
+.player-detail__grade--s {
+  color: #0f172a;
+  background-color: #e2e8f0;
+  border-color: #94a3b8;
+}
+
+.player-detail__grade--a {
+  color: #1e293b;
+  background-color: #f1f5f9;
+  border-color: #cbd5e1;
+}
+
+.player-detail__grade--b {
+  color: #475569;
+  background-color: #ffffff;
+  border-color: #e2e8f0;
+}
+
+.player-detail__grade--c,
+.player-detail__grade--d {
+  color: #64748b;
+  background-color: #ffffff;
+  border-color: #f1f5f9;
+}
+
+.player-detail__stat-number {
+  font-size: 14px;
+  font-weight: 800;
+  color: #0f172a;
+  min-width: 32px;
+  text-align: right;
+}
+
+.player-detail__stat-bar-track {
+  width: 100%;
+  height: 10px;
+  background-color: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 0;
+  overflow: hidden;
+}
+
+.player-detail__stat-bar-fill {
+  height: 100%;
+  background-color: #0f172a;
+}
+
+.player-detail__stat-desc {
+  font-size: 11px;
+  color: #64748b;
+}
+
+/* --------------------------------------------------------------------------
+   MBTI Personality Area (Flat White Theme)
+   -------------------------------------------------------------------------- */
+.player-detail__mbti-col {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.player-detail__mbti-container {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 20px;
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+}
+
+.player-detail__mbti-header {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.player-detail__mbti-code {
+  font-size: 26px;
+  font-weight: 900;
+  color: #0f172a;
+  letter-spacing: 1px;
+}
+
+.player-detail__mbti-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #64748b;
+}
+
+.player-detail__mbti-axes {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.player-detail__mbti-axis-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.player-detail__mbti-axis-labels {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748b;
+}
+
+.player-detail__mbti-axis-label--dominant {
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.player-detail__mbti-bar-track {
+  width: 100%;
+  height: 8px;
+  background-color: #e2e8f0;
+  border-radius: 0;
+  overflow: hidden;
+  position: relative;
+}
+
+.player-detail__mbti-bar-fill {
+  height: 100%;
+  background-color: #0f172a;
+}
+
+@media (max-width: 860px) {
+  .player-detail__visual-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+
