@@ -71,4 +71,24 @@ class BaseDecisionEngine(ABC):
         """타격 이후 주자/타자의 목표 베이스(1루 vs 2루타 진루 도전) 판단 (추후 NN 모델 치환 영역)"""
         pass
 
+    @abstractmethod
+    def decide_starting_pitcher(self, pitchers: list[Player]) -> Player:
+        """투수진 중 선발 투수 결정 판단 (감독 판단)"""
+        pass
+
+    @abstractmethod
+    def decide_batting_order(self, batters: list[Player]) -> list[Player]:
+        """야수/타자들 중 9명의 선발 라인업 및 타순(1~9번) 결정 판단 (감독 판단)"""
+        pass
+
+    @abstractmethod
+    def decide_pinch_hitter(self, context: IngameContext) -> Player | None:
+        """대타 기용 판단 (감독 판단)"""
+        pass
+
+    @abstractmethod
+    def decide_defense_substitution(self, context: IngameContext) -> tuple[int, Player] | None:
+        """대수비/야수 교체 판단 (교체 대상 수비 인덱스 0~8, 교체할 벤치 선수) (감독 판단)"""
+        pass
+
 

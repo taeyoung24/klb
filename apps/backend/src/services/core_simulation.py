@@ -9,7 +9,7 @@ KLB 코어 시뮬레이션 엔진 (Core Simulation Engine)
 import datetime
 from typing import NamedTuple
 from sqlmodel import Session, select, asc, desc, func, col
-from src.models import WorldState, Match, Club, League, DailyClubStanding, MatchPlaceholder
+from src.models import WorldState, Match, Club, League, DailyClubStanding, MatchPlaceholder, Player
 from src.enums import MatchStatus, MatchStage
 from src.services.schedule_utils import (
     generate_regular_schedule,
@@ -642,6 +642,38 @@ def _update_standings_and_rankings(session: Session, sim_day: int) -> None:
             )
 
 
+def _recover_daily_energy(session: Session, sim_day: int) -> None:
+    """
+    23:59 시각: 하루가 마감될 때 모든 선수의 일일 자연 체력 회복을 수행합니다.
+    - 당일 경기 출전 선수: +800 회복
+    - 미출전/휴식 선수: +2000 회복 (4~5일 휴식 시 100% 완충)
+    """
+    # 1. 당일 완료된 경기 조회 및 출전 구단 ID 수집
+    today_matches = session.exec(
+        select(Match)
+        .where(Match.sim_day == sim_day)
+        .where(Match.status == MatchStatus.COMPLETED)
+    ).all()
+    
+    # 당일 경기에 참가한 구단 ID 집합
+    played_club_ids = set()
+    for m in today_matches:
+        played_club_ids.add(m.home_club_id)
+        played_club_ids.add(m.away_club_id)
+
+    # 2. 모든 등록 선수 조회 후 체력 회복
+    all_players = session.exec(select(Player)).all()
+    for player in all_players:
+        if player.current_energy >= player.max_energy:
+            continue
+        
+        # 소속 구단이 오늘 경기를 치렀는지 여부로 출전/피로 여부 판단
+        participated = player.club_id in played_club_ids
+        recovery = 800 if participated else 2000
+        player.current_energy = min(player.max_energy, player.current_energy + recovery)
+        session.add(player)
+
+
 # ==============================================================================
 # 메인 1일 단위 시뮬레이션 단일 함수 (Main Core Simulation Function)
 # ==============================================================================
@@ -671,7 +703,8 @@ def step_simulation_day(session: Session) -> None:
     # 3. 22:00 일일 순위표 및 기록 정산
     _update_standings_and_rankings(session, sim_day)
 
-    # 4. 23:59 일일 마감 및 WorldState 시각 1일 진전
+    # 4. 23:59 일일 마감, 선수 체력 자연 회복 및 WorldState 시각 1일 진전
+    _recover_daily_energy(session, sim_day)
     world_state.current_sim_day = sim_day + 1
     session.add(world_state)
     session.commit()

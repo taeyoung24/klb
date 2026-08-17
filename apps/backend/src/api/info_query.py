@@ -39,6 +39,8 @@ class PlayerDetailRead(BaseModel):
     flexibility: Optional[int] = None
     focus: Optional[int] = None
     stamina: Optional[int] = None
+    current_energy: Optional[int] = None
+    max_energy: Optional[int] = None
     height: Optional[float] = None
     weight: Optional[float] = None
     region_id: Optional[int] = None

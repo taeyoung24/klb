@@ -33,6 +33,12 @@ from src.models import (
     IngameContext,
 )
 from .decisions import BaseDecisionEngine, RuleBasedDecisionEngine
+from .energy import (
+    drain_pitcher_energy,
+    drain_batter_energy,
+    drain_runner_energy,
+    drain_fielder_energy,
+)
 from .physics import (
     calculate_pitch_physics,
     calculate_batting_physics,
@@ -66,6 +72,7 @@ def advance_runners(
     for base, runner in runners_on_base:
         if runner is not None:
             new_base = base + advance_bases
+            drain_runner_energy(runner, advance_bases)
             context.logged_events.append(IngameBaseRunStartEvent(
                 event_type=IngameEventType.BASE_RUN_START,
                 sim_timestamp=context.sim_timestamp,
@@ -279,9 +286,11 @@ def simulate_plate_appearance(
     context.scoreboard.strikes = 0
     context.scoreboard.balls = 0
     runs_scored = 0
+    pitch_count_in_pa = 0
     
     while True:
         context.sim_timestamp += random.uniform(3.0, 5.0)
+        pitch_count_in_pa += 1
         
         # 1. 투수 행위 판단 (투구 vs 견제구)
         pitch_action = engine.decide_pitch_action(context)
@@ -296,6 +305,10 @@ def simulate_plate_appearance(
 
         # 2-1. 투수 스탯(power, control) 기반 물리 연산 수행 (실측 구속 & 가우시안 탄착점)
         pitch_physics = calculate_pitch_physics(pitcher, pitch_info)
+
+        # 투수 체력 소진 (2스트라이크 결정구 또는 견제구 시 전력투구 가중치)
+        is_power_pitch = (context.scoreboard.strikes == 2 or pitch_action == IngamePitchAction.PICK_OFF)
+        drain_pitcher_energy(pitcher, is_power_pitch=is_power_pitch)
 
         context.logged_events.append(IngamePitchStartEvent(
             event_type=IngameEventType.PITCH_START,
@@ -400,8 +413,14 @@ def simulate_plate_appearance(
                     else:
                         context.scoreboard.home_h += 1
 
+                    # 타자 주루 체력 소진 (홈런 주루: 4베이스)
+                    drain_runner_energy(batter, 4)
+
                     # 주자 수에 따른 홈런 유형 및 득점 연산 (1~4점)
                     base_runners = [r for r in [context.runner_1b, context.runner_2b, context.runner_3b] if r is not None]
+                    for r in base_runners:
+                        drain_runner_energy(r, 3)
+
                     homerun_runs = 1 + len(base_runners)
                     runs_scored += homerun_runs
 
@@ -446,6 +465,10 @@ def simulate_plate_appearance(
 
                 # 3. 야수 수비 도달시간/포구/송구 완류 연산 (파울 지역 포함)
                 fielding_physics = calculate_fielding_physics(defense_lineup, trajectory_physics, target_base=target_base)
+
+                # 수비수 체력 소진
+                if fielding_physics and fielding_physics.fielder:
+                    drain_fielder_energy(fielding_physics.fielder, is_difficult_play=fielding_physics.is_caught_in_air)
 
                 # [경우 B-1] 공중 뜬공 포구 아웃 (Fly Out / Foul Fly Out)
                 if fielding_physics.is_caught_in_air:
@@ -534,6 +557,8 @@ def simulate_plate_appearance(
 
                     break
 
-                        
+    # 타석 종료 시 타자 체력 소진 반영
+    drain_batter_energy(batter, pitch_count_in_pa)
+
     return runs_scored
 

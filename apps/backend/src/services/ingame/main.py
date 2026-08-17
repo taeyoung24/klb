@@ -113,9 +113,9 @@ def run_match(
     """단일 매치를 IngameContext 객체 중심으로 시뮬레이션하여 세부 이벤트 대본을 남깁니다."""
     engine = decision_engine or RuleBasedDecisionEngine()
 
-    # 1. 라인업 및 투수 스쿼드 추출
-    away_sp, away_bp, away_batters = select_team_roster_for_match(match.away_club_id, session=session)
-    home_sp, home_bp, home_batters = select_team_roster_for_match(match.home_club_id, session=session)
+    # 1. 라인업 및 투수 스쿼드, 벤치 추출
+    away_sp, away_bp, away_batters, away_bench = select_team_roster_for_match(match.away_club_id, session=session, decision_engine=engine)
+    home_sp, home_bp, home_batters, home_bench = select_team_roster_for_match(match.home_club_id, session=session, decision_engine=engine)
 
     if away_sp and away_sp.id:
         match.away_starting_pitcher_id = away_sp.id
@@ -181,6 +181,8 @@ def run_match(
         home_batters=home_batters,
         away_pitchers=[away_sp] + away_bp,
         home_pitchers=[home_sp] + home_bp,
+        away_bench=away_bench,
+        home_bench=home_bench,
     )
 
     context.current_away_pitcher_log = PitcherTracker(context.away_pitchers[0], True, 'away', 1, True, 0, 0, 0)
@@ -190,6 +192,42 @@ def run_match(
 
     current_pitcher_responsible_away = context.current_away_pitcher_log
     current_pitcher_responsible_home = context.current_home_pitcher_log
+
+    def _apply_pitcher_change_if_needed():
+        nonlocal current_pitcher_responsible_home, current_pitcher_responsible_away
+        next_p = engine.decide_pitcher_change(context)
+        if next_p is not None:
+            if context.is_top and context.home_pitcher_idx < len(context.home_pitchers) - 1:
+                if context.current_home_pitcher_log:
+                    context.current_home_pitcher_log.exit_inning = context.inning
+                    context.current_home_pitcher_log.exit_top = context.is_top
+                    context.current_home_pitcher_log.exit_away_score = context.away_score
+                    context.current_home_pitcher_log.exit_home_score = context.home_score
+
+                context.home_pitcher_idx += 1
+                on_base_cnt = sum(1 for r in [context.runner_1b, context.runner_2b, context.runner_3b] if r is not None)
+                context.current_home_pitcher_log = PitcherTracker(
+                    next_p, False, 'home', context.inning, context.is_top, context.away_score, context.home_score, on_base_cnt
+                )
+                context.home_pitcher_logs.append(context.current_home_pitcher_log)
+                current_pitcher_responsible_home = context.current_home_pitcher_log
+                context.current_pitcher = next_p
+
+            elif not context.is_top and context.away_pitcher_idx < len(context.away_pitchers) - 1:
+                if context.current_away_pitcher_log:
+                    context.current_away_pitcher_log.exit_inning = context.inning
+                    context.current_away_pitcher_log.exit_top = context.is_top
+                    context.current_away_pitcher_log.exit_away_score = context.away_score
+                    context.current_away_pitcher_log.exit_home_score = context.home_score
+
+                context.away_pitcher_idx += 1
+                on_base_cnt = sum(1 for r in [context.runner_1b, context.runner_2b, context.runner_3b] if r is not None)
+                context.current_away_pitcher_log = PitcherTracker(
+                    next_p, False, 'away', context.inning, context.is_top, context.away_score, context.home_score, on_base_cnt
+                )
+                context.away_pitcher_logs.append(context.current_away_pitcher_log)
+                current_pitcher_responsible_away = context.current_away_pitcher_log
+                context.current_pitcher = next_p
 
     context.logged_events.append(IngameGameStateEvent(
         event_type=IngameEventType.GAME_STATE,
@@ -205,36 +243,25 @@ def run_match(
     game_over = False
 
     while not game_over:
-        # 감독 투수 교체 훅 (decision_engine.decide_pitcher_change 사용)
-        next_pitcher = engine.decide_pitcher_change(context)
-        if next_pitcher is not None:
-            if context.is_top and context.home_pitcher_idx < len(context.home_pitchers) - 1:
-                context.current_home_pitcher_log.exit_inning = context.inning
-                context.current_home_pitcher_log.exit_top = context.is_top
-                context.current_home_pitcher_log.exit_away_score = context.away_score
-                context.current_home_pitcher_log.exit_home_score = context.home_score
+        # 이닝 시작 전 수비 투수 교체 검토
+        _apply_pitcher_change_if_needed()
 
-                context.home_pitcher_idx += 1
-                on_base_cnt = sum(1 for r in [context.runner_1b, context.runner_2b, context.runner_3b] if r is not None)
-                context.current_home_pitcher_log = PitcherTracker(
-                    next_pitcher, False, 'home', context.inning, context.is_top, context.away_score, context.home_score, on_base_cnt
-                )
-                context.home_pitcher_logs.append(context.current_home_pitcher_log)
-                current_pitcher_responsible_home = context.current_home_pitcher_log
-
-            elif not context.is_top and context.away_pitcher_idx < len(context.away_pitchers) - 1:
-                context.current_away_pitcher_log.exit_inning = context.inning
-                context.current_away_pitcher_log.exit_top = context.is_top
-                context.current_away_pitcher_log.exit_away_score = context.away_score
-                context.current_away_pitcher_log.exit_home_score = context.home_score
-
-                context.away_pitcher_idx += 1
-                on_base_cnt = sum(1 for r in [context.runner_1b, context.runner_2b, context.runner_3b] if r is not None)
-                context.current_away_pitcher_log = PitcherTracker(
-                    next_pitcher, False, 'away', context.inning, context.is_top, context.away_score, context.home_score, on_base_cnt
-                )
-                context.away_pitcher_logs.append(context.current_away_pitcher_log)
-                current_pitcher_responsible_away = context.current_away_pitcher_log
+        # 이닝 시작 전 수비팀 대수비 교체 검토
+        defense_sub = engine.decide_defense_substitution(context)
+        if defense_sub is not None:
+            sub_pos_idx, sub_player = defense_sub
+            if context.is_top:
+                # 홈팀 수비
+                if 0 <= sub_pos_idx < len(context.home_batters):
+                    context.home_batters[sub_pos_idx] = sub_player
+                    if sub_player in context.home_bench:
+                        context.home_bench.remove(sub_player)
+            else:
+                # 어웨이팀 수비
+                if 0 <= sub_pos_idx < len(context.away_batters):
+                    context.away_batters[sub_pos_idx] = sub_player
+                    if sub_player in context.away_bench:
+                        context.away_bench.remove(sub_player)
 
         context.logged_events.append(IngameGameStateEvent(
             event_type=IngameEventType.GAME_STATE,
@@ -269,6 +296,18 @@ def run_match(
                 break
 
             context.current_batter = batters[current_batter_idx]
+
+            # 1. 매 타석 전 수비팀 투수 교체 검토
+            _apply_pitcher_change_if_needed()
+
+            # 2. 매 타석 전 공격팀 대타(Pinch Hitter) 교체 검토
+            pinch_hitter = engine.decide_pinch_hitter(context)
+            if pinch_hitter is not None:
+                batters[current_batter_idx] = pinch_hitter
+                context.current_batter = pinch_hitter
+                curr_bench = context.away_bench if context.is_top else context.home_bench
+                if pinch_hitter in curr_bench:
+                    curr_bench.remove(pinch_hitter)
 
             prev_outs = context.scoreboard.outs
             prev_away = context.away_score
@@ -372,6 +411,16 @@ def run_match(
         simulation_version=CONFIG.simulation_version,
         logged_events=context.logged_events
     )
+
+    # 3. 경기 출전 선수들의 소진된 체력(current_energy) DB 세션 반영
+    if session:
+        all_participants = (
+            context.away_pitchers + context.home_pitchers +
+            context.away_batters + context.home_batters
+        )
+        for p in all_participants:
+            if p and p.id:
+                session.add(p)
 
 
 

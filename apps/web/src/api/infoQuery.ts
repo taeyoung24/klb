@@ -14,6 +14,8 @@ export interface PlayerInfo {
   flexibility?: number;
   focus?: number;
   stamina?: number;
+  current_energy?: number;
+  max_energy?: number;
   height?: number;
   weight?: number;
   region_id?: number;

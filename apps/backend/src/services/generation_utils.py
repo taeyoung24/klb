@@ -148,6 +148,8 @@ def generate_player(
         flexibility=stats["flexibility"],
         focus=stats["focus"],
         stamina=stats["stamina"],
+        current_energy=10000,
+        max_energy=10000,
         roster_status=RosterStatus.ACTIVE,
         position=final_pos,
         personality=personality_traits,
