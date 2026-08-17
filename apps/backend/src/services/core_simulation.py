@@ -637,6 +637,8 @@ def _update_standings_and_rankings(session: Session, sim_day: int) -> None:
                 elite_start_day=elite_start_day,
                 host_league_id=host_league_id,
                 playoff_club_ids=playoff_club_ids,
+                regular_max_day=max_regular_day,
+                elite_matches=elite_matches,
             )
 
 
