@@ -11,6 +11,7 @@ import {
 import type { Club } from '../../api/clubs'
 import TeamLogo from '../../components/TeamLogo/TeamLogo'
 import { formatPosition } from '../../constants/positions'
+import { formatSimDayDot } from '../../utils/date'
 import { useSystemContext } from '../../context/SystemContext'
 import { InfoQueryTable, type TableColumn } from '../../components/InfoQuery'
 
@@ -289,10 +290,10 @@ export const PlayerDetail: React.FC<PlayerDetailProps> = ({
     () => [
       {
         key: 'sim_day',
-        header: '시점',
+        header: '일자',
         align: 'center',
-        width: '90px',
-        render: (row) => <span className="player-detail__history-day">Day {row.sim_day}</span>,
+        width: '110px',
+        render: (row) => <span className="player-detail__history-day">{formatSimDayDot(row.sim_day)}</span>,
       },
       {
         key: 'transaction_type',
