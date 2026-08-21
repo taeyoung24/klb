@@ -85,6 +85,24 @@ class PlayerPitchingRecord(BaseModel):
 PlayerSeasonRecord = PlayerBattingRecord
 
 
+class PlayerTransactionRead(BaseModel):
+    """선수 계약, 지명, 이적 행정 이력 DTO"""
+    id: int
+    player_id: int
+    sim_day: int
+    transaction_type: str
+    from_club_id: Optional[int] = None
+    from_club_name: Optional[str] = None
+    to_club_id: Optional[int] = None
+    to_club_name: Optional[str] = None
+    draft_round: Optional[int] = None
+    draft_overall_pick: Optional[int] = None
+    details: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
 class PlayerDetailRead(BaseModel):
     """선수 1명 세부 정보 조회용 풀스펙 모델"""
     id: int
@@ -110,6 +128,10 @@ class PlayerDetailRead(BaseModel):
     region: Optional[RegionRead] = None
     high_school_id: Optional[int] = None
     high_school: Optional[HighSchoolRead] = None
+    draft_info: Optional[str] = None
+    draft_round: Optional[int] = None
+    draft_overall_pick: Optional[int] = None
+    transactions: list[PlayerTransactionRead] = []
     records: list[PlayerBattingRecord] = []
     batting_records: list[PlayerBattingRecord] = []
     pitching_records: list[PlayerPitchingRecord] = []
@@ -455,10 +477,68 @@ def get_info_query_player_detail(
     for year_k in sorted(yearly_pitching.keys(), reverse=True):
         pitching_records.append(_calc_pitching_row(f"{year_k}", yearly_pitching[year_k]))
 
+    # 3. 선수 행정/이적/지명 트랜잭션 이력 조회
+    from src.models import PlayerTransactionHistory, Club
+
+    tx_stmt = (
+        select(PlayerTransactionHistory)
+        .where(PlayerTransactionHistory.player_id == player_id)
+        .order_by(col(PlayerTransactionHistory.sim_day).asc(), col(PlayerTransactionHistory.id).asc())
+    )
+    histories = list(session.exec(tx_stmt).all())
+
+    club_ids: set[int] = set()
+    for h in histories:
+        if h.from_club_id:
+            club_ids.add(h.from_club_id)
+        if h.to_club_id:
+            club_ids.add(h.to_club_id)
+
+    clubs_map: dict[int, str] = {}
+    if club_ids:
+        c_stmt = select(Club).where(col(Club.id).in_(club_ids))
+        for c in session.exec(c_stmt).all():
+            clubs_map[c.id] = c.name_ko or c.name
+
+    draft_info: Optional[str] = None
+    draft_round: Optional[int] = None
+    draft_overall_pick: Optional[int] = None
+    transactions: list[PlayerTransactionRead] = []
+
+    for h in histories:
+        tx_type_str = str(h.transaction_type)
+        if tx_type_str == "DRAFT" or getattr(h.transaction_type, "value", "") == "DRAFT":
+            draft_round = h.draft_round
+            draft_overall_pick = h.draft_overall_pick
+            if h.draft_round and h.draft_overall_pick:
+                draft_info = f"{h.draft_round}라운드 (전체 {h.draft_overall_pick}순위)"
+            elif h.details:
+                draft_info = h.details
+        elif (tx_type_str == "UNDRAFTED_SIGN" or getattr(h.transaction_type, "value", "") == "UNDRAFTED_SIGN") and not draft_info:
+            draft_info = "육성선수 입단"
+
+        transactions.append(PlayerTransactionRead(
+            id=h.id,
+            player_id=h.player_id,
+            sim_day=h.sim_day,
+            transaction_type=tx_type_str,
+            from_club_id=h.from_club_id,
+            from_club_name=clubs_map.get(h.from_club_id) if h.from_club_id is not None else None,
+            to_club_id=h.to_club_id,
+            to_club_name=clubs_map.get(h.to_club_id) if h.to_club_id is not None else None,
+            draft_round=h.draft_round,
+            draft_overall_pick=h.draft_overall_pick,
+            details=h.details,
+        ))
+
     # Pydantic 응답 객체 생성
     resp_dict = player.model_dump()
     resp_dict["region"] = player.region
     resp_dict["high_school"] = player.high_school
+    resp_dict["draft_info"] = draft_info
+    resp_dict["draft_round"] = draft_round
+    resp_dict["draft_overall_pick"] = draft_overall_pick
+    resp_dict["transactions"] = transactions
     resp_dict["records"] = batting_records
     resp_dict["batting_records"] = batting_records
     resp_dict["pitching_records"] = pitching_records

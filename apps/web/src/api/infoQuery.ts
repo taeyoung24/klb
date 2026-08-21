@@ -51,6 +51,20 @@ export interface PlayerPitchingRecord {
   whip: string;
 }
 
+export interface PlayerTransaction {
+  id: number;
+  player_id: number;
+  sim_day: number;
+  transaction_type: string;
+  from_club_id?: number | null;
+  from_club_name?: string | null;
+  to_club_id?: number | null;
+  to_club_name?: string | null;
+  draft_round?: number | null;
+  draft_overall_pick?: number | null;
+  details?: string | null;
+}
+
 export interface PlayerDetailInfo {
   id: number;
   name: string;
@@ -75,6 +89,10 @@ export interface PlayerDetailInfo {
   region?: Region | null;
   high_school_id?: number;
   high_school?: HighSchool | null;
+  draft_info?: string | null;
+  draft_round?: number | null;
+  draft_overall_pick?: number | null;
+  transactions?: PlayerTransaction[];
   records?: PlayerBattingRecord[];
   batting_records?: PlayerBattingRecord[];
   pitching_records?: PlayerPitchingRecord[];

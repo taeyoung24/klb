@@ -64,15 +64,19 @@ def calculate_pitch_physics(
     control = pitcher.control
 
     # 0. 피로도(Fatigue) 산출 (체력 40% 이하부터 점진적 피로 발생: 0.0 ~ 1.0)
-    max_energy = getattr(pitcher, "max_energy", 10000) or 10000
-    energy_ratio = max(0.0, min(1.0, pitcher.current_energy / max_energy))
+    energy_ratio = max(0.0, min(1.0, pitcher.current_energy / pitcher.max_energy))
     fatigue = max(0.0, (0.40 - energy_ratio) / 0.40)  # 40% 이상: 0.0, 0% 방전: 1.0
 
-    # 1. 구속 연산 (km/h) - 피로 시 최대 5.0 km/h 감속
-    max_fb_speed = 130.0 + (power / 1000.0) * 32.0 - (fatigue * 5.0)
+    # 1. 구속 연산 (km/h) - S-Curve (Sigmoid) 정규분포 기반 스탯 반영 및 피로 감속 (최대 6.0 km/h)
+    # - 파워 500: 리그 평균 패스트볼 145.0 km/h 형성
+    # - 파워 750: 약 162.8 km/h, 파워 900: 약 170.5 km/h
+    # - 파워 1000: 베이스 177.3 km/h (극단적 양의 난수 발생 시에만 기적적으로 180.0 km/h 도달)
+    sigmoid_stat = 1.0 / (1.0 + math.exp(-0.0045 * (power - 500.0)))
+    elite_power_bonus = (max(0.0, (power - 850.0) / 150.0) ** 2) * 4.0
+    base_fb_speed = 110.0 + (70.0 * sigmoid_stat) + elite_power_bonus - (fatigue * 6.0)
     speed_ratio = PITCH_SPEED_RATIO.get(pitch_selection.pitch_type, 0.90)
-    speed_fluctuation = random.uniform(-1.5, 1.5)
-    actual_velocity = round(max_fb_speed * speed_ratio + speed_fluctuation, 1)
+    speed_fluctuation = random.gauss(0.0, 1.2)  # 정규분포 난수 오차
+    actual_velocity = max(0.1, round(base_fb_speed * speed_ratio + speed_fluctuation, 1))
 
     # 2. 회전수 연산 (Spin Rate, RPM) - 피로 시 최대 200 RPM 감소
     base_rpm = PITCH_BASE_SPIN_RPM.get(pitch_selection.pitch_type, 2000)
