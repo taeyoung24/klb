@@ -1,5 +1,6 @@
 import random
 from datetime import datetime
+from typing import Optional
 from settings import CONFIG
 from src.enums import (
     MatchStatus,
@@ -31,6 +32,7 @@ from src.models import (
     IngameBaseRunStartEvent,
     IngameBaseRunResultEvent,
     IngameContext,
+    MatchStatCollector,
 )
 from .decisions import BaseDecisionEngine, RuleBasedDecisionEngine
 from .energy import (
@@ -56,10 +58,12 @@ def advance_runners(
     advance_bases: int,
     reason: IngameBaseRunReason = IngameBaseRunReason.HIT_RUN,
     skip_batter_start_event: bool = False,
+    stat_collector: Optional[MatchStatCollector] = None,
 ) -> int:
     """주자들을 진루시키고 context 베이스 및 이벤트 대본을 업데이트하며 득점(runs)을 반환합니다."""
     runs = 0
     batter = context.current_batter
+    pitcher = context.current_pitcher
     if not batter:
         return 0
 
@@ -83,6 +87,14 @@ def advance_runners(
             ))
             if new_base >= 4:
                 runs += 1
+                if stat_collector:
+                    stat_collector.get(runner.id).bat_runs += 1
+                    stat_collector.get(batter.id).bat_rbi += 1
+                    if pitcher:
+                        p_d = stat_collector.get(pitcher.id)
+                        p_d.pitch_runs += 1
+                        p_d.pitch_earned_runs += 1
+
                 context.logged_events.append(IngameBaseRunResultEvent(
                     event_type=IngameEventType.BASE_RUN_RESULT,
                     sim_timestamp=context.sim_timestamp,
@@ -105,7 +117,7 @@ def advance_runners(
                     target_base=new_base,
                     result=IngameBaseRunResult.SAFE
                 ))
-                
+
     # 타자 진루 처리
     if not skip_batter_start_event:
         context.logged_events.append(IngameBaseRunStartEvent(
@@ -116,9 +128,17 @@ def advance_runners(
             target_base=advance_bases,
             reason=reason
         ))
-    
+
     if advance_bases >= 4:
         runs += 1
+        if stat_collector:
+            stat_collector.get(batter.id).bat_runs += 1
+            stat_collector.get(batter.id).bat_rbi += 1
+            if pitcher:
+                p_d = stat_collector.get(pitcher.id)
+                p_d.pitch_runs += 1
+                p_d.pitch_earned_runs += 1
+
         context.logged_events.append(IngameBaseRunResultEvent(
             event_type=IngameEventType.BASE_RUN_RESULT,
             sim_timestamp=context.sim_timestamp,
@@ -150,22 +170,24 @@ def advance_runners(
 
 def advance_runners_walk(
     context: IngameContext,
+    stat_collector: Optional[MatchStatCollector] = None,
 ) -> int:
     """볼넷(또는 사구)으로 인한 강제 진루 처리"""
     runs = 0
     batter = context.current_batter
+    pitcher = context.current_pitcher
     if not batter:
         return 0
 
     will_advance = {1: True, 2: False, 3: False, 4: False}
-    
+
     if context.runner_1b is not None:
         will_advance[2] = True
         if context.runner_2b is not None:
             will_advance[3] = True
             if context.runner_3b is not None:
                 will_advance[4] = True
-                
+
     new_runner_1b: Player | None = context.runner_1b
     new_runner_2b: Player | None = context.runner_2b
     new_runner_3b: Player | None = context.runner_3b
@@ -182,6 +204,14 @@ def advance_runners_walk(
             reason=IngameBaseRunReason.WALK
         ))
         runs += 1
+        if stat_collector:
+            stat_collector.get(runner.id).bat_runs += 1
+            stat_collector.get(batter.id).bat_rbi += 1
+            if pitcher:
+                p_d = stat_collector.get(pitcher.id)
+                p_d.pitch_runs += 1
+                p_d.pitch_earned_runs += 1
+
         new_runner_3b = None
         context.logged_events.append(IngameBaseRunResultEvent(
             event_type=IngameEventType.BASE_RUN_RESULT,
@@ -190,7 +220,7 @@ def advance_runners_walk(
             target_base=4,
             result=IngameBaseRunResult.SAFE
         ))
-        
+
     # 2루 주자 3루 진루
     if will_advance[3] and context.runner_2b is not None:
         runner = context.runner_2b
@@ -211,7 +241,7 @@ def advance_runners_walk(
             target_base=3,
             result=IngameBaseRunResult.SAFE
         ))
-        
+
     # 1루 주자 2루 진루
     if will_advance[2] and context.runner_1b is not None:
         runner = context.runner_1b
@@ -232,7 +262,7 @@ def advance_runners_walk(
             target_base=2,
             result=IngameBaseRunResult.SAFE
         ))
-        
+
     # 타자 1루 진루
     context.logged_events.append(IngameBaseRunStartEvent(
         event_type=IngameEventType.BASE_RUN_START,
@@ -250,7 +280,7 @@ def advance_runners_walk(
         target_base=1,
         result=IngameBaseRunResult.SAFE
     ))
-    
+
     context.runner_1b = new_runner_1b
     context.runner_2b = new_runner_2b
     context.runner_3b = new_runner_3b
@@ -261,6 +291,7 @@ def simulate_plate_appearance(
     context: IngameContext,
     defense_lineup: list[Player],
     decision_engine: BaseDecisionEngine | None = None,
+    stat_collector: Optional[MatchStatCollector] = None,
 ) -> int:
     """
     IngameContext를 받아 단일 타석을 시뮬레이션하고 발생 득점(runs_scored)을 반환합니다.
@@ -288,10 +319,13 @@ def simulate_plate_appearance(
     runs_scored = 0
     pitch_count_in_pa = 0
     
+    if stat_collector:
+        stat_collector.get(batter.id).bat_pa += 1
+
     while True:
         context.sim_timestamp += random.uniform(3.0, 5.0)
         pitch_count_in_pa += 1
-        
+
         # 1. 투수 행위 판단 (투구 vs 견제구)
         pitch_action = engine.decide_pitch_action(context)
         if pitch_action == IngamePitchAction.PICK_OFF:
@@ -309,6 +343,9 @@ def simulate_plate_appearance(
         # 투수 체력 소진 (2스트라이크 결정구 또는 견제구 시 전력투구 가중치)
         is_power_pitch = (context.scoreboard.strikes == 2 or pitch_action == IngamePitchAction.PICK_OFF)
         drain_pitcher_energy(pitcher, is_power_pitch=is_power_pitch)
+
+        if stat_collector:
+            stat_collector.get(pitcher.id).pitch_pitches += 1
 
         context.logged_events.append(IngamePitchStartEvent(
             event_type=IngameEventType.PITCH_START,
@@ -338,6 +375,13 @@ def simulate_plate_appearance(
                 ))
                 if context.scoreboard.strikes == 3:
                     context.scoreboard.outs += 1
+                    if stat_collector:
+                        b_d = stat_collector.get(batter.id)
+                        b_d.bat_ab += 1
+                        b_d.bat_so += 1
+                        p_d = stat_collector.get(pitcher.id)
+                        p_d.pitch_so += 1
+                        p_d.pitch_outs += 1
                     break
             else:
                 context.scoreboard.balls += 1
@@ -350,7 +394,10 @@ def simulate_plate_appearance(
                     pitch_velocity=pitch_physics.pitch_velocity
                 ))
                 if context.scoreboard.balls == 4:
-                    runs_scored = advance_runners_walk(context)
+                    if stat_collector:
+                        stat_collector.get(batter.id).bat_bb += 1
+                        stat_collector.get(pitcher.id).pitch_bb += 1
+                    runs_scored = advance_runners_walk(context, stat_collector=stat_collector)
                     if context.is_top:
                         context.scoreboard.away_b += 1
                     else:
@@ -373,6 +420,13 @@ def simulate_plate_appearance(
                 ))
                 if context.scoreboard.strikes == 3:
                     context.scoreboard.outs += 1
+                    if stat_collector:
+                        b_d = stat_collector.get(batter.id)
+                        b_d.bat_ab += 1
+                        b_d.bat_so += 1
+                        p_d = stat_collector.get(pitcher.id)
+                        p_d.pitch_so += 1
+                        p_d.pitch_outs += 1
                     break
             else:
                 # 1. 타자 스탯(power, focus) 및 투구 물리, 투수 스탯 기반 3D 타구 벡터 연산
@@ -431,6 +485,22 @@ def simulate_plate_appearance(
 
                     homerun_runs = 1 + len(base_runners)
                     runs_scored += homerun_runs
+
+                    if stat_collector:
+                        b_d = stat_collector.get(batter.id)
+                        b_d.bat_ab += 1
+                        b_d.bat_hits += 1
+                        b_d.bat_homeruns += 1
+                        b_d.bat_tb += 4
+                        b_d.bat_rbi += homerun_runs
+                        b_d.bat_runs += 1
+                        for r in base_runners:
+                            stat_collector.get(r.id).bat_runs += 1
+                        p_d = stat_collector.get(pitcher.id)
+                        p_d.pitch_hits += 1
+                        p_d.pitch_homeruns += 1
+                        p_d.pitch_runs += homerun_runs
+                        p_d.pitch_earned_runs += homerun_runs
 
                     homerun_type_map = {
                         1: "솔로 홈런",
@@ -517,6 +587,9 @@ def simulate_plate_appearance(
                         action_type=fielding_physics.fielding_action
                     ))
                     context.scoreboard.outs += 1
+                    if stat_collector:
+                        stat_collector.get(batter.id).bat_ab += 1
+                        stat_collector.get(pitcher.id).pitch_outs += 1
                     break
 
                 # [경우 B-2] 공중 포구 실패 및 바운드 파울 (일반 파울 - 수비 에러 미발생)
@@ -572,17 +645,32 @@ def simulate_plate_appearance(
                                 context.scoreboard.away_h += 1
                             else:
                                 context.scoreboard.home_h += 1
+                            if stat_collector:
+                                b_d = stat_collector.get(batter.id)
+                                b_d.bat_ab += 1
+                                b_d.bat_hits += 1
+                                b_d.bat_tb += target_base
+                                if target_base == 2:
+                                    b_d.bat_doubles += 1
+                                elif target_base == 3:
+                                    b_d.bat_triples += 1
+                                stat_collector.get(pitcher.id).pitch_hits += 1
                         else:
                             # 수비측 실책(Error) 카운트 증가
                             if context.is_top:
                                 context.scoreboard.home_e += 1
                             else:
                                 context.scoreboard.away_e += 1
+                            if stat_collector:
+                                stat_collector.get(batter.id).bat_ab += 1
 
-                        runs_scored += advance_runners(context, target_base, reason=run_reason, skip_batter_start_event=True)
+                        runs_scored += advance_runners(context, target_base, reason=run_reason, skip_batter_start_event=True, stat_collector=stat_collector)
                     else:
                         # 아웃! (땅볼 / 1루 포스아웃 / 2루 태그아웃)
                         context.scoreboard.outs += 1
+                        if stat_collector:
+                            stat_collector.get(batter.id).bat_ab += 1
+                            stat_collector.get(pitcher.id).pitch_outs += 1
 
                         # 목표 베이스 최종 아웃 판정 이벤트 발행
                         context.logged_events.append(IngameBaseRunResultEvent(
