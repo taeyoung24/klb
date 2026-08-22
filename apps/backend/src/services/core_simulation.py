@@ -7,9 +7,10 @@ KLB 코어 시뮬레이션 엔진 (Core Simulation Engine)
 """
 
 import datetime
-from typing import NamedTuple
+from typing import NamedTuple, Any, Optional
 from sqlmodel import Session, select, asc, desc, func, col
-from src.models import WorldState, Match, Club, League, DailyClubStanding, MatchPlaceholder, Player
+from settings import CONFIG
+from src.models import WorldState, Match, Club, League, DailyClubStanding, MatchPlaceholder, Player, PlayerSeasonStat
 from src.enums import MatchStatus, MatchStage
 from src.services.schedule_utils import (
     generate_regular_schedule,
@@ -679,6 +680,223 @@ def _update_standings_and_rankings(session: Session, sim_day: int) -> None:
             )
 
 
+def _update_daily_player_season_stats(session: Session, sim_day: int) -> None:
+    """
+    22:00 시각: 당일 완료된 경기들의 경기 로그(logged_events)를 파싱하여
+    해당 선수들의 PlayerSeasonStat 누적 집계 지표를 점진적(Incremental)으로 갱신합니다.
+    """
+    today_matches = session.exec(
+        select(Match)
+        .where(Match.sim_day == sim_day)
+        .where(Match.status == MatchStatus.COMPLETED)
+    ).all()
+
+    if not today_matches:
+        return
+
+    year_num = CONFIG.base_datetime.year + (max(1, sim_day) - 1) // 365
+
+    # 1. 당일 경기에서 발생한 선수별 증분 델타 집계
+    def _create_empty_delta() -> dict[str, int]:
+        return {
+            "bat_games": 0, "bat_pa": 0, "bat_ab": 0, "bat_hits": 0,
+            "bat_doubles": 0, "bat_triples": 0, "bat_homeruns": 0,
+            "bat_rbi": 0, "bat_runs": 0, "bat_bb": 0, "bat_hbp": 0,
+            "bat_so": 0, "bat_tb": 0, "bat_sb": 0, "bat_cs": 0,
+            "pitch_games": 0, "pitch_starts": 0, "pitch_outs": 0,
+            "pitch_wins": 0, "pitch_losses": 0, "pitch_saves": 0,
+            "pitch_holds": 0, "pitch_hits": 0, "pitch_homeruns": 0,
+            "pitch_runs": 0, "pitch_earned_runs": 0, "pitch_bb": 0,
+            "pitch_hbp": 0, "pitch_so": 0, "pitch_pitches": 0,
+        }
+
+    deltas: dict[int, dict[str, int]] = {}
+
+    def _get_delta(p_id: int) -> dict[str, int]:
+        if p_id not in deltas:
+            deltas[p_id] = _create_empty_delta()
+        return deltas[p_id]
+
+    def _get_val(ev: Any, attr: str, default: Any = None) -> Any:
+        if isinstance(ev, dict):
+            return ev.get(attr, default)
+        return getattr(ev, attr, default)
+
+    for m in today_matches:
+        events = None
+        if m.match_log and hasattr(m.match_log, "logged_events"):
+            events = m.match_log.logged_events
+        elif m.match_log_json and isinstance(m.match_log_json, dict):
+            events = m.match_log_json.get("logged_events", [])
+
+        if not events:
+            continue
+
+        participated_batters: set[int] = set()
+        participated_pitchers: set[int] = set()
+        starting_pitchers_marked: set[int] = set()
+
+        curr_batter_id: Optional[int] = None
+        curr_pitcher_id: Optional[int] = None
+        strikes = 0
+        balls = 0
+
+        for ev in events:
+            etype = _get_val(ev, "event_type")
+
+            if etype == "BATTER_ENTER":
+                curr_batter_id = _get_val(ev, "batter_id")
+                curr_pitcher_id = _get_val(ev, "pitcher_id")
+                strikes = 0
+                balls = 0
+
+                if curr_batter_id is not None:
+                    participated_batters.add(curr_batter_id)
+                    _get_delta(curr_batter_id)["bat_pa"] += 1
+
+                if curr_pitcher_id is not None:
+                    participated_pitchers.add(curr_pitcher_id)
+                    if curr_pitcher_id not in starting_pitchers_marked and len(starting_pitchers_marked) < 2:
+                        starting_pitchers_marked.add(curr_pitcher_id)
+                        _get_delta(curr_pitcher_id)["pitch_starts"] += 1
+
+            elif etype == "PITCH":
+                res = _get_val(ev, "result")
+                if curr_pitcher_id is not None:
+                    _get_delta(curr_pitcher_id)["pitch_pitches"] += 1
+
+                if res == "BALL":
+                    balls += 1
+                    if balls == 4:
+                        if curr_batter_id is not None:
+                            _get_delta(curr_batter_id)["bat_bb"] += 1
+                        if curr_pitcher_id is not None:
+                            _get_delta(curr_pitcher_id)["pitch_bb"] += 1
+
+                elif res in ("STRIKE", "STRIKE_LOOKING", "STRIKE_SWINGING"):
+                    strikes += 1
+                    if strikes == 3:
+                        if curr_batter_id is not None:
+                            d = _get_delta(curr_batter_id)
+                            d["bat_ab"] += 1
+                            d["bat_so"] += 1
+                        if curr_pitcher_id is not None:
+                            d = _get_delta(curr_pitcher_id)
+                            d["pitch_so"] += 1
+                            d["pitch_outs"] += 1
+
+                elif res == "FOUL":
+                    if strikes < 2:
+                        strikes += 1
+
+                elif res in ("HIT_BY_PITCH", "DEAD_BALL", "HBP"):
+                    if curr_batter_id is not None:
+                        _get_delta(curr_batter_id)["bat_hbp"] += 1
+                    if curr_pitcher_id is not None:
+                        _get_delta(curr_pitcher_id)["pitch_hbp"] += 1
+
+            elif etype == "NOTICE":
+                msg = _get_val(ev, "message", "")
+                if "홈런" in str(msg):
+                    if curr_batter_id is not None:
+                        d = _get_delta(curr_batter_id)
+                        d["bat_ab"] += 1
+                        d["bat_hits"] += 1
+                        d["bat_homeruns"] += 1
+                        d["bat_tb"] += 4
+                        d["bat_rbi"] += 1
+                        d["bat_runs"] += 1
+                    if curr_pitcher_id is not None:
+                        d = _get_delta(curr_pitcher_id)
+                        d["pitch_hits"] += 1
+                        d["pitch_homeruns"] += 1
+                        d["pitch_runs"] += 1
+                        d["pitch_earned_runs"] += 1
+
+            elif etype == "BASE_RUN_RESULT":
+                target_base = _get_val(ev, "target_base")
+                res = _get_val(ev, "result")
+                reason = _get_val(ev, "reason")
+                runner_id = _get_val(ev, "runner_id")
+
+                if runner_id is None or runner_id == curr_batter_id:
+                    if res == "OUT":
+                        if curr_batter_id is not None:
+                            _get_delta(curr_batter_id)["bat_ab"] += 1
+                        if curr_pitcher_id is not None:
+                            _get_delta(curr_pitcher_id)["pitch_outs"] += 1
+                    elif res == "SAFE" and target_base and 1 <= target_base <= 3 and reason != "WALK":
+                        if curr_batter_id is not None:
+                            d = _get_delta(curr_batter_id)
+                            d["bat_ab"] += 1
+                            d["bat_hits"] += 1
+                            d["bat_tb"] += target_base
+                            if target_base == 2:
+                                d["bat_doubles"] += 1
+                            elif target_base == 3:
+                                d["bat_triples"] += 1
+                        if curr_pitcher_id is not None:
+                            _get_delta(curr_pitcher_id)["pitch_hits"] += 1
+                else:
+                    if res == "OUT":
+                        if curr_pitcher_id is not None:
+                            _get_delta(curr_pitcher_id)["pitch_outs"] += 1
+                    elif res == "SAFE" and target_base == 4:
+                        if runner_id is not None:
+                            _get_delta(runner_id)["bat_runs"] += 1
+                        if curr_batter_id is not None:
+                            _get_delta(curr_batter_id)["bat_rbi"] += 1
+                        if curr_pitcher_id is not None:
+                            d = _get_delta(curr_pitcher_id)
+                            d["pitch_runs"] += 1
+                            d["pitch_earned_runs"] += 1
+
+        for b_id in participated_batters:
+            _get_delta(b_id)["bat_games"] += 1
+
+        for p_id in participated_pitchers:
+            d = _get_delta(p_id)
+            d["pitch_games"] += 1
+            if getattr(m, "winning_pitcher_id", None) == p_id:
+                d["pitch_wins"] += 1
+            if getattr(m, "losing_pitcher_id", None) == p_id:
+                d["pitch_losses"] += 1
+            if getattr(m, "save_pitcher_id", None) == p_id:
+                d["pitch_saves"] += 1
+
+    if not deltas:
+        return
+
+    # 2. DB의 PlayerSeasonStat 레코드 조회 및 증분 누적 (Upsert)
+    player_ids = list(deltas.keys())
+    existing_stats = session.exec(
+        select(PlayerSeasonStat)
+        .where(col(PlayerSeasonStat.player_id).in_(player_ids))
+        .where(PlayerSeasonStat.season_year == year_num)
+    ).all()
+    existing_map = {st.player_id: st for st in existing_stats}
+
+    players = session.exec(select(Player).where(col(Player.id).in_(player_ids))).all()
+    p_club_map = {p.id: p.club_id for p in players}
+
+    for p_id, d in deltas.items():
+        st = existing_map.get(p_id)
+        if not st:
+            st = PlayerSeasonStat(
+                player_id=p_id,
+                club_id=p_club_map.get(p_id),
+                season_year=year_num,
+            )
+
+        for field_name, delta_val in d.items():
+            if delta_val != 0:
+                current_val = getattr(st, field_name, 0) or 0
+                setattr(st, field_name, current_val + delta_val)
+
+        st.updated_at = datetime.datetime.now()
+        session.add(st)
+
+
 def _recover_daily_energy(session: Session, sim_day: int) -> None:
     """
     23:59 시각: 하루가 마감될 때 모든 선수의 일일 자연 체력 회복을 수행합니다.
@@ -743,8 +961,9 @@ def step_simulation_day(session: Session) -> None:
     # 2. 14:00 당일 예정 경기 시뮬레이션 실행
     _run_scheduled_matches(session, sim_day)
 
-    # 3. 22:00 일일 순위표 및 기록 정산
+    # 3. 22:00 일일 순위표 및 선수 시즌 기록 정산
     _update_standings_and_rankings(session, sim_day)
+    _update_daily_player_season_stats(session, sim_day)
 
     # 4. 23:59 일일 마감, 선수 체력 자연 회복 및 WorldState 시각 1일 진전
     _recover_daily_energy(session, sim_day)
