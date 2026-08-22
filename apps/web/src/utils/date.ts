@@ -18,3 +18,15 @@ export const simDayToDateStr = (simDay: number, baseYear: number = BASE_YEAR): s
   const day = String(d.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
 };
+
+/**
+ * 백엔드 sim_day를 yyyy.mm.dd 날짜 문자열로 변환합니다.
+ */
+export const formatSimDayDot = (simDay: number, baseYear: number = BASE_YEAR): string => {
+  const d = simDayToDate(simDay, baseYear);
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}.${month}.${day}`;
+};
+

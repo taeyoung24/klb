@@ -127,3 +127,20 @@ def process_pre_draft_releases(session: Session, year: int, sim_day: int, target
 
     session.commit()
     logger.info(f"[{year}년 신인 드래프트 행정] 총 {released_count}명 2차 로스터 정원 확보 방출 완료")
+
+
+def process_annual_player_progression(session: Session, year: int, sim_day: int) -> None:
+    """
+    [연간 에이징 커브 스텝업/스텝다운] 연 1회 오프시즌/시즌 종료 시점에 실행.
+    - 모든 현역/미계약 선수의 나이 및 잠재력에 따라 6대 스탯에 스텝업/스텝다운을 영구 적용합니다.
+    """
+    from src.services.general_utils import apply_player_aging_progression
+
+    players = list(session.exec(select(Player)).all())
+    for player in players:
+        apply_player_aging_progression(player, current_year=year)
+        session.add(player)
+
+    session.commit()
+    logger.info(f"[{year}시즌 종료 에이징 커브] 총 {len(players)}명 선수 연간 스탯 스텝업/스텝다운 적용 완료 (Sim Day: {sim_day})")
+

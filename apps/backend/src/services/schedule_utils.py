@@ -1,8 +1,8 @@
 import datetime
 from typing import Optional, Union
-from sqlmodel import Session, select, col
+from sqlmodel import Session, select, col, desc
 from src.enums import MatchStatus, MatchStage
-from src.models import Match, Club, MatchPlaceholder, WorldState
+from src.models import Match, Club, MatchPlaceholder, WorldState, DailyClubStanding
 from src.services.date_utils import sim_day_to_date, date_obj_to_sim_day
 from settings import CONFIG
 
@@ -405,4 +405,60 @@ def update_knockout_placeholders_realtime(session: Session, sim_day: Optional[in
         session.commit()
 
     return updated
+
+
+def get_elite_league_rank(session: Session, club_id: Optional[int], sim_day: int) -> int:
+    """
+    해당 시즌 정예리그(EL, is_postseason=True)에서의 구단 최종 순위를 반환합니다.
+    기록이 없거나 오류 시 99 반환.
+    """
+    if not club_id:
+        return 99
+
+    curr_date = sim_day_to_date(sim_day)
+    jan_1 = date_obj_to_sim_day(datetime.date(curr_date.year, 1, 1))
+
+    standing = session.exec(
+        select(DailyClubStanding)
+        .where(DailyClubStanding.club_id == club_id)
+        .where(DailyClubStanding.is_postseason == True)
+        .where(DailyClubStanding.sim_day >= jan_1)
+        .where(DailyClubStanding.sim_day <= sim_day)
+        .order_by(desc(DailyClubStanding.sim_day))
+    ).first()
+
+    return standing.rank if standing else 99
+
+
+def determine_series_home_away(
+    club_a_id: Optional[int],
+    club_b_id: Optional[int],
+    game_num: int,
+    advantage_game_nums: list[int],
+    session: Session,
+    sim_day: int
+) -> tuple[Optional[int], Optional[int]]:
+    """
+    두 구단 중 정예리그(EL) 순위가 더 높은(rank 숫자가 더 작은) 상위 시드 구단에게
+    홈 어드밴티지 경기(advantage_game_nums)를 배정합니다.
+
+    Returns:
+        (actual_home_club_id, actual_away_club_id)
+    """
+    if not club_a_id or not club_b_id:
+        return club_a_id, club_b_id
+
+    rank_a = get_elite_league_rank(session, club_a_id, sim_day)
+    rank_b = get_elite_league_rank(session, club_b_id, sim_day)
+
+    # rank 숫자가 작을수록 상위 시드 (예: 1위 vs 4위 -> A가 상위)
+    is_a_higher = (rank_a <= rank_b)
+    higher_club_id = club_a_id if is_a_higher else club_b_id
+    lower_club_id = club_b_id if is_a_higher else club_a_id
+
+    if game_num in advantage_game_nums:
+        return higher_club_id, lower_club_id
+    else:
+        return lower_club_id, higher_club_id
+
 

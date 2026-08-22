@@ -30,6 +30,8 @@ from .ingame import (
     PitcherTracker,
     IngameContext,
     PitchSelectionResult,
+    PlayerMatchStatDelta,
+    MatchStatCollector,
 )
 from .db import (
     IngameInstructionLogType,
@@ -41,6 +43,7 @@ from .db import (
     Article,
     ArticleComment,
     PlayerTransactionHistory,
+    PlayerSeasonStat,
 )
 
 __all__ = [
@@ -70,6 +73,8 @@ __all__ = [
     "PitcherTracker",
     "IngameContext",
     "PitchSelectionResult",
+    "PlayerMatchStatDelta",
+    "MatchStatCollector",
 
     # DB
     "IngameInstructionLogType",
@@ -81,4 +86,5 @@ __all__ = [
     "Article",
     "ArticleComment",
     "PlayerTransactionHistory",
+    "PlayerSeasonStat",
 ]

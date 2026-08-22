@@ -509,39 +509,47 @@ def resolve_elite_league_ties(
                         h2h_stats[m.away_club_id]["wins"] += 1
                         h2h_stats[m.home_club_id]["losses"] += 1
 
-            # 6단계 정렬 키 헬퍼
-            def get_elite_tiebreaker_sort_key(cid: int) -> tuple[float, float, float, float, float, float]:
-                # 1순위: 정예리그 H2H 승률
+            # 1~4단계 키 헬퍼 (1: H2H 승률, 2: 정규시즌 시드, 3: 정규시즌 승률, 4: H2H 다득점)
+            def get_stage1_to_4_key(cid: int) -> tuple[float, float, float, float]:
                 w = h2h_stats[cid]["wins"]
                 l = h2h_stats[cid]["losses"]
                 h2h_win_rate = w / (w + l) if (w + l) > 0 else 0.0
-
-                # 2순위 & 3순위: 정규시즌 시드(rank) & 정규시즌 승률(win_rate)
                 reg_std = reg_map.get(cid)
                 reg_seed = reg_std.rank if reg_std else 999
                 reg_win_rate = reg_std.win_rate if reg_std else 0.0
-
-                # 4순위: 정예리그 H2H 다득점
                 h2h_runs = h2h_stats[cid]["runs_scored"]
-
-                # 5순위: 전년도 정예리그 순위 (호출측에서 미리 로드된 맵 사용)
-                prev_rank_score = prev_rank_map.get(cid, 999)
-
-                # 6순위: 무작위 (랜덤)
-                rand_val = random.random()
-
                 return (
                     h2h_win_rate,
                     -float(reg_seed),
                     reg_win_rate,
                     float(h2h_runs),
-                    -float(prev_rank_score),
-                    rand_val,
                 )
 
-            sorted_ids = sorted(tied_club_ids, key=get_elite_tiebreaker_sort_key, reverse=True)
-            for cid in sorted_ids:
-                final_ranking_list.append(item_map[cid])
+            # 1~4단계 기준으로 서브그룹 분할
+            sub_groups: dict[tuple[float, float, float, float], list[int]] = {}
+            for cid in tied_club_ids:
+                k = get_stage1_to_4_key(cid)
+                sub_groups.setdefault(k, []).append(cid)
+
+            # 1~4단계 기준 내림차순 정렬
+            sorted_sub_keys = sorted(sub_groups.keys(), reverse=True)
+
+            for k in sorted_sub_keys:
+                sub_cids = sub_groups[k]
+                if len(sub_cids) == 1:
+                    final_ranking_list.append(item_map[sub_cids[0]])
+                else:
+                    # 1~4순위로도 동률이 해소되지 않은 경우에만 5순위(전년도 순위)를 Lazy Load
+                    if prev_rank_map is None:
+                        prev_rank_map = _batch_load_prev_elite_season_ranks(session, tied_club_ids, elite_start_day)
+
+                    def get_stage5_to_6_key(cid: int) -> tuple[float, float]:
+                        prev_rank_score = prev_rank_map.get(cid, 999) if prev_rank_map else 999
+                        return (-float(prev_rank_score), random.random())
+
+                    sorted_remaining_ids = sorted(sub_cids, key=get_stage5_to_6_key, reverse=True)
+                    for cid in sorted_remaining_ids:
+                        final_ranking_list.append(item_map[cid])
 
     return final_ranking_list
 
@@ -586,6 +594,8 @@ def update_elite_daily_standings(
     host_league_id: int,
     playoff_club_ids: list[int],
     regular_max_day: int = 168,
+    *,
+    elite_matches: Optional[Sequence[Match]] = None,
 ):
     """
     지정된 sim_day(정예리그 기간)까지 완료된 정예리그 매치 결과를 바탕으로
@@ -593,18 +603,23 @@ def update_elite_daily_standings(
     DailyClubStanding 스냅샷 (is_postseason=True, league_id=host_league_id)을 DB에 저장합니다.
 
     최적화:
+    - elite_matches: 외부 전달 시 재활용하여 중복 쿼리 제거
     - 구단 배치 조회: session.get × 16 → IN 쿼리 1회
     - streak 계산: 16 × N 루프 → 클럽별 경기 인덱스 사전 구축
     - reg_map: resolve_elite_league_ties 내부 매번 재쿼리 → 1회 선로드 후 주입
-    - prev_rank_map: 구단별 개별 쿼리 → 배치 1회 로드 후 주입
+    - prev_rank_map: 매일 무조건 실행하지 않고 1~4순위 동률 시 Lazy Loading
     """
-    # [최적화 1] 정예리그 경기 1회 조회
-    elite_matches = session.exec(
-        select(Match)
-        .where(col(Match.sim_day) >= elite_start_day)
-        .where(col(Match.sim_day) <= sim_day)
-        .where(col(Match.status) == MatchStatus.COMPLETED)
-    ).all()
+    # [최적화 1] 정예리그 경기 조회 (외부 미전달 시 1회 조회)
+    if elite_matches is None:
+        elite_matches = session.exec(
+            select(Match)
+            .where(col(Match.sim_day) >= elite_start_day)
+            .where(col(Match.sim_day) <= sim_day)
+            .where(col(Match.status) == MatchStatus.COMPLETED)
+        ).all()
+    else:
+        # COMPLETED 상태의 경기만 필터링 (필요시)
+        elite_matches = [m for m in elite_matches if m.status == MatchStatus.COMPLETED and m.sim_day <= sim_day]
 
     # [최적화 2] 클럽 배치 조회 (session.get × N → IN 1회)
     club_rows = session.exec(
@@ -696,9 +711,6 @@ def update_elite_daily_standings(
     ).all()
     reg_map = {s.club_id: s for s in reg_standings}
 
-    # [최적화 5] prev_rank_map 배치 로드 (구단별 개별 쿼리 제거)
-    prev_rank_map = _batch_load_prev_elite_season_ranks(session, playoff_club_ids, elite_start_day)
-
     ranking_list = [
         {
             "club": club_map.get(cid),
@@ -718,7 +730,7 @@ def update_elite_daily_standings(
         regular_max_day,
         reg_map=reg_map,
         elite_matches=elite_matches,
-        prev_rank_map=prev_rank_map,
+        prev_rank_map=None,  # 필요 시 내부에서 5순위 동률 시 Lazy Load
     )
 
     ordered_cids = [item["club"].id for item in resolved_ranking if item["club"] is not None]

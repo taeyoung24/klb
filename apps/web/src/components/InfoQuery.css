@@ -1,0 +1,151 @@
+/* ==========================================================================
+   InfoQuery Shared Components Style (BEM Convention - Flat White Theme)
+   - Strict rule: White-based flat light theme
+   - Strict rule: BEM naming convention
+   - Strict rule: NO hover effects, NO shadows, NO card design
+   ========================================================================== */
+
+.info-query-table-container {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+}
+
+.info-query-table__wrapper {
+  width: 100%;
+  overflow-x: auto;
+  border: 1px solid #e2e8f0;
+}
+
+.info-query-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 13px;
+}
+
+.info-query-table__head {
+  background-color: #f1f5f9;
+  border-bottom: 2px solid #cbd5e1;
+}
+
+.info-query-table__header {
+  padding: 8px 10px;
+  font-weight: 700;
+  color: #1e293b;
+  white-space: nowrap;
+  border-right: 1px solid #e2e8f0;
+}
+
+.info-query-table__header:last-child {
+  border-right: none;
+}
+
+.info-query-table__header--center {
+  text-align: center;
+}
+
+.info-query-table__header--right {
+  text-align: right;
+}
+
+.info-query-table__body {
+  background-color: #ffffff;
+}
+
+.info-query-table__row {
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.info-query-table__cell {
+  padding: 8px 10px;
+  color: #334155;
+  white-space: nowrap;
+  border-right: 1px solid #f1f5f9;
+}
+
+.info-query-table__cell:last-child {
+  border-right: none;
+}
+
+.info-query-table__cell--bold {
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.info-query-table__cell--center {
+  text-align: center;
+}
+
+.info-query-table__cell--right {
+  text-align: right;
+}
+
+.info-query-table__empty {
+  padding: 48px 16px;
+  text-align: center;
+  color: #64748b;
+  font-size: 14px;
+}
+
+/* --------------------------------------------------------------------------
+   Pagination (Flat White Style - No Hover, No Shadow, No Cards)
+   -------------------------------------------------------------------------- */
+.info-query-table__pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 12px 0 8px 0;
+}
+
+.info-query-table__pagination-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 34px;
+  min-width: 34px;
+  padding: 0 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #334155;
+  background-color: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 0;
+  cursor: pointer;
+  box-sizing: border-box;
+}
+
+.info-query-table__pagination-button:disabled {
+  color: #cbd5e1;
+  border-color: #e2e8f0;
+  background-color: #f8fafc;
+  cursor: not-allowed;
+}
+
+.info-query-table__pagination-button--active {
+  color: #ffffff;
+  background-color: #0f172a;
+  border-color: #0f172a;
+  font-weight: 700;
+}
+
+.info-query-table__pagination-ellipsis {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 34px;
+  min-width: 24px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #94a3b8;
+  user-select: none;
+}
+
+@media (max-width: 768px) {
+  .info-query-table__pagination {
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+}

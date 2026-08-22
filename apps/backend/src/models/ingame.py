@@ -1,3 +1,4 @@
+from dataclasses import dataclass, field
 from typing import Annotated, Union, Literal, Optional
 from sqlmodel import SQLModel, Field
 from src.enums import (
@@ -25,7 +26,6 @@ class IngameEvent(SQLModel):
     """
     시뮬레이션 타임라인을 구성하는 모든 인게임 이벤트의 최상위 기반 모델.
     """
-    event_type: IngameEventType  # 이벤트의 구체적인 유형
     sim_timestamp: float  # 시뮬레이션 경과 시간 (초 단위, 밀리초 소수점 허용)
 
 
@@ -294,3 +294,55 @@ class IngameContext(SQLModel):
 
     # 시뮬레이션 타임라인 로그 이벤트 대본
     logged_events: list[IngameEventConcrete] = Field(default_factory=list)
+
+
+@dataclass
+class PlayerMatchStatDelta:
+    """단일 매치에서 특정 선수가 기록한 순수 실시간 스탯 증분 델타"""
+    player_id: int
+    # 타격 지표
+    bat_games: int = 0
+    bat_pa: int = 0
+    bat_ab: int = 0
+    bat_hits: int = 0
+    bat_doubles: int = 0
+    bat_triples: int = 0
+    bat_homeruns: int = 0
+    bat_rbi: int = 0
+    bat_runs: int = 0
+    bat_bb: int = 0
+    bat_hbp: int = 0
+    bat_so: int = 0
+    bat_tb: int = 0
+    bat_sb: int = 0
+    bat_cs: int = 0
+    # 투구 지표
+    pitch_games: int = 0
+    pitch_starts: int = 0
+    pitch_outs: int = 0
+    pitch_wins: int = 0
+    pitch_losses: int = 0
+    pitch_saves: int = 0
+    pitch_holds: int = 0
+    pitch_hits: int = 0
+    pitch_homeruns: int = 0
+    pitch_runs: int = 0
+    pitch_earned_runs: int = 0
+    pitch_bb: int = 0
+    pitch_hbp: int = 0
+    pitch_so: int = 0
+    pitch_pitches: int = 0
+
+
+class MatchStatCollector:
+    """경기 진행 중 발생하는 선수 스탯을 실시간 O(1)로 수집하는 전용 독립 컬렉터"""
+    def __init__(self):
+        self.stats: dict[int, PlayerMatchStatDelta] = {}
+
+    def get(self, player_id: int) -> PlayerMatchStatDelta:
+        d = self.stats.get(player_id)
+        if d is None:
+            d = PlayerMatchStatDelta(player_id=player_id)
+            self.stats[player_id] = d
+        return d
+

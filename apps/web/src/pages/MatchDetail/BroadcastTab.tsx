@@ -59,6 +59,10 @@ interface PlateAppearance {
   paIndex: number;
   batterId?: number;
   pitcherId?: number;
+  pitcherChanged?: {
+    prevPitcherId?: number;
+    newPitcherId: number;
+  };
   summary: string;
   resultType: 'HIT' | 'HOMERUN' | 'OUT' | 'WALK' | 'STRIKE_OUT' | 'ETC';
   runsScored?: number;
@@ -121,6 +125,7 @@ const FIELDING_ACTION_MAP: Record<string, string> = {
 const BASE_RUN_REASON_MAP: Record<string, string> = {
   STEAL: '도루 시도',
   HIT_RUN: '인플레이 진루',
+  HOMERUN: '홈런 주루',
   WALK: '볼넷 출루',
   HIT_BY_PITCH: '사구 출루',
   ERROR: '실책 진루',
@@ -222,11 +227,9 @@ export const BroadcastTab: React.FC<BroadcastTabProps> = ({ matchLog, awayClub, 
     let paCounter = 1;
     let currentPitchType: string | null = null;
     let currentPitchVel: number | null = null;
+    const lastPitcherByTeam: { home?: number; away?: number } = {};
     const runnerStartBaseMap: Record<number, number> = {};
     const runnerReasonMap: Record<number, string> = {};
-
-
-
 
     for (const ev of log.logged_events) {
       const type = ev.event_type;
@@ -295,10 +298,26 @@ export const BroadcastTab: React.FC<BroadcastTabProps> = ({ matchLog, awayClub, 
         strikes = 0;
         pitchCountInPA = 0;
 
+        // 수비팀 투수 교체 감지 (초 이닝이면 홈팀이 수비, 말 이닝이면 어웨이팀이 수비)
+        const defTeamKey: 'home' | 'away' = currentInning.isTop ? 'home' : 'away';
+        const prevPId = lastPitcherByTeam[defTeamKey];
+        let pitcherChangedInfo: { prevPitcherId?: number; newPitcherId: number } | undefined;
+
+        if (ev.pitcher_id) {
+          if (prevPId && prevPId !== ev.pitcher_id) {
+            pitcherChangedInfo = {
+              prevPitcherId: prevPId,
+              newPitcherId: ev.pitcher_id,
+            };
+          }
+          lastPitcherByTeam[defTeamKey] = ev.pitcher_id;
+        }
+
         currentPA = {
           paIndex: paCounter++,
           batterId: ev.batter_id,
           pitcherId: ev.pitcher_id,
+          pitcherChanged: pitcherChangedInfo,
           summary: '타석 진행',
           resultType: 'ETC',
           runsScored: 0,
@@ -692,36 +711,48 @@ export const BroadcastTab: React.FC<BroadcastTabProps> = ({ matchLog, awayClub, 
                 const isScored = Boolean(pa.runsScored && pa.runsScored > 0);
 
                 return (
-                  <div key={idx} className={`match-broadcast__pa-card ${isScored ? 'match-broadcast__pa-card--scored' : ''}`}>
-                    <div className="match-broadcast__pa-header">
-                      <div className="match-broadcast__pa-title-group">
-                        <span className="match-broadcast__pa-num">타석 #{pa.paIndex}</span>
-                        <span className="match-broadcast__pa-player">
-                          {getPlayerLabel(pa.batterId, playersMap, '타자', batterOrderMap)}
+                  <React.Fragment key={idx}>
+                    {pa.pitcherChanged && (
+                      <div className="match-broadcast__pitcher-change-banner">
+                        <span className="match-broadcast__pitcher-change-badge">투수 교체</span>
+                        <span className="match-broadcast__pitcher-change-prev">
+                          {getPlayerLabel(pa.pitcherChanged.prevPitcherId, playersMap, '투수')} ➔
                         </span>
-                        {pa.pitcherId && (
-                          <span className="match-broadcast__pa-vs">
-                            vs {getPlayerLabel(pa.pitcherId, playersMap, '투수')}
-                          </span>
-                        )}
+                        <span className="match-broadcast__pitcher-change-player">
+                          {getPlayerLabel(pa.pitcherChanged.newPitcherId, playersMap, '투수')}
+                        </span>
                       </div>
-                      <div className="match-broadcast__pa-status-group">
-                        <span className={`match-broadcast__pa-badge ${badgeClass}`}>
-                          {pa.summary}
-                        </span>
-                        {isScored && pa.awayScore !== undefined && pa.homeScore !== undefined && (
-                          <span className="match-broadcast__pa-score-changed">
-                            {pa.awayScore}:{pa.homeScore}
+                    )}
+                    <div className={`match-broadcast__pa-card ${isScored ? 'match-broadcast__pa-card--scored' : ''}`}>
+                      <div className="match-broadcast__pa-header">
+                        <div className="match-broadcast__pa-title-group">
+                          <span className="match-broadcast__pa-num">타석 #{pa.paIndex}</span>
+                          <span className="match-broadcast__pa-player">
+                            {getPlayerLabel(pa.batterId, playersMap, '타자', batterOrderMap)}
                           </span>
-                        )}
-                        <div className="match-broadcast__pa-outs" title={`${pa.outs ?? 0}아웃`}>
-                          <span className={`match-broadcast__pa-out-dot ${(pa.outs ?? 0) >= 1 ? 'match-broadcast__pa-out-dot--filled' : ''}`} />
-                          <span className={`match-broadcast__pa-out-dot ${(pa.outs ?? 0) >= 2 ? 'match-broadcast__pa-out-dot--filled' : ''}`} />
+                          {pa.pitcherId && (
+                            <span className="match-broadcast__pa-vs">
+                              vs {getPlayerLabel(pa.pitcherId, playersMap, '투수')}
+                            </span>
+                          )}
+                        </div>
+                        <div className="match-broadcast__pa-status-group">
+                          <span className={`match-broadcast__pa-badge ${badgeClass}`}>
+                            {pa.summary}
+                          </span>
+                          {isScored && pa.awayScore !== undefined && pa.homeScore !== undefined && (
+                            <span className="match-broadcast__pa-score-changed">
+                              {pa.awayScore}:{pa.homeScore}
+                            </span>
+                          )}
+                          <div className="match-broadcast__pa-outs" title={`${pa.outs ?? 0}아웃`}>
+                            <span className={`match-broadcast__pa-out-dot ${(pa.outs ?? 0) >= 1 ? 'match-broadcast__pa-out-dot--filled' : ''}`} />
+                            <span className={`match-broadcast__pa-out-dot ${(pa.outs ?? 0) >= 2 ? 'match-broadcast__pa-out-dot--filled' : ''}`} />
+                          </div>
                         </div>
                       </div>
-                    </div>
 
-                    <div className="match-broadcast__pa-body">
+                      <div className="match-broadcast__pa-body">
                       {pa.textLogs.length > 0 ? (
                         <div className="match-broadcast__timeline">
                           {pa.textLogs.map((log) => {
@@ -756,8 +787,9 @@ export const BroadcastTab: React.FC<BroadcastTabProps> = ({ matchLog, awayClub, 
                       ) : (
                         <div style={{ color: '#718096', fontSize: '0.85rem' }}>상세 투구 로그 기록 없음</div>
                       )}
+                      </div>
                     </div>
-                  </div>
+                  </React.Fragment>
                 );
               })
             )}

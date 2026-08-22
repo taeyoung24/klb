@@ -18,8 +18,8 @@ const SystemContext = createContext<SystemContextType | undefined>(undefined);
 
 export function SystemProvider({ children }: { children: ReactNode }) {
   const [seasonYear, setSeasonYear] = useState<number | null>(null);
-  const [currentDate, setCurrentDate] = useState<Date>(new Date("2026-07-17"));
-  const [scheduleDate, setScheduleDate] = useState<Date>(new Date("2026-07-17"));
+  const [currentDate, setCurrentDate] = useState<Date>(new Date("1953-01-01"));
+  const [scheduleDate, setScheduleDate] = useState<Date>(new Date("1953-01-01"));
   const [hostLeagueName, setHostLeagueName] = useState<string | null>(null);
   const [hostLeagueId, setHostLeagueId] = useState<number>(1);
   const [clubsMap, setClubsMap] = useState<Record<number, Club>>({});
@@ -46,7 +46,7 @@ export function SystemProvider({ children }: { children: ReactNode }) {
       })
       .catch(e => {
         console.error("Failed to load initial system context data", e);
-        setSeasonYear(2026);
+        setSeasonYear(1953);
         setIsLoaded(true);
       });
   }, []);

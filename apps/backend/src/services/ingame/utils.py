@@ -31,8 +31,8 @@ def calculate_pressure_weight(context: IngameContext) -> float:
     pressure_weight = inning_weight + bso_weight + runners_weight
     return max(0.0, min(1.0, pressure_weight))
 
-def generate_mock_players(club_id: int) -> tuple[Player, list[Player], list[Player]]:
-    """지정된 클럽 ID를 갖는 목 선발 투수 1명, 불펜 투수들, 그리고 목 타자 9명을 생성합니다."""
+def generate_mock_players(club_id: int) -> tuple[Player, list[Player], list[Player], list[Player]]:
+    """지정된 클럽 ID를 갖는 목 선발 투수 1명, 불펜 투수들, 목 타자 9명, 그리고 목 벤치 타자들을 생성합니다."""
     # 선발 투수 생성
     starting_pitcher = Player(
         id=club_id * 1000 + 1,
@@ -45,6 +45,8 @@ def generate_mock_players(club_id: int) -> tuple[Player, list[Player], list[Play
         flexibility=580,
         focus=600,
         stamina=700,
+        current_energy=10000,
+        max_energy=10000,
         roster_status=RosterStatus.ACTIVE,
         position=IngameRole.PITCHER,
         personality=[500, 500, 500, 500],
@@ -67,6 +69,8 @@ def generate_mock_players(club_id: int) -> tuple[Player, list[Player], list[Play
             flexibility=570,
             focus=580,
             stamina=550,
+            current_energy=10000,
+            max_energy=10000,
             roster_status=RosterStatus.ACTIVE,
             position=IngameRole.PITCHER,
             personality=[500, 500, 500, 500],
@@ -96,6 +100,8 @@ def generate_mock_players(club_id: int) -> tuple[Player, list[Player], list[Play
             flexibility=530 + i * 10,
             focus=520 + i * 15,
             stamina=500,
+            current_energy=10000,
+            max_energy=10000,
             roster_status=RosterStatus.ACTIVE,
             position=pos,
             personality=[500, 500, 500, 500],
@@ -105,4 +111,29 @@ def generate_mock_players(club_id: int) -> tuple[Player, list[Player], list[Play
         )
         batters.append(batter)
         
-    return starting_pitcher, bullpen_pitchers, batters
+    # 벤치 타자 2명 생성
+    bench_batters = []
+    for idx in range(1, 3):
+        bench = Player(
+            id=club_id * 1000 + 30 + idx,
+            name=f"Bench_{club_id}_{idx}",
+            club_id=club_id,
+            uniform_number=f"{idx+50:02d}",
+            speed=530 + idx * 20,
+            control=500,
+            power=520 + idx * 20,
+            flexibility=520,
+            focus=510,
+            stamina=500,
+            current_energy=10000,
+            max_energy=10000,
+            roster_status=RosterStatus.ACTIVE,
+            position=IngameRole.LEFT_FIELD if idx == 1 else IngameRole.FIRST_BASE,
+            personality=[500, 500, 500, 500],
+            birthday=datetime(2001, 5, idx),
+            height=178.0,
+            weight=76.0
+        )
+        bench_batters.append(bench)
+
+    return starting_pitcher, bullpen_pitchers, batters, bench_batters

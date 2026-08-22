@@ -1,6 +1,6 @@
 import datetime
 import json
-from typing import Optional
+from typing import Any, Optional
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session, select, asc, SQLModel
 from sqlalchemy.orm import defer
@@ -208,8 +208,8 @@ def get_match_lineup(
     # DB에 MatchLineup이 없는 경우 fallback (동적 추출/생성)
     if not away_lineup or not home_lineup:
         from src.services.ingame.lineup import select_team_roster_for_match
-        away_sp, _, away_batters = select_team_roster_for_match(match.away_club_id, session=session)
-        home_sp, _, home_batters = select_team_roster_for_match(match.home_club_id, session=session)
+        away_sp, _, away_batters, _ = select_team_roster_for_match(match.away_club_id, session=session)
+        home_sp, _, home_batters, _ = select_team_roster_for_match(match.home_club_id, session=session)
 
         if not away_lineup:
             away_lineup = [
@@ -332,7 +332,109 @@ def get_match_analysis(
             else:
                 home_h2h_wins += 1
 
-    # 3. 팀별 해당 시즌 target_day 이전 완료 경기 실적 동적 집계
+    # 3. 팀별 및 투수별 match_log 기반 정밀 지표 집계
+    def _get_ev_val(ev: Any, attr: str, default: Any = None) -> Any:
+        if isinstance(ev, dict):
+            return ev.get(attr, default)
+        return getattr(ev, attr, default)
+
+    def extract_match_detailed_stats(m: Match) -> dict:
+        events = None
+        if m.match_log and hasattr(m.match_log, 'logged_events'):
+            events = m.match_log.logged_events
+        elif m.match_log_json and isinstance(m.match_log_json, dict):
+            events = m.match_log_json.get('logged_events', [])
+
+        match_stats = {
+            'away': {'ab': 0, 'h': 0, 'bb': 0, 'tb': 0, 'def_outs': 0, 'runs': m.away_score or 0, 'ra': m.home_score or 0},
+            'home': {'ab': 0, 'h': 0, 'bb': 0, 'tb': 0, 'def_outs': 0, 'runs': m.home_score or 0, 'ra': m.away_score or 0},
+            'pitchers': {}
+        }
+
+        if not events:
+            # 로그가 없는 경우 기본 아웃수 27(9이닝) 추정
+            match_stats['away']['def_outs'] = 27
+            match_stats['home']['def_outs'] = 27
+            return match_stats
+
+        curr_is_top = True
+        curr_pitcher_id = None
+        strikes = 0
+        balls = 0
+
+        for ev in events:
+            etype = _get_ev_val(ev, 'event_type')
+            if etype == 'GAME_STATE':
+                is_top = _get_ev_val(ev, 'is_top')
+                if is_top is not None:
+                    curr_is_top = is_top
+            elif etype == 'BATTER_ENTER':
+                p_id = _get_ev_val(ev, 'pitcher_id')
+                curr_pitcher_id = p_id
+                strikes = 0
+                balls = 0
+                if curr_pitcher_id and curr_pitcher_id not in match_stats['pitchers']:
+                    match_stats['pitchers'][curr_pitcher_id] = {'outs': 0, 'er': 0, 'so': 0, 'h': 0, 'bb': 0, 'ab': 0}
+            elif etype == 'PITCH':
+                res = _get_ev_val(ev, 'result')
+                atk_key = 'away' if curr_is_top else 'home'
+                def_key = 'home' if curr_is_top else 'away'
+                p_stat = match_stats['pitchers'].get(curr_pitcher_id) if curr_pitcher_id else None
+
+                if res == 'BALL':
+                    balls += 1
+                    if balls == 4:
+                        match_stats[atk_key]['bb'] += 1
+                        if p_stat:
+                            p_stat['bb'] += 1
+                elif res in ('STRIKE', 'STRIKE_LOOKING', 'STRIKE_SWINGING'):
+                    strikes += 1
+                    if strikes == 3:
+                        match_stats[atk_key]['ab'] += 1
+                        match_stats[def_key]['def_outs'] += 1
+                        if p_stat:
+                            p_stat['outs'] += 1
+                            p_stat['so'] += 1
+                            p_stat['ab'] += 1
+                elif res == 'FOUL':
+                    if strikes < 2:
+                        strikes += 1
+            elif etype == 'NOTICE':
+                msg = _get_ev_val(ev, 'message', '')
+                if '홈런' in str(msg):
+                    atk_key = 'away' if curr_is_top else 'home'
+                    p_stat = match_stats['pitchers'].get(curr_pitcher_id) if curr_pitcher_id else None
+                    match_stats[atk_key]['ab'] += 1
+                    match_stats[atk_key]['h'] += 1
+                    match_stats[atk_key]['tb'] += 4
+                    if p_stat:
+                        p_stat['h'] += 1
+                        p_stat['ab'] += 1
+            elif etype == 'BASE_RUN_RESULT':
+                target_base = _get_ev_val(ev, 'target_base')
+                res = _get_ev_val(ev, 'result')
+                atk_key = 'away' if curr_is_top else 'home'
+                def_key = 'home' if curr_is_top else 'away'
+                p_stat = match_stats['pitchers'].get(curr_pitcher_id) if curr_pitcher_id else None
+
+                if res == 'OUT':
+                    match_stats[atk_key]['ab'] += 1
+                    match_stats[def_key]['def_outs'] += 1
+                    if p_stat:
+                        p_stat['outs'] += 1
+                        p_stat['ab'] += 1
+                elif res == 'SAFE' and target_base and 1 <= target_base <= 3:
+                    # 타자 주자의 인플레이 안타 출루
+                    match_stats[atk_key]['ab'] += 1
+                    match_stats[atk_key]['h'] += 1
+                    match_stats[atk_key]['tb'] += target_base
+                    if p_stat:
+                        p_stat['h'] += 1
+                        p_stat['ab'] += 1
+
+        return match_stats
+
+    # 팀별 해당 시즌 target_day 이전 완료 경기 실적 정밀 집계
     def get_team_season_stats(club_id: int):
         matches = session.exec(
             select(Match).where(
@@ -350,6 +452,12 @@ def get_match_analysis(
         runs_allowed = 0
         total_games = len(matches)
 
+        total_ab = 0
+        total_h = 0
+        total_bb = 0
+        total_tb = 0
+        total_def_outs = 0
+
         for m in matches:
             is_home = (m.home_club_id == club_id)
             team_score = (m.home_score if is_home else m.away_score) or 0
@@ -365,11 +473,24 @@ def get_match_analysis(
             else:
                 draws += 1
 
-        win_rate = wins / total_games if total_games > 0 else 0.500
-        # 추정 타율/ERA (경기당 평균 득실점 기반 동적 매핑)
-        estimated_avg = 0.240 + (runs_scored / (total_games * 35) if total_games > 0 else 0.025)
-        estimated_era = 4.50 - ((runs_scored - runs_allowed) / total_games * 0.5 if total_games > 0 else 0.0)
-        estimated_era = max(1.50, min(6.50, estimated_era))
+            m_stats = extract_match_detailed_stats(m)
+            c_key = 'home' if is_home else 'away'
+            total_ab += m_stats[c_key]['ab']
+            total_h += m_stats[c_key]['h']
+            total_bb += m_stats[c_key]['bb']
+            total_tb += m_stats[c_key]['tb']
+            total_def_outs += m_stats[c_key]['def_outs']
+
+        win_rate = wins / total_games if total_games > 0 else 0.000
+        
+        # 실제 타율 / ERA / OPS 계산
+        real_avg = (total_h / total_ab) if total_ab > 0 else 0.000
+        real_obp = ((total_h + total_bb) / (total_ab + total_bb)) if (total_ab + total_bb) > 0 else 0.000
+        real_slg = (total_tb / total_ab) if total_ab > 0 else 0.000
+        real_ops = real_obp + real_slg
+
+        innings_pitched = total_def_outs / 3.0
+        real_era = (runs_allowed * 9.0 / innings_pitched) if innings_pitched > 0 else 0.00
 
         return {
             "wins": wins,
@@ -377,10 +498,10 @@ def get_match_analysis(
             "draws": draws,
             "games": total_games,
             "win_rate": win_rate,
-            "avg": f"{estimated_avg:.3f}".replace("0.", "."),
-            "era": f"{estimated_era:.2f}",
+            "avg": f"{real_avg:.3f}".replace("0.", "."),
+            "era": f"{real_era:.2f}",
             "runs": runs_scored,
-            "ops": f"{estimated_avg + 0.480:.3f}".replace("0.", "."),
+            "ops": f"{real_ops:.3f}".replace("0.", "."),
         }
 
     away_stats = get_team_season_stats(away_id)
@@ -395,14 +516,14 @@ def get_match_analysis(
         ),
         MetricItemResponse(
             label="팀 타율",
-            away=away_stats['avg'],
-            home=home_stats['avg'],
+            away=str(away_stats['avg']),
+            home=str(home_stats['avg']),
             away_win=float(away_stats['avg']) >= float(home_stats['avg'])
         ),
         MetricItemResponse(
             label="팀 ERA",
-            away=away_stats['era'],
-            home=home_stats['era'],
+            away=str(away_stats['era']),
+            home=str(home_stats['era']),
             away_win=float(away_stats['era']) <= float(home_stats['era'])
         ),
         MetricItemResponse(
@@ -413,21 +534,21 @@ def get_match_analysis(
         ),
         MetricItemResponse(
             label="팀 OPS",
-            away=away_stats['ops'],
-            home=home_stats['ops'],
+            away=str(away_stats['ops']),
+            home=str(home_stats['ops']),
             away_win=float(away_stats['ops']) >= float(home_stats['ops'])
         ),
     ]
 
-    # 4. 선발투수 정보 및 해당 시즌 target_day 이전 기록 동적 집계
+    # 4. 선발투수 정보 및 해당 시즌 target_day 이전 기록 정밀 집계
     def get_pitcher_season_info(pitcher_id: Optional[int], club_id: int):
         player = session.get(Player, pitcher_id) if pitcher_id else None
         p_name = player.name if player else ("선발투수" if club_id == away_id else "선발투수")
         p_hand = "우투우타"
 
         if not pitcher_id:
-            return PitcherProfileResponse(name=p_name, hand=p_hand, era="3.50", record="0승 0패"), {
-                "era": "3.50", "whip": "1.20", "so": "45개", "so_num": 45, "avg": ".245"
+            return PitcherProfileResponse(name=p_name, hand=p_hand, era="0.00", record="0승 0패"), {
+                "era": "0.00", "whip": "0.00", "so": "0개", "so_num": 0, "avg": ".000"
             }
 
         # 해당 투수의 season_start_day <= sim_day < target_day 이전 승/패 카운트
@@ -450,26 +571,51 @@ def get_match_analysis(
         l_cnt = len(p_losses)
         rec_str = f"{w_cnt}승 {l_cnt}패"
 
-        # 투수 개별 능력치(control/speed)를 연계한 시즌 추정 ERA/WHIP/탈삼진
-        ctrl = player.control if player else 500
-        spd = player.speed if player else 500
-        p_era = max(1.20, min(5.80, 4.50 - (ctrl - 500) * 0.003))
-        p_whip = max(0.90, min(1.60, 1.30 - (ctrl - 500) * 0.0008))
-        p_so = max(10, int(30 + (spd - 500) * 0.1 + w_cnt * 8))
-        p_oavg = max(0.180, min(0.320, 0.260 - (ctrl - 500) * 0.0001))
+        # 해당 투수가 등판한 경기들의 실제 match_log 파싱 집계
+        pitcher_matches = session.exec(
+            select(Match).where(
+                Match.sim_day >= season_start_day,
+                Match.sim_day < target_day,
+                Match.status == "COMPLETED",
+                ((Match.home_club_id == club_id) | (Match.away_club_id == club_id))
+            )
+        ).all()
+
+        p_total_outs = 0
+        p_total_so = 0
+        p_total_h = 0
+        p_total_bb = 0
+        p_total_ab = 0
+        p_total_er = 0
+
+        for m in pitcher_matches:
+            m_stats = extract_match_detailed_stats(m)
+            p_st = m_stats['pitchers'].get(pitcher_id)
+            if p_st:
+                p_total_outs += p_st['outs']
+                p_total_so += p_st['so']
+                p_total_h += p_st['h']
+                p_total_bb += p_st['bb']
+                p_total_ab += p_st['ab']
+
+        p_innings = p_total_outs / 3.0
+        # 투수 실제 ERA, WHIP, 피안타율
+        p_era_val = (p_total_er * 9.0 / p_innings) if p_innings > 0 else 0.00
+        p_whip_val = ((p_total_bb + p_total_h) / p_innings) if p_innings > 0 else 0.00
+        p_avg_val = (p_total_h / p_total_ab) if p_total_ab > 0 else 0.000
 
         profile = PitcherProfileResponse(
             name=p_name,
             hand=p_hand,
-            era=f"{p_era:.2f}",
+            era=f"{p_era_val:.2f}",
             record=rec_str
         )
         p_metrics = {
-            "era": f"{p_era:.2f}",
-            "whip": f"{p_whip:.2f}",
-            "so": f"{p_so}개",
-            "so_num": p_so,
-            "avg": f"{p_oavg:.3f}".replace("0.", "."),
+            "era": f"{p_era_val:.2f}",
+            "whip": f"{p_whip_val:.2f}",
+            "so": f"{p_total_so}개",
+            "so_num": p_total_so,
+            "avg": f"{p_avg_val:.3f}".replace("0.", "."),
         }
         return profile, p_metrics
 
@@ -479,26 +625,26 @@ def get_match_analysis(
     pitcher_metrics = [
         MetricItemResponse(
             label="시즌 ERA",
-            away=away_p_met["era"],
-            home=home_p_met["era"],
+            away=str(away_p_met["era"]),
+            home=str(home_p_met["era"]),
             away_win=float(away_p_met["era"]) <= float(home_p_met["era"])
         ),
         MetricItemResponse(
             label="WHIP",
-            away=away_p_met["whip"],
-            home=home_p_met["whip"],
+            away=str(away_p_met["whip"]),
+            home=str(home_p_met["whip"]),
             away_win=float(away_p_met["whip"]) <= float(home_p_met["whip"])
         ),
         MetricItemResponse(
             label="탈삼진",
-            away=away_p_met["so"],
-            home=home_p_met["so"],
-            away_win=away_p_met["so_num"] >= home_p_met["so_num"]
+            away=str(away_p_met["so"]),
+            home=str(home_p_met["so"]),
+            away_win=int(away_p_met["so_num"]) >= int(home_p_met["so_num"])
         ),
         MetricItemResponse(
             label="피안타율",
-            away=away_p_met["avg"],
-            home=home_p_met["avg"],
+            away=str(away_p_met["avg"]),
+            home=str(home_p_met["avg"]),
             away_win=float(away_p_met["avg"]) <= float(home_p_met["avg"])
         ),
     ]

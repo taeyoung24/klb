@@ -116,6 +116,7 @@ class IngameBaseRunReason(StrEnum):
     """진루 시작 원인"""
     STEAL         = "STEAL"          # 도루 시도
     HIT_RUN       = "HIT_RUN"        # 안타/인플레이 타구 진루
+    HOMERUN       = "HOMERUN"        # 홈런 진루
     WALK          = "WALK"           # 볼넷 강제 진루
     HIT_BY_PITCH  = "HIT_BY_PITCH"   # 사구 강제 진루
     ERROR         = "ERROR"          # 수비 실책으로 인한 진루
