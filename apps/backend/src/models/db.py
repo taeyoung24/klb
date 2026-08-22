@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Any, Optional
 from sqlmodel import SQLModel, Field, JSON, Relationship
-from sqlalchemy import Column
+from sqlalchemy import Column, UniqueConstraint
 from sqlalchemy.types import TypeDecorator
 
 from src.enums import (
@@ -203,3 +203,55 @@ class PlayerTransactionHistory(SQLModel, table=True):
     draft_overall_pick: Optional[int] = Field(default=None)
 
     details: Optional[str] = Field(default=None)
+
+
+class PlayerSeasonStat(SQLModel, table=True):
+    """
+    선수별 연도(시즌) 단위 누적 타격/투구 통합 집계 장부 테이블.
+    경기 종료 시 1행씩 누적 업데이트하여 O(1) 초고속 조회를 보장합니다.
+    """
+    __table_args__ = (
+        UniqueConstraint("player_id", "season_year", "club_id", name="uq_player_season_club"),
+    )
+
+    id: int = Field(default=None, primary_key=True)
+    player_id: int = Field(foreign_key="player.id", index=True)
+    club_id: Optional[int] = Field(default=None, foreign_key="club.id", index=True)
+    season_year: int = Field(index=True)  # ex) 1953, 2024
+
+    # 1. 타격 집계 지표 (Batting Stats)
+    bat_games: int = Field(default=0)      # 출전 경기수
+    bat_pa: int = Field(default=0)         # 타석 (Plate Appearances)
+    bat_ab: int = Field(default=0)         # 타수 (At Bats)
+    bat_hits: int = Field(default=0)       # 안타
+    bat_doubles: int = Field(default=0)    # 2루타
+    bat_triples: int = Field(default=0)    # 3루타
+    bat_homeruns: int = Field(default=0)   # 홈런
+    bat_rbi: int = Field(default=0)        # 타점
+    bat_runs: int = Field(default=0)       # 득점
+    bat_bb: int = Field(default=0)         # 볼넷
+    bat_hbp: int = Field(default=0)        # 사구 (데드볼)
+    bat_so: int = Field(default=0)         # 삼진
+    bat_tb: int = Field(default=0)         # 루타수 (Total Bases)
+    bat_sb: int = Field(default=0)         # 도루 성공
+    bat_cs: int = Field(default=0)         # 도루 실패
+
+    # 2. 투구 집계 지표 (Pitching Stats)
+    pitch_games: int = Field(default=0)    # 등판 경기수
+    pitch_starts: int = Field(default=0)   # 선발 등판수
+    pitch_outs: int = Field(default=0)     # 소화 아웃카운트 (이닝 = pitch_outs // 3 + .rem)
+    pitch_wins: int = Field(default=0)     # 승리
+    pitch_losses: int = Field(default=0)   # 패전
+    pitch_saves: int = Field(default=0)    # 세이브
+    pitch_holds: int = Field(default=0)    # 홀드
+    pitch_hits: int = Field(default=0)     # 피안타
+    pitch_homeruns: int = Field(default=0) # 피홈런
+    pitch_runs: int = Field(default=0)     # 실점
+    pitch_earned_runs: int = Field(default=0) # 자책점
+    pitch_bb: int = Field(default=0)       # 허용 볼넷
+    pitch_hbp: int = Field(default=0)      # 허용 사구
+    pitch_so: int = Field(default=0)       # 탈삼진
+    pitch_pitches: int = Field(default=0)  # 총 투구수
+
+    updated_at: datetime = Field(default_factory=datetime.now)
+

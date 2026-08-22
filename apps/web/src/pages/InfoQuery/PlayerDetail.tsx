@@ -6,10 +6,12 @@ import {
   type PlayerDetailInfo,
   type PlayerListItem,
   type PlayerPitchingRecord,
+  type PlayerTransaction,
 } from '../../api/infoQuery'
 import type { Club } from '../../api/clubs'
 import TeamLogo from '../../components/TeamLogo/TeamLogo'
 import { formatPosition } from '../../constants/positions'
+import { formatSimDayDot } from '../../utils/date'
 import { useSystemContext } from '../../context/SystemContext'
 import { InfoQueryTable, type TableColumn } from '../../components/InfoQuery'
 
@@ -283,6 +285,62 @@ export const PlayerDetail: React.FC<PlayerDetailProps> = ({
     []
   )
 
+  // 소속 변경 및 계약 이력 테이블 컬럼 정의
+  const transactionColumns: TableColumn<PlayerTransaction>[] = useMemo(
+    () => [
+      {
+        key: 'sim_day',
+        header: '일자',
+        align: 'center',
+        width: '110px',
+        render: (row) => <span className="player-detail__history-day">{formatSimDayDot(row.sim_day)}</span>,
+      },
+      {
+        key: 'transaction_type',
+        header: '구분',
+        align: 'center',
+        width: '120px',
+        render: (row) => {
+          const typeNames: Record<string, string> = {
+            DRAFT: '신인 드래프트',
+            UNDRAFTED_SIGN: '육성선수 입단',
+            TRADE: '트레이드',
+            FA: 'FA 계약',
+            RELEASE: '방출',
+            WAIVER: '웨이버',
+            RETIRE: '은퇴',
+          }
+          const label = typeNames[row.transaction_type] || row.transaction_type
+          const isDark = row.transaction_type === 'DRAFT' || row.transaction_type === 'FA'
+          return (
+            <span className={isDark ? 'player-detail__tx-chip player-detail__tx-chip--dark' : 'player-detail__tx-chip'}>
+              {label}
+            </span>
+          )
+        },
+      },
+      {
+        key: 'details',
+        header: '상세 내용',
+        align: 'left',
+        render: (row) => row.details || '-',
+      },
+      {
+        key: 'club_change',
+        header: '소속 변화',
+        align: 'center',
+        width: '240px',
+        render: (row) => {
+          if (row.from_club_name && row.to_club_name) {
+            return `${row.from_club_name} → ${row.to_club_name}`
+          }
+          return row.to_club_name || row.from_club_name || '-'
+        },
+      },
+    ],
+    []
+  )
+
   return (
     <div className="player-detail">
       {/* Top Back Navigation Button */}
@@ -340,6 +398,12 @@ export const PlayerDetail: React.FC<PlayerDetailProps> = ({
               <div className="player-detail__profile-item">
                 <span className="player-detail__profile-label">출신교</span>
                 <span className="player-detail__profile-value">{schoolName || '-'}</span>
+              </div>
+              <div className="player-detail__profile-item player-detail__profile-item--full">
+                <span className="player-detail__profile-label">입단 구분 / 지명 순위</span>
+                <span className="player-detail__profile-value">
+                  {player?.draft_info || (player?.draft_round && player?.draft_overall_pick ? `${player.draft_round}라운드 (전체 ${player.draft_overall_pick}순위)` : '-')}
+                </span>
               </div>
               <div className="player-detail__profile-item player-detail__profile-item--full">
                 <span className="player-detail__profile-label">현재 체력 컨디션</span>
@@ -416,6 +480,17 @@ export const PlayerDetail: React.FC<PlayerDetailProps> = ({
                 emptyMessage="기록된 타격 성적이 없습니다."
               />
             )}
+          </div>
+
+          {/* Career & Transaction History Section */}
+          <div className="player-detail__section">
+            <h3 className="player-detail__section-title">소속 변경 및 계약 이력</h3>
+            <InfoQueryTable
+              columns={transactionColumns}
+              data={player?.transactions || []}
+              rowKey={(r, idx) => `tx-${r.id}-${idx}`}
+              emptyMessage="기록된 계약 및 소속 변경 이력이 없습니다."
+            />
           </div>
         </>
       ) : null}

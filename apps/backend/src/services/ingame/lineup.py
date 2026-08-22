@@ -28,35 +28,40 @@ def select_team_roster_for_match(
     session: Optional[Session] = None,
     manager_strategy: Optional[Any] = None,
     decision_engine: Optional[BaseDecisionEngine] = None,
+    preloaded_roster: Optional[list[Player]] = None,
 ) -> tuple[Player, list[Player], list[Player], list[Player]]:
     """
     구단의 ACTIVE 로스터 선수 목록에서 선발 투수(1명), 불펜 투수진, 선발 타순(9명), 벤치 타자들을 결정/추출합니다.
     감독 의사결정(선발 투수, 타순)은 decision_engine(기본 RuleBasedDecisionEngine)에 위임됩니다.
+    preloaded_roster가 제공되면 DB 쿼리를 생략하고 즉시 사용합니다.
     """
     db_players: list[Player] = []
 
-    # 1. DB 세션이 제공되었거나 engine을 통한 DB 선수 조회
-    local_session = session
-    should_close = False
-    if local_session is None:
-        try:
-            local_session = Session(engine)
-            should_close = True
-        except Exception:
-            local_session = None
+    if preloaded_roster is not None:
+        db_players = preloaded_roster
+    else:
+        # 1. DB 세션이 제공되었거나 engine을 통한 DB 선수 조회
+        local_session = session
+        should_close = False
+        if local_session is None:
+            try:
+                local_session = Session(engine)
+                should_close = True
+            except Exception:
+                local_session = None
 
-    if local_session:
-        try:
-            statement = select(Player).where(
-                Player.club_id == club_id,
-                Player.roster_status == RosterStatus.ACTIVE,
-            )
-            db_players = list(local_session.exec(statement).all())
-        except Exception:
-            db_players = []
-        finally:
-            if should_close:
-                local_session.close()
+        if local_session:
+            try:
+                statement = select(Player).where(
+                    Player.club_id == club_id,
+                    Player.roster_status == RosterStatus.ACTIVE,
+                )
+                db_players = list(local_session.exec(statement).all())
+            except Exception:
+                db_players = []
+            finally:
+                if should_close:
+                    local_session.close()
 
     # 2. 선수 분류
     pitchers = [p for p in db_players if p.position == IngameRole.PITCHER]
